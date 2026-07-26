@@ -14,6 +14,7 @@ Sprint 1
 
 - ✅ ISSUE-001 — Infraestrutura Docker
 - ✅ ISSUE-002 — Centralização da validação de cupões
+- ✅ ISSUE-003 — Concluida
 
 ---
 
@@ -25,7 +26,7 @@ Nenhuma
 
 ## Próxima Issue
 
-⏳ ISSUE-003
+⏳ ISSUE-004
 
 ---
 
