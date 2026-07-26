@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: loja
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-muda_isto}
+      POSTGRES_DB: loja_flores
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - loja
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URI: ${DATABASE_URI}
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:-muda_isto}
+      NEXT_PUBLIC_SERVER_URL: ${NEXT_PUBLIC_SERVER_URL:-http://localhost:3000}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}
+    ports:
+      - "3000:3000"
+    networks:
+      - loja
+
+volumes:
+  postgres_data:
+
+networks:
+  loja:

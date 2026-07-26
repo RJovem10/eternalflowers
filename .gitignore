@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+.env
+.env.local
+*.sqlite
+*.sqlite3
+src/payload-types.ts
+public/media/
+.DS_Store
+coverage/
+*.log

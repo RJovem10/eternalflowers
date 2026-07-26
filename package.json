@@ -1,0 +1,33 @@
+{
+  "name": "loja-flores-marina",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "payload": "payload",
+    "generate:types": "payload generate:types"
+  },
+  "dependencies": {
+    "next": "15.4.11",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "payload": "^3.0.0",
+    "@payloadcms/next": "^3.0.0",
+    "@payloadcms/db-postgres": "^3.0.0",
+    "@payloadcms/db-sqlite": "^3.0.0",
+    "better-sqlite3": "^11.0.0",
+    "stripe": "^16.0.0",
+    "tailwindcss": "^3.4.0",
+    "autoprefixer": "^10.4.0",
+    "postcss": "^8.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/node": "^20.14.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/better-sqlite3": "^7.6.0"
+  }
+}
