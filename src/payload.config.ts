@@ -19,6 +19,18 @@ const Flowers: CollectionConfig = {
     { name: 'nameEs', type: 'text', label: 'Nome (ES)' },
     { name: 'nameIt', type: 'text', label: 'Nome (IT)' },
     { name: 'nameDe', type: 'text', label: 'Nome (DE)' },
+    {
+      name: 'productType',
+      type: 'select',
+      required: true,
+      defaultValue: 'permanente',
+      label: 'Tipo de Produto',
+      options: [
+        { label: 'Permanente', value: 'permanente' },
+        { label: 'Sazonal', value: 'sazonal' },
+        { label: 'Exclusivo', value: 'exclusivo' },
+      ],
+    },
     { name: 'price', type: 'number', required: true, label: 'Preço (€)', min: 0 },
     { name: 'descriptionPt', type: 'textarea', label: 'Descrição (PT)' },
     { name: 'descriptionEn', type: 'textarea', label: 'Descrição (EN)' },
