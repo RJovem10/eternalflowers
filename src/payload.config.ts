@@ -31,6 +31,8 @@ const Flowers: CollectionConfig = {
         { label: 'Exclusivo', value: 'exclusivo' },
       ],
     },
+    { name: 'scientificName', type: 'text', required: true, label: 'Nome Científico' },
+    { name: 'creationName', type: 'text', label: 'Nome da Criação' },
     { name: 'price', type: 'number', required: true, label: 'Preço (€)', min: 0 },
     { name: 'descriptionPt', type: 'textarea', label: 'Descrição (PT)' },
     { name: 'descriptionEn', type: 'textarea', label: 'Descrição (EN)' },

@@ -14,9 +14,8 @@ Sprint 1
 
 - ✅ ISSUE-001 — Infraestrutura Docker
 - ✅ ISSUE-002 — Centralização da validação de cupões
-- ✅ ISSUE-003 — Modelo de domínio
-✅ ISSUE-004B - Passo 1 (productType)
-
+- ✅ ISSUE-003 — Modelo de Domínio
+- ✅ ISSUE-004B (Passo 1) — Campo productType
 ---
 
 ## Issue atual
