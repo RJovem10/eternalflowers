@@ -1,19 +1,24 @@
-import Link from 'next/link'
-import { getDictionary } from '@/i18n/dictionaries'
+import { getPayloadClient } from '@/payload'
+import Hero from '@/components/Hero'
 
 export default async function Home({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  const dict = getDictionary(locale)
+  const payload = await getPayloadClient()
+  const homepage = await payload.findGlobal({ slug: 'homepage' })
+  const hero = homepage.hero
+
   return (
-    <div className="text-center py-16">
-      <h1 className="text-4xl font-bold tracking-tight">🌸 {dict.brand}</h1>
-      <p className="text-stone-600 mt-3 text-lg">{dict.tagline}</p>
-      <Link
-        href={`/${locale}/catalog`}
-        className="mt-8 inline-block bg-rose-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-rose-700"
-      >
-        {dict.catalog}
-      </Link>
+    <div>
+      <Hero
+        heroImage={hero.heroImage}
+        heroTitle={hero.heroTitle}
+        heroSubtitle={hero.heroSubtitle}
+        primaryButtonText={hero.primaryButtonText}
+        primaryButtonLink={hero.primaryButtonLink}
+        secondaryButtonText={hero.secondaryButtonText}
+        secondaryButtonLink={hero.secondaryButtonLink}
+        locale={locale}
+      />
     </div>
   )
 }

@@ -271,3 +271,20 @@ Antes de contactar a Marina, o cliente deverá perceber:
 
 Nunca o contrário.
 
+## Categorias
+
+Cada produto pertence a uma única categoria.
+
+Exemplos:
+
+- Colares
+- Brincos
+- Pulseiras
+- Conjuntos
+- Ganchos de cabelo
+- Pendentes
+- Pingentes
+
+A categoria "Conjuntos" representa um único produto composto por várias peças vendidas em conjunto.
+
+As peças individuais não são comercializadas separadamente.

@@ -1,4 +1,4 @@
-import { buildConfig, type CollectionConfig } from 'payload'
+import { buildConfig, type CollectionConfig, type GlobalConfig } from 'payload'
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { sqliteAdapter } from '@payloadcms/db-sqlite'
 
@@ -54,10 +54,11 @@ const Flowers: CollectionConfig = {
     },
     { name: 'sku', type: 'text', label: 'Código (SKU)' },
     {
-      name: 'collections',
-      type: 'array',
-      label: 'Coleções',
-      fields: [{ name: 'collection', type: 'text', label: 'Coleção (ex: Casamentos)' }],
+      name: 'category',
+      type: 'relationship',
+      relationTo: 'categories',
+      label: 'Categoria',
+      hasMany: false,
     },
   ],
 }
@@ -135,9 +136,41 @@ const Orders: CollectionConfig = {
   ],
 }
 
+const Categories: CollectionConfig = {
+  slug: 'categories',
+  admin: { useAsTitle: 'name' },
+  fields: [
+    { name: 'name', type: 'text', required: true, unique: true, label: 'Nome' },
+    { name: 'slug', type: 'text', required: true, unique: true, label: 'Slug' },
+    { name: 'description', type: 'textarea', label: 'Descrição' },
+  ],
+}
+
+const Homepage: GlobalConfig = {
+  slug: 'homepage',
+  label: 'Homepage',
+  fields: [
+    {
+      type: 'group',
+      name: 'hero',
+      label: 'Hero',
+      fields: [
+        { name: 'heroImage', type: 'upload', relationTo: 'media', label: 'Imagem de Fundo' },
+        { name: 'heroTitle', type: 'text', required: true, label: 'Título' },
+        { name: 'heroSubtitle', type: 'textarea', required: true, label: 'Subtítulo' },
+        { name: 'primaryButtonText', type: 'text', required: true, label: 'Texto (botão primário)' },
+        { name: 'primaryButtonLink', type: 'text', required: true, label: 'Link (botão primário)' },
+        { name: 'secondaryButtonText', type: 'text', label: 'Texto (botão secundário)' },
+        { name: 'secondaryButtonLink', type: 'text', label: 'Link (botão secundário)' },
+      ],
+    },
+  ],
+}
+
 export default buildConfig({
   serverURL: process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000',
-  collections: [Flowers, Media, Coupons, Orders],
+  collections: [Flowers, Categories, Media, Coupons, Orders],
+  globals: [Homepage],
   db,
   secret: process.env.PAYLOAD_SECRET || 'dev-secret-local-mudar-em-prod',
   typescript: { outputFile: 'src/payload-types.ts' },

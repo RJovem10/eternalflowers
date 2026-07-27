@@ -16,6 +16,8 @@ Sprint 1
 - ✅ ISSUE-002 — Centralização da validação de cupões
 - ✅ ISSUE-003 — Modelo de Domínio
 - ✅ ISSUE-004B (Passo 1) — Campo productType
+- ✅ ISSUE-004B (Passo 2) - scientificName + creationName
+-    ISSUE-004B (Passo 3) - Collections
 ---
 
 ## Issue atual
