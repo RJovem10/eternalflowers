@@ -60,6 +60,13 @@ const Flowers: CollectionConfig = {
       label: 'Categoria',
       hasMany: false,
     },
+    {
+      name: 'collections',
+      type: 'relationship',
+      relationTo: 'collections',
+      label: 'Coleções',
+      hasMany: true,
+    },
   ],
 }
 
@@ -146,6 +153,18 @@ const Categories: CollectionConfig = {
   ],
 }
 
+const Collections: CollectionConfig = {
+  slug: 'collections',
+  admin: { useAsTitle: 'name' },
+  fields: [
+    { name: 'name', type: 'text', required: true, unique: true, label: 'Nome' },
+    { name: 'slug', type: 'text', required: true, unique: true, label: 'Slug' },
+    { name: 'description', type: 'textarea', label: 'Descrição' },
+    { name: 'image', type: 'upload', relationTo: 'media', label: 'Imagem' },
+    { name: 'isActive', type: 'checkbox', required: true, defaultValue: true, label: 'Ativo?' },
+  ],
+}
+
 const Homepage: GlobalConfig = {
   slug: 'homepage',
   label: 'Homepage',
@@ -164,12 +183,73 @@ const Homepage: GlobalConfig = {
         { name: 'secondaryButtonLink', type: 'text', label: 'Link (botão secundário)' },
       ],
     },
+    {
+      type: 'group',
+      name: 'realFlowers',
+      label: 'Flores Verdadeiras',
+      fields: [
+        { name: 'title', type: 'text', required: true, label: 'Título' },
+        { name: 'subtitle', type: 'textarea', label: 'Subtítulo' },
+      ],
+    },
+    {
+      type: 'group',
+      name: 'story',
+      label: 'História',
+      fields: [
+        { name: 'title', type: 'text', required: true, label: 'Título' },
+        { name: 'text', type: 'textarea', required: true, label: 'Texto' },
+        { name: 'image', type: 'upload', relationTo: 'media', label: 'Imagem' },
+      ],
+    },
+    {
+      type: 'group',
+      name: 'international',
+      label: 'Presença Internacional',
+      fields: [
+        { name: 'title', type: 'text', required: true, label: 'Título' },
+        { name: 'subtitle', type: 'textarea', label: 'Subtítulo' },
+      ],
+    },
+    {
+      type: 'group',
+      name: 'instagram',
+      label: 'Instagram',
+      fields: [
+        { name: 'title', type: 'text', required: true, label: 'Título' },
+        { name: 'handle', type: 'text', required: true, label: 'Handle' },
+        { name: 'text', type: 'textarea', label: 'Texto' },
+      ],
+    },
+    {
+      type: 'group',
+      name: 'cta',
+      label: 'CTA Final',
+      fields: [
+        { name: 'title', type: 'text', required: true, label: 'Título' },
+        { name: 'subtitle', type: 'textarea', label: 'Subtítulo' },
+        { name: 'buttonText', type: 'text', required: true, label: 'Texto do botão' },
+        { name: 'buttonLink', type: 'text', required: true, label: 'Link do botão' },
+      ],
+    },
+    {
+      type: 'group',
+      name: 'footer',
+      label: 'Footer',
+      fields: [
+        { name: 'brandDescription', type: 'textarea', label: 'Descrição da marca' },
+        { name: 'email', type: 'text', label: 'Email' },
+        { name: 'phone', type: 'text', label: 'Telefone' },
+        { name: 'instagramUrl', type: 'text', label: 'URL Instagram' },
+        { name: 'whatsappUrl', type: 'text', label: 'URL WhatsApp' },
+      ],
+    },
   ],
 }
 
 export default buildConfig({
   serverURL: process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000',
-  collections: [Flowers, Categories, Media, Coupons, Orders],
+  collections: [Flowers, Categories, Collections, Media, Coupons, Orders],
   globals: [Homepage],
   db,
   secret: process.env.PAYLOAD_SECRET || 'dev-secret-local-mudar-em-prod',
