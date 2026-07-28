@@ -20,14 +20,15 @@ export default function FlowerCard({ flower, dict }: { flower: FlowerCardData; d
   }
 
   const soldOut = flower.availability === 'sold'
+  const displayName = flower.name || '—'
+  const imgSrc = flower.image || null
 
   return (
     <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm hover:shadow-md transition">
       <Link href={`/${flower.locale}/flower/${flower.id}`}>
         <div className="aspect-square bg-stone-100 relative">
-          {flower.image ? (
-            // @ts-ignore
-            <img src={flower.image} alt={flower.name} className="object-cover w-full h-full" />
+          {imgSrc ? (
+            <img src={imgSrc} alt={displayName} className="object-cover w-full h-full" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-5xl">🌷</div>
           )}
@@ -35,7 +36,7 @@ export default function FlowerCard({ flower, dict }: { flower: FlowerCardData; d
         </div>
       </Link>
       <div className="p-4">
-        <h3 className="font-medium truncate">{flower.name}</h3>
+        <h3 className="font-medium truncate">{displayName}</h3>
         <p className="text-rose-700 font-semibold mt-1">{flower.price.toFixed(2)} €</p>
         <Link
           href={`/${flower.locale}/flower/${flower.id}`}

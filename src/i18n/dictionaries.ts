@@ -47,6 +47,24 @@ type Dict = {
   chooseLanguage: string
   required: string
   admin: string
+  scientificName: string
+  category: string
+  collection: string
+  productType: string
+  story: string
+  storyPlaceholder: string
+  realFlower: string
+  realFlowerDesc: string
+  handmadePortugal: string
+  handmadePortugalDesc: string
+  uniquePiece: string
+  uniquePieceDesc: string
+  premiumPackaging: string
+  premiumPackagingDesc: string
+  relatedProducts: string
+  productTypePermanente: string
+  productTypeSazonal: string
+  productTypeExclusivo: string
 }
 
 export const dictionaries: Record<Locale, Dict> = {
@@ -86,6 +104,24 @@ export const dictionaries: Record<Locale, Dict> = {
     chooseLanguage: 'Escolher idioma',
     required: 'Obrigatório.',
     admin: 'Painel',
+    scientificName: 'Nome Científico',
+    category: 'Categoria',
+    collection: 'Coleção',
+    productType: 'Tipo',
+    story: 'História',
+    storyPlaceholder: 'Cada peça tem a sua própria história. Em breve, poderá ler aqui o significado especial desta criação.',
+    realFlower: 'Flor Verdadeira',
+    realFlowerDesc: 'Cada peça é criada com flores verdadeiras, preservadas para durar.',
+    handmadePortugal: 'Feito à Mão em Portugal',
+    handmadePortugalDesc: 'Artesanato português, com dedicação e atenção a cada detalhe.',
+    uniquePiece: 'Peça Única',
+    uniquePieceDesc: 'Não existem duas iguais. Cada criação é uma edição limitada.',
+    premiumPackaging: 'Embalagem Premium',
+    premiumPackagingDesc: 'Embalagem especial, preparada para oferecer ou guardar.',
+    relatedProducts: 'Peças Relacionadas',
+    productTypePermanente: 'Permanente',
+    productTypeSazonal: 'Sazonal',
+    productTypeExclusivo: 'Exclusivo',
   },
   en: {
     brand: 'Flores Marina',
@@ -123,6 +159,24 @@ export const dictionaries: Record<Locale, Dict> = {
     chooseLanguage: 'Choose language',
     required: 'Required.',
     admin: 'Admin',
+    scientificName: 'Scientific Name',
+    category: 'Category',
+    collection: 'Collection',
+    productType: 'Type',
+    story: 'Story',
+    storyPlaceholder: 'Every piece has its own story. Soon you will be able to read here the special meaning of this creation.',
+    realFlower: 'Real Flower',
+    realFlowerDesc: 'Each piece is crafted with real flowers, preserved to last.',
+    handmadePortugal: 'Handmade in Portugal',
+    handmadePortugalDesc: 'Portuguese craftsmanship, with dedication and attention to every detail.',
+    uniquePiece: 'Unique Piece',
+    uniquePieceDesc: 'No two are alike. Each creation is a limited edition.',
+    premiumPackaging: 'Premium Packaging',
+    premiumPackagingDesc: 'Special packaging, ready to gift or keep.',
+    relatedProducts: 'Related Pieces',
+    productTypePermanente: 'Permanent',
+    productTypeSazonal: 'Seasonal',
+    productTypeExclusivo: 'Exclusive',
   },
   es: {
     brand: 'Flores Marina',
@@ -160,6 +214,24 @@ export const dictionaries: Record<Locale, Dict> = {
     chooseLanguage: 'Elegir idioma',
     required: 'Obligatorio.',
     admin: 'Panel',
+    scientificName: 'Nombre Científico',
+    category: 'Categoría',
+    collection: 'Colección',
+    productType: 'Tipo',
+    story: 'Historia',
+    storyPlaceholder: 'Cada pieza tiene su propia historia. Pronto podrás leer aquí el significado especial de esta creación.',
+    realFlower: 'Flor Verdadera',
+    realFlowerDesc: 'Cada pieza está hecha con flores verdaderas, preservadas para durar.',
+    handmadePortugal: 'Hecho a Mano en Portugal',
+    handmadePortugalDesc: 'Artesanía portuguesa, con dedicación y atención a cada detalle.',
+    uniquePiece: 'Pieza Única',
+    uniquePieceDesc: 'No hay dos iguales. Cada creación es una edición limitada.',
+    premiumPackaging: 'Embalaje Premium',
+    premiumPackagingDesc: 'Embalaje especial, listo para regalar o guardar.',
+    relatedProducts: 'Piezas Relacionadas',
+    productTypePermanente: 'Permanente',
+    productTypeSazonal: 'Estacional',
+    productTypeExclusivo: 'Exclusivo',
   },
   it: {
     brand: 'Flores Marina',
@@ -197,6 +269,24 @@ export const dictionaries: Record<Locale, Dict> = {
     chooseLanguage: 'Scegli lingua',
     required: 'Obbligatorio.',
     admin: 'Pannello',
+    scientificName: 'Nome Scientifico',
+    category: 'Categoria',
+    collection: 'Collezione',
+    productType: 'Tipo',
+    story: 'Storia',
+    storyPlaceholder: 'Ogni pezzo ha la sua storia. Presto potrai leggere qui il significato speciale di questa creazione.',
+    realFlower: 'Fiore Vero',
+    realFlowerDesc: 'Ogni pezzo è realizzato con fiori veri, preservati per durare.',
+    handmadePortugal: 'Fatto a Mano in Portogallo',
+    handmadePortugalDesc: 'Artigianato portoghese, con dedizione e attenzione a ogni dettaglio.',
+    uniquePiece: 'Pezzo Unico',
+    uniquePieceDesc: 'Non esistono due pezzi uguali. Ogni creazione è un\'edizione limitata.',
+    premiumPackaging: 'Confezione Premium',
+    premiumPackagingDesc: 'Confezione speciale, pronta per regalare o conservare.',
+    relatedProducts: 'Pezzi Correlati',
+    productTypePermanente: 'Permanente',
+    productTypeSazonal: 'Stagionale',
+    productTypeExclusivo: 'Esclusivo',
   },
   de: {
     brand: 'Flores Marina',
@@ -234,6 +324,24 @@ export const dictionaries: Record<Locale, Dict> = {
     chooseLanguage: 'Sprache wählen',
     required: 'Erforderlich.',
     admin: 'Panel',
+    scientificName: 'Wissenschaftlicher Name',
+    category: 'Kategorie',
+    collection: 'Kollektion',
+    productType: 'Typ',
+    story: 'Geschichte',
+    storyPlaceholder: 'Jedes Stück hat seine eigene Geschichte. Bald kannst du hier die besondere Bedeutung dieser Kreation lesen.',
+    realFlower: 'Echte Blume',
+    realFlowerDesc: 'Jedes Stück wird mit echten Blumen hergestellt, konserviert um zu halten.',
+    handmadePortugal: 'Handgefertigt in Portugal',
+    handmadePortugalDesc: 'Portugiesisches Handwerk mit Hingabe und Aufmerksamkeit für jedes Detail.',
+    uniquePiece: 'Einzigartiges Stück',
+    uniquePieceDesc: 'Keine zwei sind gleich. Jede Kreation ist eine limitierte Auflage.',
+    premiumPackaging: 'Premium-Verpackung',
+    premiumPackagingDesc: 'Spezielle Verpackung, bereit zum Verschenken oder Aufbewahren.',
+    relatedProducts: 'Ähnliche Stücke',
+    productTypePermanente: 'Dauerhaft',
+    productTypeSazonal: 'Saisonal',
+    productTypeExclusivo: 'Exklusiv',
   },
 }
 

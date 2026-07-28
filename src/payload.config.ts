@@ -54,6 +54,21 @@ const Flowers: CollectionConfig = {
     },
     { name: 'sku', type: 'text', label: 'Código (SKU)' },
     {
+      name: 'images',
+      type: 'array',
+      label: 'Galeria de Imagens',
+      fields: [
+        {
+          name: 'image',
+          type: 'upload',
+          relationTo: 'media',
+          required: true,
+          label: 'Imagem',
+        },
+      ],
+    },
+    { name: 'story', type: 'textarea', label: 'História da Peça' },
+    {
       name: 'category',
       type: 'relationship',
       relationTo: 'categories',
@@ -252,6 +267,11 @@ export default buildConfig({
   collections: [Flowers, Categories, Collections, Media, Coupons, Orders],
   globals: [Homepage],
   db,
+  admin: {
+    importMap: {
+      baseDir: __dirname,
+    },
+  },
   secret: process.env.PAYLOAD_SECRET || 'dev-secret-local-mudar-em-prod',
   typescript: { outputFile: 'src/payload-types.ts' },
 })

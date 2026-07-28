@@ -13,6 +13,15 @@ interface HeroProps {
   locale: string
 }
 
+/**
+ * Sanitiza um link vindo do CMS: impede "undefined" ou "null" no URL final.
+ * Se o valor for inválido, devolve '/' (home).
+ */
+function safeLink(link: string | undefined | null): string {
+  if (!link || link === 'undefined' || link === 'null') return '/'
+  return link.startsWith('/') ? link : `/${link}`
+}
+
 export default function Hero({
   heroImage,
   heroTitle,
@@ -26,10 +35,13 @@ export default function Hero({
   const image = heroImage && typeof heroImage !== 'number' ? heroImage : null
   const hasSecondary =
     secondaryButtonText && secondaryButtonLink && secondaryButtonText.length > 0
-  const bgImage = '/docs/references/instagram-profile.png'
+
+  // Fallback image segura — usa <img> nativo em vez de CSS url() para evitar
+  // resolução relativa ao path da página (ex: /pt/hero-fallback.png)
+  const fallbackImage = '/hero-fallback.png'
 
   return (
-    <section className="relative min-h-[80vh] flex items-center overflow-hidden">
+    <section className="relative min-h-[80vh] flex items-center overflow-hidden w-screen -ml-[50vw] left-1/2">
       {/* Background */}
       <div className="absolute inset-0 bg-stone-900">
         {image?.url ? (
@@ -42,9 +54,10 @@ export default function Hero({
             priority
           />
         ) : (
-          <div
-            className="w-full h-full bg-cover bg-center opacity-40"
-            style={{ backgroundImage: `url(${bgImage})` }}
+          <img
+            src={fallbackImage}
+            alt=""
+            className="w-full h-full object-cover opacity-40"
           />
         )}
         <div className="absolute inset-0 bg-gradient-to-r from-stone-900/80 via-stone-900/50 to-transparent" />
@@ -63,16 +76,17 @@ export default function Hero({
 
           <div className="mt-8 flex flex-wrap gap-4">
             <Button
-              variant="primary"
-              href={`/${locale}${primaryButtonLink}`}
+              variant="accent"
+              href={`/${locale}${safeLink(primaryButtonLink)}`}
             >
               {primaryButtonText}
             </Button>
 
             {hasSecondary && (
               <Button
-                variant="secondary"
-                href={`/${locale}${secondaryButtonLink}`}
+                variant="accent"
+                href={`/${locale}${safeLink(secondaryButtonLink)}`}
+                className="bg-transparent border border-stone-400 text-stone-200 hover:bg-stone-800/50 hover:text-stone-50 hover:border-stone-300"
               >
                 {secondaryButtonText}
               </Button>

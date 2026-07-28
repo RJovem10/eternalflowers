@@ -46,9 +46,9 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
         heroTitle={hero.heroTitle}
         heroSubtitle={hero.heroSubtitle}
         primaryButtonText={hero.primaryButtonText}
-        primaryButtonLink={hero.primaryButtonLink}
+        primaryButtonLink={hero.primaryButtonLink || '/'}
         secondaryButtonText={hero.secondaryButtonText}
-        secondaryButtonLink={hero.secondaryButtonLink}
+        secondaryButtonLink={hero.secondaryButtonLink || '/'}
         locale={locale}
       />
 

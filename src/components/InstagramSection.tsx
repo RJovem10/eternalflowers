@@ -6,7 +6,17 @@ interface InstagramSectionProps {
   text?: string | null
 }
 
+/**
+ * Sanitiza um handle: impede "undefined" ou "null" no URL.
+ */
+function safeHandle(h: string | undefined | null): string {
+  if (!h || h === 'undefined' || h === 'null') return 'eternal.flowers.pt'
+  return h
+}
+
 export default function InstagramSection({ title, handle, text }: InstagramSectionProps) {
+  const cleanHandle = safeHandle(handle)
+
   return (
     <Section title={title} align="center">
       <div className="max-w-lg mx-auto text-center">
@@ -15,12 +25,12 @@ export default function InstagramSection({ title, handle, text }: InstagramSecti
         </div>
         <p className="text-stone-600 leading-relaxed">{text}</p>
         <a
-          href={`https://www.instagram.com/${handle}`}
+          href={`https://www.instagram.com/${cleanHandle}`}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-4 inline-flex items-center gap-2 text-amber-600 hover:text-amber-700 font-medium transition-colors"
         >
-          @{handle} →
+          @{cleanHandle} →
         </a>
       </div>
     </Section>

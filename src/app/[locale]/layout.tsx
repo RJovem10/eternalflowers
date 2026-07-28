@@ -22,7 +22,7 @@ export default async function LocaleLayout({
       <body className="min-h-screen bg-stone-50 text-stone-900">
         <CartProvider>
           <Header dict={dict} locale={locale} />
-          <main className="max-w-6xl mx-auto px-4 py-8">{children}</main>
+          <main className="max-w-6xl mx-auto px-4">{children}</main>
         </CartProvider>
       </body>
     </html>

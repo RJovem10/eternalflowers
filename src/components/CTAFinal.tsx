@@ -8,6 +8,11 @@ interface CTAFinalProps {
   locale: string
 }
 
+function safeLink(link: string | undefined | null): string {
+  if (!link || link === 'undefined' || link === 'null') return '/'
+  return link.startsWith('/') ? link : `/${link}`
+}
+
 export default function CTAFinal({ title, subtitle, buttonText, buttonLink, locale }: CTAFinalProps) {
   return (
     <section className="py-20 lg:py-28 bg-stone-900 text-stone-50">
@@ -21,7 +26,7 @@ export default function CTAFinal({ title, subtitle, buttonText, buttonLink, loca
           </p>
         )}
         <div className="mt-8">
-          <Button variant="primary" href={`/${locale}${buttonLink}`}>
+          <Button variant="primary" href={`/${locale}${safeLink(buttonLink)}`}>
             {buttonText}
           </Button>
         </div>
