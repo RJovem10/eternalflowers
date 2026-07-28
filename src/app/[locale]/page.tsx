@@ -1,6 +1,6 @@
 import { getPayloadClient } from '@/payload'
 import { getDictionary } from '@/i18n/dictionaries'
-import Hero from '@/components/Hero'
+import Hero from '@/components/FounderHero'
 import RealFlowers from '@/components/RealFlowers'
 import CategoriesSection from '@/components/CategoriesSection'
 import CollectionsSection from '@/components/CollectionsSection'
@@ -10,6 +10,32 @@ import InternationalPresence from '@/components/InternationalPresence'
 import InstagramSection from '@/components/InstagramSection'
 import CTAFinal from '@/components/CTAFinal'
 import Footer from '@/components/Footer'
+
+/**
+ * A homepage da Eternal Flowers segue um arco narrativo em 7 atos:
+ *
+ *   ATO 1 — HERÓI  (Hero)
+ *   O visitante chega. O impacto é imediato. A imagem domina.
+ *   A pergunta "O que é isto?" é respondida em segundos.
+ *
+ *   ATO 2 — VERDADE (RealFlowers)
+ *   "São flores verdadeiras."  Nomes científicos. Autenticidade.
+ *
+ *   ATO 3 — UTILIDADE (CategoriesSection)
+ *   "O que posso comprar?"  Navegação por tipo de peça.
+ *
+ *   ATO 4 — EDIÇÃO (CollectionsSection)
+ *   "O que é especial?"  Coleções temáticas, imagens grandes.
+ *
+ *   ATO 5 — ALMA (StorySection + MarinaPicks)
+ *   "Porque é que isto existe?"  A história da Marina e as suas escolhas.
+ *
+ *   ATO 6 — CREDIBILIDADE (InternationalPresence + InstagramSection)
+ *   "Isto é a sério."  Prova social, presença global, comunidade.
+ *
+ *   ATO 7 — FECHO (CTAFinal)
+ *   "E agora?"  O convite final para eternizar uma memória.
+ */
 
 export default async function Home({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
@@ -41,22 +67,22 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
 
   return (
     <div>
+      {/* ─── ATO 1: HERÓI — A MARINA ─── */}
       <Hero
-        heroImage={hero.heroImage}
-        heroTitle={hero.heroTitle}
-        heroSubtitle={hero.heroSubtitle}
-        primaryButtonText={hero.primaryButtonText}
-        primaryButtonLink={hero.primaryButtonLink || '/'}
-        secondaryButtonText={hero.secondaryButtonText}
-        secondaryButtonLink={hero.secondaryButtonLink || '/'}
+        heroTitle={hero.heroTitle || 'Joias Botânicas\nFeitas à Mão'}
+        heroSubtitle={hero.heroSubtitle || 'Cada peça é uma história que o tempo não apaga. Flores verdadeiras, eternizadas em resina pela Marina, em Braga.'}
         locale={locale}
       />
 
+      {/* ─── ATO 2: VERDADE ─── */}
+      {/* Background: branco | Size: compact | Prova botânica */}
       <RealFlowers
         title={realFlowers?.title || 'Flores Verdadeiras'}
         subtitle={realFlowers?.subtitle}
       />
 
+      {/* ─── ATO 3: UTILIDADE ─── */}
+      {/* Background: creme | Size: default | Grid de categorias */}
       <CategoriesSection
         categories={categoriesData.docs.map((c: any) => ({
           id: c.id,
@@ -67,6 +93,8 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
         locale={locale}
       />
 
+      {/* ─── ATO 4: EDIÇÃO ─── */}
+      {/* Background: branco | Size: default | Imagens grandes, editorial */}
       <CollectionsSection
         collections={collectionsData.docs.map((c: any) => ({
           id: c.id,
@@ -78,12 +106,15 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
         locale={locale}
       />
 
+      {/* ─── ATO 5: ALMA ─── */}
+      {/* Background: creme | Size: large | Split layout, história */}
       <StorySection
         title={story?.title || 'Do efémero ao eterno'}
         text={story?.text || 'Cada peça é uma história. Das nossas mãos para as suas, transformamos flores verdadeiras em joias que duram para sempre.'}
         image={story?.image}
       />
 
+      {/* Background: branco | Size: default | Escolhas curadas */}
       <MarinaPicks
         flowers={flowersData.docs.map((f: any) => ({
           id: f.id,
@@ -95,17 +126,22 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
         dict={dict}
       />
 
+      {/* ─── ATO 6: CREDIBILIDADE ─── */}
+      {/* Background: creme | Size: default | Prova social */}
       <InternationalPresence
         title={international?.title || 'Presença Internacional'}
         subtitle={international?.subtitle}
       />
 
+      {/* Background: branco | Size: compact | Comunidade */}
       <InstagramSection
         title={instagram?.title || 'Siga-nos no Instagram'}
         handle={instagram?.handle || 'eternal.flowers.pt'}
         text={instagram?.text || 'Acompanhe o nosso dia-a-dia, bastidores e novidades em primeira mão.'}
       />
 
+      {/* ─── ATO 7: FECHO ─── */}
+      {/* Background: escuro | Size: grande | O convite emocional */}
       <CTAFinal
         title={cta?.title || 'Pronta para eternizar uma memória?'}
         subtitle={cta?.subtitle}
@@ -114,6 +150,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
         locale={locale}
       />
 
+      {/* Footer */}
       <Footer
         brandDescription={footer?.brandDescription}
         email={footer?.email}

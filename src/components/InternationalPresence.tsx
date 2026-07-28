@@ -5,26 +5,41 @@ interface InternationalPresenceProps {
   subtitle?: string | null
 }
 
-export default function InternationalPresence({ title, subtitle }: InternationalPresenceProps) {
-  const locations = [
-    { country: 'Portugal', flags: '🇵🇹', cities: 'Braga · Lisboa' },
-    { country: 'Espanha', flags: '🇪🇸', cities: 'Exposições' },
-    { country: 'Itália', flags: '🇮🇹', cities: 'Trento · Mati' },
-  ]
+const locations = [
+  { country: 'Portugal', cities: 'Braga · Lisboa', emoji: '🇵🇹', description: 'Atelier e loja física' },
+  { country: 'Espanha', cities: 'Exposições', emoji: '🇪🇸', description: 'Feiras de orquídeas' },
+  { country: 'Itália', cities: 'Trento · Mati', emoji: '🇮🇹', description: 'Exposições internacionais' },
+]
 
+export default function InternationalPresence({ title, subtitle }: InternationalPresenceProps) {
   return (
-    <Section title={title} subtitle={subtitle || undefined} align="center" background="bg-stone-50">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-2xl mx-auto">
-        {locations.map((loc) => (
-          <div
-            key={loc.country}
-            className="text-center p-6 rounded-xl bg-white border border-stone-200"
-          >
-            <span className="text-4xl">{loc.flags}</span>
-            <h3 className="text-lg font-medium text-stone-800 mt-3">{loc.country}</h3>
-            <p className="text-sm text-stone-500 mt-1">{loc.cities}</p>
-          </div>
-        ))}
+    <Section
+      title={title}
+      subtitle={subtitle || undefined}
+      align="center"
+      background="bg-brand-cream"
+      size="default"
+    >
+      <div className="max-w-3xl mx-auto">
+        <div className="flex flex-col md:flex-row gap-px bg-brand-wood/8">
+          {locations.map((loc) => (
+            <div
+              key={loc.country}
+              className="flex-1 text-center p-8 lg:p-10 bg-white"
+            >
+              <span className="text-2xl block mb-4">{loc.emoji}</span>
+              <h3 className="font-display text-lg font-light text-brand-charcoal">
+                {loc.country}
+              </h3>
+              <p className="font-body text-sm text-brand-charcoal/50 mt-1.5 font-light">
+                {loc.cities}
+              </p>
+              <p className="font-body text-[10px] text-brand-charcoal/35 mt-3 uppercase tracking-[0.15em]">
+                {loc.description}
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
     </Section>
   )

@@ -263,7 +263,7 @@ const Homepage: GlobalConfig = {
 }
 
 export default buildConfig({
-  serverURL: process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000',
+  serverURL: process.env.NEXT_PUBLIC_SERVER_URL || '',
   collections: [Flowers, Categories, Collections, Media, Coupons, Orders],
   globals: [Homepage],
   db,

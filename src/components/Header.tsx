@@ -18,41 +18,78 @@ export default function Header({
   function changeLocale(e: React.ChangeEvent<HTMLSelectElement>) {
     const newLocale = e.target.value
     document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=31536000`
-    // reescreve o path com a nova língua
     const segments = pathname.split('/')
     segments[1] = newLocale
     window.location.href = segments.join('/') || `/${newLocale}`
   }
 
   return (
-    <header className="border-b border-stone-200 bg-white">
-      <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
-        <Link href={`/${locale}`} className="text-xl font-semibold tracking-tight">
-          🌸 {dict.brand}
+    <header className="fixed top-0 left-0 right-0 z-50 bg-brand-cream/90 backdrop-blur-md border-b border-brand-wood/10">
+      <div className="max-w-content mx-auto px-6 lg:px-8 h-16 lg:h-20 flex items-center justify-between gap-4">
+        {/* Logo */}
+        <Link
+          href={`/${locale}`}
+          className="flex items-center gap-3 group"
+        >
+          <span className="text-2xl">🌺</span>
+          <div>
+            <span className="font-display text-lg font-light tracking-wide text-brand-charcoal group-hover:text-brand-gold transition-colors">
+              Eternal Flowers
+            </span>
+            <span className="hidden lg:block text-[10px] uppercase tracking-[0.2em] text-brand-wood/60 font-body font-light">
+              Resin Art &amp; Jewelry
+            </span>
+          </div>
         </Link>
-        <nav className="flex items-center gap-4 text-sm">
-          <Link href={`/${locale}`} className="hover:underline">{dict.home}</Link>
-          <Link href={`/${locale}/catalog`} className="hover:underline">{dict.catalog}</Link>
-          <Link href={`/${locale}/cart`} className="hover:underline relative">
+
+        {/* Navigation */}
+        <nav className="hidden md:flex items-center gap-8">
+          <Link
+            href={`/${locale}`}
+            className="text-xs uppercase tracking-[0.15em] text-brand-charcoal/70 hover:text-brand-gold transition-colors font-body font-medium"
+          >
+            {dict.home}
+          </Link>
+          <Link
+            href={`/${locale}/catalog`}
+            className="text-xs uppercase tracking-[0.15em] text-brand-charcoal/70 hover:text-brand-gold transition-colors font-body font-medium"
+          >
+            {dict.catalog}
+          </Link>
+          <Link
+            href={`/${locale}/cart`}
+            className="relative text-xs uppercase tracking-[0.15em] text-brand-charcoal/70 hover:text-brand-gold transition-colors font-body font-medium"
+          >
             {dict.cart}
             {count > 0 && (
-              <span className="ml-1 inline-flex items-center justify-center bg-rose-600 text-white text-xs rounded-full w-5 h-5">
+              <span className="ml-1.5 inline-flex items-center justify-center bg-brand-gold text-white text-[10px] font-semibold rounded-full w-4 h-4">
                 {count}
               </span>
             )}
           </Link>
-          <Link href="/admin" className="text-stone-400 hover:text-stone-700 text-xs">{dict.admin}</Link>
+          <Link
+            href="/admin"
+            className="text-[10px] uppercase tracking-[0.15em] text-brand-wood/40 hover:text-brand-charcoal/60 transition-colors font-body"
+          >
+            {dict.admin}
+          </Link>
+        </nav>
+
+        {/* Right: Locale + Mobile menu */}
+        <div className="flex items-center gap-3">
           <select
             value={locale}
             onChange={changeLocale}
             aria-label={dict.language}
-            className="border border-stone-300 rounded-md px-2 py-1 text-sm bg-white"
+            className="bg-transparent border-none text-[11px] uppercase tracking-[0.1em] text-brand-wood/60 font-body font-medium cursor-pointer focus:outline-none"
           >
-            {locales.map((l: Locale) => (
-              <option key={l} value={l}>{localeNames[l]}</option>
+            {locales.map((l: string) => (
+              <option key={l} value={l}>
+                {(localeNames as Record<string, string>)[l] || l}
+              </option>
             ))}
           </select>
-        </nav>
+        </div>
       </div>
     </header>
   )

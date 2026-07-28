@@ -13,6 +13,16 @@ interface CategoriesSectionProps {
   locale: string
 }
 
+const categoryIcons: Record<string, string> = {
+  brincos: '💎',
+  anéis: '💍',
+  pingentes: '🌙',
+  colares: '📿',
+  pulseiras: '🔗',
+  conjuntos: '✨',
+  decoracao: '🏺',
+}
+
 export default function CategoriesSection({ categories, locale }: CategoriesSectionProps) {
   if (categories.length === 0) return null
 
@@ -21,23 +31,26 @@ export default function CategoriesSection({ categories, locale }: CategoriesSect
       title="Categorias"
       subtitle="Descubra as nossas joias botânicas por tipo de peça"
       align="center"
-      background="bg-stone-50"
+      background="bg-brand-cream"
+      size="default"
     >
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
         {categories.map((cat) => (
           <Link
             key={cat.id}
             href={`/${locale}/catalog?category=${cat.slug}`}
-            className="group bg-white rounded-xl border border-stone-200 p-6 text-center hover:border-stone-300 hover:shadow-sm transition-all"
+            className="group relative bg-white px-5 py-8 text-center transition-all duration-300 border border-brand-wood/8 hover:border-brand-gold/25 hover:bg-white/80"
           >
-            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-stone-100 flex items-center justify-center text-xl group-hover:bg-amber-50 transition-colors">
-              💎
+            <div className="text-2xl mb-3 opacity-50 group-hover:opacity-100 group-hover:scale-110 transition-all duration-400">
+              {categoryIcons[cat.slug] || '🌿'}
             </div>
-            <h3 className="font-medium text-stone-800 group-hover:text-amber-700 transition-colors">
+            <h3 className="font-display text-base font-light text-brand-charcoal/75 group-hover:text-brand-gold-dark transition-colors duration-300">
               {cat.name}
             </h3>
             {cat.description && (
-              <p className="text-xs text-stone-400 mt-1 line-clamp-2">{cat.description}</p>
+              <p className="text-xs text-brand-charcoal/35 mt-1.5 line-clamp-2 font-body font-light">
+                {cat.description}
+              </p>
             )}
           </Link>
         ))}

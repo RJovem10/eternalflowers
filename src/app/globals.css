@@ -2,6 +2,44 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+:root {
+  --ef-cream: #F5F0E8;
+  --ef-gold: #D4A853;
+  --ef-sage: #A8B5A0;
+  --ef-blush: #E8B4B8;
+  --ef-lavender: #C9B1D0;
+  --ef-wood: #8B7355;
+  --ef-moss: #6B7D5A;
+  --ef-charcoal: #2C2C2C;
+  --ef-white: #FFFFFF;
+}
+
+::selection {
+  background-color: #D4A853;
+  color: #FFFFFF;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Gold underline accent for centered headings */
+.gold-underline {
+  display: inline-block;
+  position: relative;
+}
+
+.gold-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 60px;
+  height: 1px;
+  background-color: #D4A853;
+}
+
+.gold-underline-center::after {
+  left: 50%;
+  transform: translateX(-50%);
 }

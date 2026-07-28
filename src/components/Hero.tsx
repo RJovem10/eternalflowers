@@ -13,10 +13,6 @@ interface HeroProps {
   locale: string
 }
 
-/**
- * Sanitiza um link vindo do CMS: impede "undefined" ou "null" no URL final.
- * Se o valor for inválido, devolve '/' (home).
- */
 function safeLink(link: string | undefined | null): string {
   if (!link || link === 'undefined' || link === 'null') return '/'
   return link.startsWith('/') ? link : `/${link}`
@@ -36,47 +32,55 @@ export default function Hero({
   const hasSecondary =
     secondaryButtonText && secondaryButtonLink && secondaryButtonText.length > 0
 
-  // Fallback image segura — usa <img> nativo em vez de CSS url() para evitar
-  // resolução relativa ao path da página (ex: /pt/hero-fallback.png)
-  const fallbackImage = '/hero-fallback.png'
-
   return (
-    <section className="relative min-h-[80vh] flex items-center overflow-hidden w-screen -ml-[50vw] left-1/2">
-      {/* Background */}
-      <div className="absolute inset-0 bg-stone-900">
+    <section className="relative min-h-screen flex items-end lg:items-center overflow-hidden">
+      {/* Full-bleed background — a imagem é a heroína */}
+      <div className="absolute inset-0">
         {image?.url ? (
           <Image
             src={image.url}
             alt={heroTitle}
             fill
-            className="object-cover opacity-70"
+            className="object-cover"
             sizes="100vw"
             priority
           />
         ) : (
-          <img
-            src={fallbackImage}
-            alt=""
-            className="w-full h-full object-cover opacity-40"
-          />
+          /* Fallback elegante: gradiente que evoca uma orquídea em macro */
+          <div className="w-full h-full bg-gradient-to-br from-brand-charcoal via-brand-charcoal to-[#3D2E2A]" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-r from-stone-900/80 via-stone-900/50 to-transparent" />
+        {/* Overlay subtil — apenas o suficiente para tornar o texto legível */}
+        <div className="absolute inset-0 bg-gradient-to-t from-brand-charcoal/70 via-brand-charcoal/30 to-brand-charcoal/10" />
       </div>
 
-      {/* Content */}
-      <div className="relative max-w-6xl mx-auto px-4 w-full">
-        <div className="max-w-xl">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-light tracking-tight text-stone-50 leading-tight">
+      {/* Conteúdo — minimalista, elegante, inspirado em Tiffany */}
+      <div className="relative w-full max-w-content mx-auto px-6 lg:px-8 pb-16 lg:pb-24 pt-40 lg:pt-0">
+        <div className="max-w-2xl">
+          {/* Badge de entrada — "Joias Botânicas Artesanais" */}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur-sm border border-white/15 text-white/70 text-[11px] uppercase tracking-[0.2em] font-body font-medium mb-6 lg:mb-8">
+            <span className="w-1.5 h-1.5 rounded-full bg-brand-gold" />
+            Joias Botânicas Artesanais
+          </div>
+
+          {/* Título — grande, leve, dramático */}
+          <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-[5.5rem] font-light leading-[0.95] tracking-tight text-white max-w-3xl">
             {heroTitle}
           </h1>
 
-          <p className="mt-6 text-lg md:text-xl text-stone-300 leading-relaxed max-w-prose">
-            {heroSubtitle}
-          </p>
+          {/* Linha dourada decorativa — um traço que separa o título do mundo */}
+          <div className="my-6 lg:my-8 w-12 h-[1.5px] bg-brand-gold/80" />
 
-          <div className="mt-8 flex flex-wrap gap-4">
+          {/* Subtítulo — minimal, apenas o essencial */}
+          {heroSubtitle && (
+            <p className="text-base md:text-lg text-white/60 leading-relaxed max-w-lg font-body font-light">
+              {heroSubtitle}
+            </p>
+          )}
+
+          {/* CTAs — discretos, sem desespero de venda */}
+          <div className="mt-8 lg:mt-10 flex flex-wrap gap-4">
             <Button
-              variant="accent"
+              variant="primary"
               href={`/${locale}${safeLink(primaryButtonLink)}`}
             >
               {primaryButtonText}
@@ -84,15 +88,20 @@ export default function Hero({
 
             {hasSecondary && (
               <Button
-                variant="accent"
+                variant="ghost"
                 href={`/${locale}${safeLink(secondaryButtonLink)}`}
-                className="bg-transparent border border-stone-400 text-stone-200 hover:bg-stone-800/50 hover:text-stone-50 hover:border-stone-300"
               >
                 {secondaryButtonText}
               </Button>
             )}
           </div>
         </div>
+      </div>
+
+      {/* Scroll indicator — sugestão subtil de que há mais conteúdo */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-white/30">
+        <span className="text-[10px] uppercase tracking-[0.3em] font-body font-light">Scroll</span>
+        <div className="w-[1px] h-8 bg-gradient-to-b from-white/40 to-transparent" />
       </div>
     </section>
   )

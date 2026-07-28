@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { forwardRef, type ButtonHTMLAttributes, type AnchorHTMLAttributes } from 'react'
 
-type Variant = 'primary' | 'secondary' | 'accent'
+type Variant = 'primary' | 'secondary' | 'ghost'
 
 interface ButtonBaseProps {
   variant?: Variant
@@ -21,11 +21,11 @@ type ButtonProps = ButtonAsButton | ButtonAsLink
 
 const variantStyles: Record<Variant, string> = {
   primary:
-    'inline-flex items-center px-6 py-3 rounded-full bg-stone-900 text-stone-50 text-sm font-medium tracking-wide hover:bg-stone-800 transition-colors',
+    'inline-flex items-center px-8 py-3.5 bg-brand-gold text-white text-sm font-medium tracking-wider uppercase hover:bg-brand-gold-dark transition-all duration-300 font-body',
   secondary:
-    'inline-flex items-center px-6 py-3 rounded-full border border-stone-300 text-stone-700 text-sm font-medium tracking-wide hover:border-stone-400 hover:text-stone-900 transition-colors',
-  accent:
-    'inline-flex items-center px-6 py-3 rounded-lg bg-rose-600 text-white text-sm font-medium hover:bg-rose-700 transition-colors',
+    'inline-flex items-center px-8 py-3.5 bg-transparent border border-brand-gold/40 text-brand-gold text-sm font-medium tracking-wider uppercase hover:bg-brand-gold/10 hover:border-brand-gold transition-all duration-300 font-body',
+  ghost:
+    'inline-flex items-center px-8 py-3.5 bg-transparent border border-white/30 text-white/80 text-sm font-medium tracking-wider uppercase hover:bg-white/10 hover:text-white hover:border-white/50 transition-all duration-300 font-body',
 }
 
 const Button = forwardRef<HTMLButtonElement | HTMLAnchorElement, ButtonProps>(

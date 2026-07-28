@@ -24,15 +24,16 @@ export default function CollectionsSection({ collections, locale }: CollectionsS
       title="Coleções"
       subtitle="Inspiradas em momentos especiais"
       align="center"
+      size="default"
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-brand-wood/8">
         {collections.map((col) => {
           const img = col.image && typeof col.image !== 'number' ? col.image : null
           return (
             <Link
               key={col.id}
               href={`/${locale}/catalog?collection=${col.slug}`}
-              className="group block rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 hover:shadow-lg transition-all"
+              className="group relative bg-white overflow-hidden"
             >
               <div className="aspect-[4/3] relative overflow-hidden">
                 {img?.url ? (
@@ -40,22 +41,35 @@ export default function CollectionsSection({ collections, locale }: CollectionsS
                     src={img.url}
                     alt={col.name}
                     fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                     sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-stone-100 to-stone-200">
-                    <span className="text-5xl opacity-40">🌿</span>
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-brand-cream to-white">
+                    <Image
+                      src="/instagram/3907793258139193626.jpg"
+                      alt={col.name}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    />
                   </div>
                 )}
+                {/* Overlay subtil no hover — como se a peça ganhasse profundidade */}
+                <div className="absolute inset-0 bg-brand-charcoal/0 group-hover:bg-brand-charcoal/5 transition-all duration-500" />
               </div>
-              <div className="p-5">
-                <h3 className="text-lg font-medium text-stone-800 group-hover:text-amber-700 transition-colors">
+              <div className="p-6 lg:p-8">
+                <h3 className="font-display text-lg font-light text-brand-charcoal group-hover:text-brand-gold-dark transition-colors duration-300">
                   {col.name}
                 </h3>
                 {col.description && (
-                  <p className="text-sm text-stone-500 mt-1 line-clamp-2">{col.description}</p>
+                  <p className="text-sm text-brand-charcoal/45 mt-2 line-clamp-2 font-body font-light leading-relaxed">
+                    {col.description}
+                  </p>
                 )}
+                <span className="inline-block mt-4 text-[10px] uppercase tracking-[0.25em] text-brand-gold/70 font-body font-medium group-hover:text-brand-gold transition-colors duration-300">
+                  Descobrir →
+                </span>
               </div>
             </Link>
           )

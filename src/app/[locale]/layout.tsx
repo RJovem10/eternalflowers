@@ -18,13 +18,9 @@ export default async function LocaleLayout({
   if (!locales.includes(locale as any)) notFound()
   const dict = getDictionary(locale)
   return (
-    <html lang={locale}>
-      <body className="min-h-screen bg-stone-50 text-stone-900">
-        <CartProvider>
-          <Header dict={dict} locale={locale} />
-          <main className="max-w-6xl mx-auto px-4">{children}</main>
-        </CartProvider>
-      </body>
-    </html>
+    <CartProvider>
+      <Header dict={dict} locale={locale} />
+      <main>{children}</main>
+    </CartProvider>
   )
 }
