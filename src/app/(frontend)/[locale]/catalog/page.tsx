@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { getDictionary } from '@/i18n/dictionaries'
 import FlowerCard from '@/components/FlowerCard'
 import { getPayload } from 'payload'
@@ -25,6 +26,21 @@ export default async function Catalog({ params }: { params: Promise<{ locale: st
 
   return (
     <div>
+      <Link
+        href={`/${locale}`}
+        className="inline-flex items-center text-xs uppercase tracking-[0.18em] text-brand-charcoal/50 transition-colors duration-300 hover:text-brand-gold-dark mb-8"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          className="w-3.5 h-3.5 mr-1.5"
+        >
+          <path d="M19 12H5M12 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        {dict.home}
+      </Link>
       <h1 className="text-2xl font-semibold mb-6">{dict.catalog}</h1>
       {cards.length === 0 ? (
         <p className="text-stone-500">—</p>
