@@ -18,6 +18,10 @@ Esta sprint consolidou a **identidade da marca**, elevou a **qualidade visual** 
 - Imagens dos produtos corrigidas (depth: 1, acesso público, URLs relativas)
 - Sobreposição do header fixed corrigida globalmente
 - Estrutura de route groups reorganizada para eliminar hydration errors no Admin
+- Página de produto redesenhada com experiência editorial premium (ProductGallery, ProductInfo, ProductStory, ProductAttributes, FlowerCard, RelatedProducts, AddToCartButton)
+- UX de compra refinada: feedback "Adicionado ✓" com aria-live, navegação contextual (carrinho/checkout)
+- Navegação mobile: menu hamburger com drawer, acesso a Início/Catálogo/Carrinho/Painel, seletor de idioma
+- Link "← INÍCIO" no topo do catálogo
 
 **Decisões estruturais:**
 - A marca é a Marina — o hero deixa de vender produtos e passa a apresentar a artesã
@@ -26,7 +30,7 @@ Esta sprint consolidou a **identidade da marca**, elevou a **qualidade visual** 
 - Route groups separados: (frontend) com layout próprio, (payload) com RootLayout do Payload
 - APIs próprias da loja (checkout, coupon) mantidas no root, separadas da API REST do Payload
 
-**Próxima prioridade:** ISSUE-014 — Premium Product Experience.
+**Próxima prioridade:** A definir — backlog disponível na secção NEXT SESSION.
 
 ---
 
@@ -438,34 +442,11 @@ src/app/
 
 ---
 
-## ✅ ISSUE-014B — Refinamento UX da Página de Produto
-
-**Objectivo:** Corrigir problemas de UX identificados na revisão humana: feedback de carrinho, navegação contextual, carregamento de imagens e equilíbrio visual.
-
-**Trabalho realizado:**
-- **AddToCartButton:** feedback "Adicionado ✓" por 2.5s com aria-live; botão desabilitado durante feedback
-- **Carrinho:** link "Continuar a comprar" quando vazio
-- **Checkout:** link "← Voltar ao carrinho" no topo
-- **Gap galeria-info:** reduzido de 48px para 32px (mobile) e 80px para 64px (desktop)
-- **Traduções:** 3 novas chaves (addedToCart, continueShopping, backToCart) em 5 idiomas
-
-**Modelo usado:** GPT-5.6 Sol via Codex CLI
-**Risco:** baixo
-**Duração:** ~2 minutos
-
-**Estado:** ✅ Concluída
-
----
-
-# Próximas Issues
-
-Ordenadas por prioridade estimada.
-
----
-
 ## ✅ ISSUE-014 — Premium Product Experience
 
-**Objectivo:** Transformar a página de produto numa experiência editorial premium, mantendo compatibilidade total com Payload CMS, carrinho, checkout e estrutura existente.
+**Objectivo:** Transformar a página de produto numa experiência editorial premium, mantendo compatibilidade total com Payload CMS, carrinho, checkout, catálogo, SEO e i18n.
+
+**Modelo usado:** GPT-5.6 Sol via Codex CLI (3 chamadas paralelas, ~7 minutos)
 
 **Trabalho realizado:**
 - **ProductGallery:** migrada para `next/image`, fundo `brand-cream`, cantos retos, thumbnails ocultas quando 1 imagem, fallback `/hero-fallback.png`
@@ -477,13 +458,74 @@ Ordenadas por prioridade estimada.
 - **AddToCartButton:** `bg-brand-gold`, cantos retos, lógica inalterada
 - **Página de produto:** SEO dinâmico (generateMetadata), whitespace generoso, consistência com homepage
 
-**Modelo usado:** GPT-5.6 Sol via Codex CLI
-**Duração:** ~7 minutos (3 chamadas paralelas ao Codex)
-**Risco:** médio — validado em browser
+**Limitações atuais:**
+- Produtos seed têm apenas uma imagem (galeria multi-imagem depende do CMS)
+- Atributos continuam fixos da marca, não dinâmicos por produto
+- Campo `story` é opcional — produtos sem história não mostram a secção
+- Avisos `metadataBase` e `sharp` mantêm-se como conhecidos
 
 **Documento produzido:** `docs/design-review-v5.md`
 
 **Estado:** ✅ Concluída
+
+---
+
+## ✅ ISSUE-014B — Refinamento UX da Página de Produto
+
+**Objectivo:** Corrigir problemas de UX identificados na revisão humana: feedback de carrinho, navegação contextual, carregamento de imagens e equilíbrio visual.
+
+**Modelo usado:** GPT-5.6 Sol via Codex CLI
+
+**Trabalho realizado:**
+- **AddToCartButton:** feedback "Adicionado ✓" por 2.5s com aria-live; botão desabilitado durante feedback; bloqueio de cliques repetidos
+- **Carrinho vazio:** link "Continuar a comprar" visível
+- **Checkout:** link "← Voltar ao carrinho" no topo
+- **Gap galeria-info:** reduzido de 48px para 32px (mobile) e 80px para 64px (desktop)
+- **Traduções:** 3 novas chaves (addedToCart, continueShopping, backToCart) em pt, en, es, it, de
+- **Imagens:** fundo do FlowerCard alterado para `bg-brand-cream` (neutro), evitando aspeto de erro durante carregamento
+- **Atraso inicial:** identificado como comportamento de desenvolvimento (compilação dinâmica); em produção as páginas são pré-compiladas
+
+**Risco:** baixo
+**Duração:** ~2 minutos
+
+**Estado:** ✅ Concluída
+
+---
+
+## ✅ ISSUE-014C — Navegação Mobile e Retorno Contextual
+
+**Objectivo:** Completar a navegação mobile e adicionar retorno contextual no catálogo e demais páginas.
+
+**Modelo usado:** GPT-5.6 Sol via Codex CLI (Header) + edição direta (catalog link)
+
+### Parte 1 — Catálogo
+- Link "← INÍCIO" adicionado no topo do catálogo, com o mesmo estilo visual do link "Voltar ao catálogo" da página de produto
+- Destino explícito para `/${locale}`, funciona com URL direto, preserva locale
+
+### Parte 2 — Menu mobile global
+- Botão hamburger (SVG) visível apenas em mobile (`md:hidden`)
+- Atributos `aria-label`, `aria-expanded`, `aria-controls` para acessibilidade
+- Drawer lateral com fundo semi-transparente (`bg-brand-charcoal/20`)
+- Links: Início, Catálogo, Carrinho (com badge), Painel
+- Seletor de idioma reutilizado
+- Fecho por: clique no X, clique no backdrop, tecla Escape, navegação num link
+- `overflow: hidden` no body enquanto aberto
+- Transições `duration-300` com paleta brand
+
+### Correção de bug (pós-revisão)
+- **Causa:** backdrop estava dentro do header `fixed z-50`; o stacking context do header impedia o menu de aparecer visualmente
+- **Correção:** backdrop movido para fora do header através de React Fragment, passando a operar no stacking context raiz
+- **Validação visual:** menu funcional, backdrop visível, navegação desktop inalterada
+
+**Risco:** baixo
+
+**Estado:** ✅ Concluída
+
+---
+
+# Próximas Issues
+
+Ordenadas por prioridade estimada.
 
 ---
 
@@ -597,8 +639,8 @@ brand: {
 
 | Indicador | Valor |
 |-----------|-------|
-| Total de Issues | 19 |
-| ✅ Concluídas | 19 |
+| Total de Issues | 20 |
+| ✅ Concluídas | 20 |
 | 🟡 Em progresso | 0 |
 | ⚪ Planeadas | 4 |
 | Documentos de marca | 10 |
@@ -608,8 +650,13 @@ brand: {
 
 ## NEXT SESSION
 
-1. Confirmar que a branch `fix/payload-layout-separation` foi integrada em `develop`.
-2. Confirmar working tree limpa.
-3. Rever o plano da ISSUE-014.
-4. Autorizar a implementação da Premium Product Experience.
-5. Validar página de produto em desktop e mobile.
+1. Confirmar working tree limpa.
+2. Confirmar se todos os commits pendentes foram enviados para o repositório remoto.
+3. Rever backlog e escolher a próxima prioridade.
+4. Considerar como candidatos:
+   - página "O Processo" / Como é Feito;
+   - desenvolvimento completo da página "Conhecer a Marina";
+   - certificado digital e QR Code;
+   - refinamento do checkout (Stripe, PayPal, MB WAY);
+   - conteúdo e sessão fotográfica profissional.
+5. Não assumir automaticamente qual será a próxima issue.
