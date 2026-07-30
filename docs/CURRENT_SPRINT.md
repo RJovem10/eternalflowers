@@ -1,26 +1,32 @@
 # Eternal Flowers by Mar&Natur — Registo de Issues
 
 > Documento central de acompanhamento do desenvolvimento.
-> Actualizado em: 28 de Julho de 2026
+> Actualizado em: 30 de Julho de 2026
 
 ---
 
 ## Resumo Executivo da Sprint
 
-Esta sprint consolidou a **identidade da marca** e elevou a **qualidade visual** da homepage.
+Esta sprint consolidou a **identidade da marca**, elevou a **qualidade visual** da homepage e corrigiu **problemas de runtime** detetados em validação real no browser.
 
 **O que mudou:**
 - De 11 documentos de marca (filosofia, linguagem visual, fotografia, tom, taxonomia, etc.) que definem como qualquer decisão futura deve ser tomada
 - Homepage redesenhada com tipografia premium (Cormorant Garamond + Inter), paleta oficial (creme, dourado, verde-sálvia), e fotografias reais do Instagram
 - Hero centrado na Marina (editorial split 50/50), substituindo o hero genérico anterior
 - 48 fotografias reais do Instagram descarregadas e integradas no site
+- Página "Conhecer a Marina" criada em /[locale]/about
+- Imagens dos produtos corrigidas (depth: 1, acesso público, URLs relativas)
+- Sobreposição do header fixed corrigida globalmente
+- Estrutura de route groups reorganizada para eliminar hydration errors no Admin
 
 **Decisões estruturais:**
 - A marca é a Marina — o hero deixa de vender produtos e passa a apresentar a artesã
 - A marca não é um template — cantos retos, whitespace generoso, dourado como acento
 - As fotografias reais do Instagram substituem placeholders em toda a homepage
+- Route groups separados: (frontend) com layout próprio, (payload) com RootLayout do Payload
+- APIs próprias da loja (checkout, coupon) mantidas no root, separadas da API REST do Payload
 
-**Próxima prioridade:** Página de Produto — elevar ao mesmo nível de refinamento visual da homepage.
+**Próxima prioridade:** ISSUE-014 — Premium Product Experience.
 
 ---
 
@@ -326,11 +332,15 @@ Esta sprint consolidou a **identidade da marca** e elevou a **qualidade visual**
 - Badge "Artesanato · Braga · Portugal"
 - Assinatura "Eternal Flowers — by Mar&Natur®" na base
 - Cantos dourados decorativos na moldura da fotografia
-- Fotografia real da Marina (marina-hero.jpg) integrada
+- Fotografia real da Marina (marina-hero.jpg, still de vídeo do Instagram) integrada
+- Link "Conhecer a Marina" redirecionado para /[locale]/about (página mínima criada)
+
+**Nota:** A fotografia atual é um still de vídeo do Instagram, considerada provisória. Futuramente poderá ser substituída por uma sessão fotográfica profissional com a Marina no atelier, conforme especificado em docs/design-review-v4.md.
 
 **Ficheiros criados/alterados:**
 - `src/components/FounderHero.tsx` — novo componente
 - `src/app/[locale]/page.tsx` — Hero substituído por FounderHero
+- `src/app/(frontend)/[locale]/about/page.tsx` — página "Conhecer a Marina"
 
 **Documento produzido:** `docs/design-review-v4.md`
 
@@ -338,7 +348,91 @@ Esta sprint consolidou a **identidade da marca** e elevou a **qualidade visual**
 
 ---
 
-# Issues em Progresso
+## ✅ ISSUE-013B — Correções de Runtime
+
+**Objectivo:** Corrigir problemas detetados em validação real no browser que não eram aparentes no build.
+
+### 1. Imagens dos produtos no catálogo
+
+**Causa raiz:** Três fatores encadeados:
+- `depth: 0` nas queries do Payload → `f.image` era um número (ID), não o objeto populado
+- Coleção `Media` sem `access: { read: () => true }` → API retornava 403 para público
+- `NEXT_PUBLIC_SERVER_URL=http://localhost:3000` → URLs absolutas com porta fixa
+
+**Correção:**
+- `depth: 1` adicionado nas queries do catálogo e homepage
+- `access: { read: () => true }` adicionado na coleção Media
+- `NEXT_PUBLIC_SERVER_URL` esvaziado em `.env.local` para URLs relativas
+
+**Resultado:** 10 imagens verificadas no browser com HTTP 200 e 800×800px.
+
+### 2. Página "Conhecer a Marina"
+
+**Causa raiz:** Botão no Hero apontava para `/${locale}/about`, rota inexistente.
+
+**Correção:** Página mínima criada em `src/app/(frontend)/[locale]/about/page.tsx`. Aguarda desenvolvimento editorial completo.
+
+### 3. Sobreposição do header fixed
+
+**Causa raiz:** Header `fixed top-0` sem `padding-top` no `<main>`. Conteúdo de todas as páginas começava por baixo do header.
+
+**Correção:**
+- `<main>` no layout ganhou `pt-16 lg:pt-20` (64px mobile, 80px desktop)
+- Homepage recebeu `-mt-16 lg:-mt-20` no wrapper para manter hero full-screen
+- Hero text container ganhou `lg:pt-20` para texto começar abaixo do header
+
+**Páginas validadas:** homepage, about, catálogo, carrinho, checkout, produto.
+
+### 4. Hydration errors no Admin Payload
+
+**Causa raiz:** `src/app/layout.tsx` renderizava `<html><body>` e `(payload)/layout.tsx` renderizava `<RootLayout>` com outro `<html><body>` → 4 hydration errors.
+
+**Correção — Separação de route groups:**
+
+```
+src/app/
+├── api/                    ← APIs da loja (checkout, coupon)
+├── (frontend)/
+│   ├── layout.tsx           ← html/body + fonts + globals.css
+│   └── [locale]/            ← páginas do site
+└── (payload)/
+    ├── layout.tsx           ← RootLayout (próprio html/body)
+    ├── admin/               ← painel Admin
+    └── api/[...slug]/       ← API REST do Payload
+```
+
+**Resultado:**
+- Zero hydration errors
+- Zero html/body aninhados
+- Admin, frontend e APIs validados no browser
+
+**Validações concluídas:**
+- `npm run build`: passou
+- Homepage: 200
+- Catálogo: 200 com imagens funcionais
+- Página about: 200
+- Carrinho: 200
+- Checkout: 200
+- Página de produto: 200
+- Painel Admin: funcional, sem hydration errors
+- Consola do browser: sem erros
+- API coupon: funcional
+- API Payload: funcional
+
+**Ficheiros alterados:**
+- `src/app/layout.tsx` — removido (substituído pelos route groups)
+- `src/app/(frontend)/layout.tsx` — criado (root layout do frontend)
+- `src/app/(frontend)/[locale]/` — movido de `src/app/[locale]/` (git mv)
+- `src/app/(payload)/api/[...slug]/route.ts` — movido de `src/app/api/[...slug]/` (git mv)
+- `src/app/(frontend)/[locale]/about/page.tsx` — criado
+- `src/app/[locale]/catalog/page.tsx` — depth: 1
+- `src/app/[locale]/page.tsx` — depth: 1 + -mt no wrapper
+- `src/payload.config.ts` — access público na Media
+- `.env.local` — NEXT_PUBLIC_SERVER_URL esvaziado
+- `src/components/FounderHero.tsx` — lg:pt-20 no texto
+- `src/app/[locale]/layout.tsx` — pt-16 lg:pt-20 no main
+
+**Estado:** ✅ Concluída
 
 🟡 Nenhuma neste momento.
 
@@ -350,9 +444,14 @@ Ordenadas por prioridade estimada.
 
 ---
 
-## ⚪ Refinamento Visual da Página de Produto
+## ⚪ ISSUE-014 — Premium Product Experience
 
-Elevar a página de produto ao mesmo nível da homepage: tipografia, espaçamento, fotografia, micro-interacções. Galeria com zoom/lightbox, indicador de stock, FAQ específica, botão "falar com a Marina" (WhatsApp).
+Elevar a página de produto ao mesmo nível da homepage: tipografia, espaçamento, fotografia, micro-interacções. Galeria premium com zoom/lightbox, seleção de variantes, informação sobre produção artesanal, materiais, cuidados, embalagem, história da peça, produtos relacionados.
+
+**Análise técnica realizada.**
+**Scoring:** 7 — recomendar GPT-5.6 Sol via Codex.
+**Risco:** médio.
+**Implementação:** aguarda autorização.
 
 ---
 
@@ -394,6 +493,24 @@ Dashboard personalizado: gestão de encomendas, notificações, estatísticas de
 - Globals: homepage
 - `push: true` em dev para schema automático; migrações manuais em prod
 - `serverURL` dinâmico (string vazia como fallback) — URLs relativas de media funcionam em qualquer porta
+- Coleção Media com `access: { read: () => true }` para permitir acesso público às imagens
+- API REST do Payload em `(payload)/api/[...slug]`
+
+### Arquitectura de Route Groups
+```
+src/app/
+├── api/                          ← APIs próprias da loja
+│   ├── checkout/route.ts
+│   └── coupon/route.ts
+├── globals.css
+├── (frontend)/
+│   ├── layout.tsx                ← html/body + fonts + globals.css + metadata
+│   └── [locale]/                 ← páginas do site (homepage, about, cart, catalog, checkout, flower, thank-you)
+└── (payload)/
+    ├── layout.tsx                ← RootLayout do Payload (próprio html/body)
+    ├── admin/[[...segments]]/    ← painel Admin
+    └── api/[...slug]/            ← API REST do Payload
+```
 
 ### Homepage CMS-driven
 - Todo o conteúdo da homepage vem do Global `homepage`
@@ -448,9 +565,19 @@ brand: {
 
 | Indicador | Valor |
 |-----------|-------|
-| Total de Issues | 16 |
-| ✅ Concluídas | 15 |
+| Total de Issues | 17 |
+| ✅ Concluídas | 17 |
 | 🟡 Em progresso | 0 |
 | ⚪ Planeadas | 5 |
 | Documentos de marca | 10 |
 | Fotografias Instagram integradas | 48 |
+
+---
+
+## NEXT SESSION
+
+1. Confirmar que a branch `fix/payload-layout-separation` foi integrada em `develop`.
+2. Confirmar working tree limpa.
+3. Rever o plano da ISSUE-014.
+4. Autorizar a implementação da Premium Product Experience.
+5. Validar página de produto em desktop e mobile.
