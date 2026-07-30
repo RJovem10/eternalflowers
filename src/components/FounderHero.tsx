@@ -28,7 +28,7 @@ export default function FounderHero({
     <section className="relative min-h-screen bg-brand-cream flex flex-col lg:flex-row overflow-hidden">
       {/* ─── LADO ESQUERDO: TEXTO ─── */}
       <div className="relative z-10 w-full lg:w-1/2 flex items-center">
-        <div className="w-full max-w-lg mx-auto px-6 lg:px-12 xl:px-16 pt-24 lg:pt-0 pb-20 lg:pb-0">
+        <div className="w-full max-w-lg mx-auto px-6 lg:px-12 xl:px-16 pt-24 lg:pt-20 pb-20 lg:pb-0">
           {/* Badge de entrada */}
           <div className="inline-flex items-center gap-2.5 mb-8 lg:mb-10">
             <span className="w-1 h-1 rounded-full bg-brand-gold" />

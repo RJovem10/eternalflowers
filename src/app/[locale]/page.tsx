@@ -51,7 +51,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
       sort: 'name',
       where: { isActive: { equals: true } },
     }),
-    payload.find({ collection: 'flowers', limit: 8, sort: '-createdAt' }),
+    payload.find({ collection: 'flowers', limit: 8, sort: '-createdAt', depth: 1 }),
   ])
 
   const hero = homepage.hero
@@ -66,7 +66,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
     ({ pt: 'namePt', en: 'nameEn', es: 'nameEs', it: 'nameIt', de: 'nameDe' }[locale] || 'namePt') as string
 
   return (
-    <div>
+    <div className="-mt-16 lg:-mt-20">
       {/* ─── ATO 1: HERÓI — A MARINA ─── */}
       <Hero
         heroTitle={hero.heroTitle || 'Joias Botânicas\nFeitas à Mão'}

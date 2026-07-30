@@ -94,6 +94,9 @@ const Media: CollectionConfig = {
       { name: 'card', width: 600, height: 600, position: 'centre' },
     ],
   },
+  access: {
+    read: () => true,
+  },
   fields: [],
 }
 

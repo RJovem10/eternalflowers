@@ -20,7 +20,7 @@ export default async function LocaleLayout({
   return (
     <CartProvider>
       <Header dict={dict} locale={locale} />
-      <main>{children}</main>
+      <main className="pt-16 lg:pt-20">{children}</main>
     </CartProvider>
   )
 }
