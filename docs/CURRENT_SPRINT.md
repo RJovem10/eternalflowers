@@ -523,6 +523,74 @@ src/app/
 
 ---
 
+## ✅ ISSUE-015 — The Founder Story
+
+**Objectivo:** Criar a página editorial completa "Conhecer a Marina" em /[locale]/about, com 5 fotografias reais, texto biográfico em 5 idiomas, e experiência premium coerente com a homepage e página de produto.
+
+**Modelo usado:** DeepSeek V4 Flash (análise fotográfica + implementação direta)
+
+**Trabalho realizado:**
+
+### Fotografia
+- 6 fotografias reais copiadas para `public/marina/` com nomes e funções narrativas específicas
+- Análise visual de cada imagem com IA de visão para determinar object-position em desktop e mobile
+- Alt texts aprovados — factuais, sem emoções, sem interpretações subjetivas
+
+### Página (10 secções)
+1. **Hero editorial** — split 50/50 com `marina-hero-orquidea-rosa.jpeg`
+2. **Percurso entre ciência e cuidado** — grid com `marina-terapeuta-bata-branca.jpeg`
+3. **Formação e mudança para naturopatia e osteopatia** — texto centrado
+4. **Criação da Mar&Natur** — texto centrado
+5. **Origem da Eternal Flowers** — grid invertido com `marina-artesa-orquideas.jpeg`
+6. **Aprendizagem e processo artesanal** — grid com `marina-processo-tesoura-orquidea.jpeg`
+7. **Ritmo visual (opcional)** — banda larga com `marina-detalhe-ferramentas.jpeg` (usada)
+8. **Exposições em Portugal e Espanha** — texto centrado
+9. **A pessoa por detrás de cada peça** — grid invertido com `marina-retrato-natureza.jpeg`
+10. **Citação final** — fundo escuro, blockquote
+11. **CTA "Descobrir as peças"** — botão dourado
+
+### i18n
+- 5 idiomas completos: pt, en, es, it, de
+- Texto base em português (versão editorial aprovada)
+- Traduções com preservação de significado e tom elegante
+- Documentado: necessitam de revisão humana antes da produção
+
+### SEO e Acessibilidade
+- `generateMetadata` com title e description localizados
+- Open Graph com imagem do Hero
+- Heading hierarchy: 1 h1 + 9 h2 (plana, sem skipping)
+- Alt texts em português (a imagem é a mesma em todos os idiomas)
+- Contraste adequado
+
+### Ficheiros criados
+- `src/content/about.ts` — conteúdo editorial completo para 5 idiomas
+- `docs/design-review-v6.md` — documentação criativa
+
+### Ficheiros alterados
+- `src/app/(frontend)/[locale]/about/page.tsx` — substituído placeholder por página completa
+
+### Validação
+- `npm run build`: ✅ 0 erros
+- `/pt/about`: 200, título "Conhecer a Marina — Eternal Flowers"
+- `/en/about`: 200, título "Meet Marina — Eternal Flowers"
+- `/de/about`: 200, título "Marina kennenlernen — Eternal Flowers"
+- Consola browser: 0 erros JavaScript
+- Network: 0 404/403
+- Zero hydration errors
+- Homepage e Admin sem regressões (não alterados)
+
+### Limitações atuais
+- `marina-retrato-natureza.jpeg` tem baixa resolução (768×1024)
+- Iluminação inconsistente entre fotografias
+- Traduções não verificadas por falantes nativos
+- Avisos `metadataBase` e `sharp` mantêm-se como conhecidos
+
+**Documento produzido:** `docs/design-review-v6.md`
+
+**Estado:** ✅ Concluída
+
+---
+
 # Próximas Issues
 
 Ordenadas por prioridade estimada.
@@ -639,10 +707,10 @@ brand: {
 
 | Indicador | Valor |
 |-----------|-------|
-| Total de Issues | 20 |
-| ✅ Concluídas | 20 |
+| Total de Issues | 21 |
+| ✅ Concluídas | 21 |
 | 🟡 Em progresso | 0 |
-| ⚪ Planeadas | 4 |
+| ⚪ Planeadas | 3 |
 | Documentos de marca | 10 |
 | Fotografias Instagram integradas | 48 |
 
@@ -655,7 +723,6 @@ brand: {
 3. Rever backlog e escolher a próxima prioridade.
 4. Considerar como candidatos:
    - página "O Processo" / Como é Feito;
-   - desenvolvimento completo da página "Conhecer a Marina";
    - certificado digital e QR Code;
    - refinamento do checkout (Stripe, PayPal, MB WAY);
    - conteúdo e sessão fotográfica profissional.
