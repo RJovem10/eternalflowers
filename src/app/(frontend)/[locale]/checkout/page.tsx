@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCart } from '@/components/CartProvider'
 import { useParams, useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -42,6 +43,12 @@ export default function Checkout() {
 
   return (
     <div className="max-w-lg mx-auto space-y-4">
+      <Link
+        href={`/${locale}/cart`}
+        className="inline-flex text-xs uppercase tracking-[0.18em] text-brand-charcoal/50 transition-colors hover:text-brand-gold-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-gold-dark"
+      >
+        ← {dict.backToCart}
+      </Link>
       <h1 className="text-2xl font-semibold">{dict.checkout}</h1>
       <div>
         <label className="block text-sm font-medium mb-1">{dict.name}</label>

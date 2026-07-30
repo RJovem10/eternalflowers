@@ -1,7 +1,7 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useCart } from './CartProvider'
-import { useRouter } from 'next/navigation'
 
 export default function AddToCartButton({
   item,
@@ -13,7 +13,14 @@ export default function AddToCartButton({
   disabled?: boolean
 }) {
   const { add } = useCart()
-  const router = useRouter()
+  const [added, setAdded] = useState(false)
+
+  useEffect(() => {
+    if (!added) return
+
+    const timeout = setTimeout(() => setAdded(false), 2500)
+    return () => clearTimeout(timeout)
+  }, [added])
 
   if (disabled) {
     return (
@@ -27,11 +34,20 @@ export default function AddToCartButton({
   }
 
   return (
-    <button
-      onClick={() => add(item)}
-      className="bg-brand-gold px-6 py-3 font-medium text-white transition-colors duration-300 hover:bg-brand-gold-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold-dark"
-    >
-      {dict.addToCart}
-    </button>
+    <>
+      <button
+        onClick={() => {
+          add(item)
+          setAdded(true)
+        }}
+        disabled={added}
+        className="bg-brand-gold px-6 py-3 font-medium text-white transition-colors duration-300 hover:bg-brand-gold-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold-dark disabled:cursor-not-allowed disabled:opacity-70"
+      >
+        {added ? `${dict.addedToCart} ✓` : dict.addToCart}
+      </button>
+      <div aria-live="polite" className="sr-only">
+        {added ? dict.addedToCart : ''}
+      </div>
+    </>
   )
 }

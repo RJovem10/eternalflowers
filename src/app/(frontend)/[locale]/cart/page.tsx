@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import { useCart } from '@/components/CartProvider'
 import { useParams, useRouter } from 'next/navigation'
@@ -30,7 +31,17 @@ export default function Cart() {
   }
 
   if (count === 0) {
-    return <div className="py-10 text-center text-stone-500">{dict.emptyCart}</div>
+    return (
+      <div className="space-y-4 py-10 text-center">
+        <p className="text-brand-charcoal/60">{dict.emptyCart}</p>
+        <Link
+          href={`/${locale}/catalog`}
+          className="inline-flex text-sm font-medium text-brand-gold-dark underline decoration-brand-gold/40 underline-offset-4 transition-colors hover:text-brand-charcoal focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-gold-dark"
+        >
+          {dict.continueShopping}
+        </Link>
+      </div>
+    )
   }
 
   return (

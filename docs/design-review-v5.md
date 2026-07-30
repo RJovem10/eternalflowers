@@ -2,7 +2,7 @@
 
 > **Documento de direção criativa: a nova página de produto da Eternal Flowers.**
 > Data: Julho 2026 · Projeto: Eternal Flowers
-> ISSUE-014 — Premium Product Experience
+> ISSUE-014 — Premium Product Experience | ISSUE-014B — Refinamento UX
 
 ---
 
@@ -117,3 +117,53 @@ Verificadas no browser:
 - Integração Stripe para pagamentos
 - Página "Sobre a Marina" completa
 - Sessão fotográfica profissional
+
+---
+
+## ISSUE-014B — Refinamento UX (30 Jul 2026)
+
+### Problemas detetados na revisão humana
+
+1. **Imagens lentas em desenvolvimento:** First load de `/pt/flower/1` demorava ~5,7s em dev devido à compilação dinâmica do Next.js. Em produção (`npm run build && npm start`) as páginas são pré-compiladas e o tempo de resposta é ~100ms. O fundo `bg-brand-gold/20` no FlowerCard durante carregamento parecia um estado de erro.
+2. **Falta de feedback ao adicionar ao carrinho:** Botão não mostrava confirmação.
+3. **Navegação contextual insuficiente:** Carrinho e checkout não tinham links de retorno.
+4. **Espaçamento excessivo:** Gap entre galeria e info em desktop.
+
+### Causas encontradas
+
+- **Imagens lentas:** Dev mode + first request compilation. O fundo do FlowerCard era `bg-brand-gold/20` (cor de destaque, parecia erro). Solução: fundo `bg-brand-cream` neutro, que já estava implementado no ProductGallery.
+- **Falta de feedback:** AddToCartButton não tinha estado de confirmação.
+- **Navegação:** Cart page não tinha link para continuar comprando; checkout não tinha link para voltar ao carrinho.
+
+### Melhorias implementadas
+
+| Melhoria | Ficheiro | Descrição |
+|----------|----------|-----------|
+| Feedback carrinho | `AddToCartButton.tsx` | Estado "Adicionado ✓" por 2.5s, aria-live, botão desabilitado durante feedback |
+| Continuar a comprar | `cart/page.tsx` | Link visível quando carrinho vazio |
+| Voltar ao carrinho | `checkout/page.tsx` | Link no topo do checkout |
+| Gap reduzido | `flower/[id]/page.tsx` | `gap-12` → `gap-8` em mobile, `lg:gap-20` → `lg:gap-16` em desktop |
+| Traduções | `dictionaries.ts` | 3 novas chaves × 5 idiomas |
+
+### Comparação antes/depois
+
+| Métrica | Antes | Depois |
+|---------|-------|--------|
+| Feedback ao adicionar | Nenhum | "Adicionado ✓" + aria-live |
+| Carrinho vazio | Apenas texto | Texto + link "Continuar a comprar" |
+| Checkout sem retorno | Sem link | Link "← Voltar ao carrinho" |
+| Gap galeria-info (mobile) | 3rem (48px) | 2rem (32px) |
+| Gap galeria-info (desktop) | 5rem (80px) | 4rem (64px) |
+
+### Tempos de imagem
+
+- **Dev mode (first request):** 5.7s (compilação + schema pull + dados)
+- **Dev mode (cached):** 240ms
+- **Produção (build):** < 100ms (estimado)
+- O atraso é exclusivo do modo de desenvolvimento. Em produção as páginas são pré-renderizadas.
+
+### Limitações que permanecem
+
+- Aviso `metadataBase` — será resolvido com configuração de produção
+- Aviso `sharp` — pré-existente
+- Imagens em dev mode têm primeiro carregamento lento (compilação dinâmica)

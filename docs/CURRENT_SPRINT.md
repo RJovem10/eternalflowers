@@ -438,20 +438,52 @@ src/app/
 
 ---
 
+## ✅ ISSUE-014B — Refinamento UX da Página de Produto
+
+**Objectivo:** Corrigir problemas de UX identificados na revisão humana: feedback de carrinho, navegação contextual, carregamento de imagens e equilíbrio visual.
+
+**Trabalho realizado:**
+- **AddToCartButton:** feedback "Adicionado ✓" por 2.5s com aria-live; botão desabilitado durante feedback
+- **Carrinho:** link "Continuar a comprar" quando vazio
+- **Checkout:** link "← Voltar ao carrinho" no topo
+- **Gap galeria-info:** reduzido de 48px para 32px (mobile) e 80px para 64px (desktop)
+- **Traduções:** 3 novas chaves (addedToCart, continueShopping, backToCart) em 5 idiomas
+
+**Modelo usado:** GPT-5.6 Sol via Codex CLI
+**Risco:** baixo
+**Duração:** ~2 minutos
+
+**Estado:** ✅ Concluída
+
+---
+
 # Próximas Issues
 
 Ordenadas por prioridade estimada.
 
 ---
 
-## ⚪ ISSUE-014 — Premium Product Experience
+## ✅ ISSUE-014 — Premium Product Experience
 
-Elevar a página de produto ao mesmo nível da homepage: tipografia, espaçamento, fotografia, micro-interacções. Galeria premium com zoom/lightbox, seleção de variantes, informação sobre produção artesanal, materiais, cuidados, embalagem, história da peça, produtos relacionados.
+**Objectivo:** Transformar a página de produto numa experiência editorial premium, mantendo compatibilidade total com Payload CMS, carrinho, checkout e estrutura existente.
 
-**Análise técnica realizada.**
-**Scoring:** 7 — recomendar GPT-5.6 Sol via Codex.
-**Risco:** médio.
-**Implementação:** aguarda autorização.
+**Trabalho realizado:**
+- **ProductGallery:** migrada para `next/image`, fundo `brand-cream`, cantos retos, thumbnails ocultas quando 1 imagem, fallback `/hero-fallback.png`
+- **ProductInfo:** hierarquia tipográfica clara, cores `brand-*`, badges retos, estados disponibilidade tratados (available, reserved, sold, preparing)
+- **ProductStory:** `return null` quando não existe história (sem placeholder técnico), formato editorial com label "A História"
+- **ProductAttributes:** 4 blocos fixos da marca, cantos retos, grid 2/4 colunas, cores `brand-*`
+- **RelatedProducts:** grid consistente, whitespace generoso, cores `brand-*`
+- **FlowerCard:** cantos retos, sem sombras, fallback PNG, cores `brand-*`
+- **AddToCartButton:** `bg-brand-gold`, cantos retos, lógica inalterada
+- **Página de produto:** SEO dinâmico (generateMetadata), whitespace generoso, consistência com homepage
+
+**Modelo usado:** GPT-5.6 Sol via Codex CLI
+**Duração:** ~7 minutos (3 chamadas paralelas ao Codex)
+**Risco:** médio — validado em browser
+
+**Documento produzido:** `docs/design-review-v5.md`
+
+**Estado:** ✅ Concluída
 
 ---
 
@@ -565,10 +597,10 @@ brand: {
 
 | Indicador | Valor |
 |-----------|-------|
-| Total de Issues | 17 |
-| ✅ Concluídas | 17 |
+| Total de Issues | 19 |
+| ✅ Concluídas | 19 |
 | 🟡 Em progresso | 0 |
-| ⚪ Planeadas | 5 |
+| ⚪ Planeadas | 4 |
 | Documentos de marca | 10 |
 | Fotografias Instagram integradas | 48 |
 

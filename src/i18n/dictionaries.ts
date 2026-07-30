@@ -44,6 +44,9 @@ type Dict = {
   invalidCoupon: string
   couponApplied: string
   firstOrderOnly: string
+  addedToCart: string
+  continueShopping: string
+  backToCart: string
   chooseLanguage: string
   required: string
   admin: string
@@ -101,6 +104,9 @@ export const dictionaries: Record<Locale, Dict> = {
     invalidCoupon: 'Cupão inválido ou expirado.',
     couponApplied: 'Cupão aplicado!',
     firstOrderOnly: 'Apenas para primeira compra.',
+    addedToCart: 'Produto adicionado ao carrinho.',
+    continueShopping: 'Continuar a comprar',
+    backToCart: 'Voltar ao carrinho',
     chooseLanguage: 'Escolher idioma',
     required: 'Obrigatório.',
     admin: 'Painel',
@@ -156,6 +162,9 @@ export const dictionaries: Record<Locale, Dict> = {
     invalidCoupon: 'Invalid or expired coupon.',
     couponApplied: 'Coupon applied!',
     firstOrderOnly: 'First order only.',
+    addedToCart: 'Product added to cart.',
+    continueShopping: 'Continue shopping',
+    backToCart: 'Back to cart',
     chooseLanguage: 'Choose language',
     required: 'Required.',
     admin: 'Admin',
@@ -211,6 +220,9 @@ export const dictionaries: Record<Locale, Dict> = {
     invalidCoupon: 'Cupón inválido o caducado.',
     couponApplied: 'Cupón aplicado!',
     firstOrderOnly: 'Solo primera compra.',
+    addedToCart: 'Producto añadido al carrito.',
+    continueShopping: 'Seguir comprando',
+    backToCart: 'Volver al carrito',
     chooseLanguage: 'Elegir idioma',
     required: 'Obligatorio.',
     admin: 'Panel',
@@ -266,6 +278,9 @@ export const dictionaries: Record<Locale, Dict> = {
     invalidCoupon: 'Coupon non valido o scaduto.',
     couponApplied: 'Coupon applicato!',
     firstOrderOnly: 'Solo primo ordine.',
+    addedToCart: 'Prodotto aggiunto al carrello.',
+    continueShopping: 'Continua lo shopping',
+    backToCart: 'Torna al carrello',
     chooseLanguage: 'Scegli lingua',
     required: 'Obbligatorio.',
     admin: 'Pannello',
@@ -321,6 +336,9 @@ export const dictionaries: Record<Locale, Dict> = {
     invalidCoupon: 'Ungültiger oder abgelaufener Gutschein.',
     couponApplied: 'Gutschein angewendet!',
     firstOrderOnly: 'Nur Erstbestellung.',
+    addedToCart: 'Produkt zum Warenkorb hinzugefügt.',
+    continueShopping: 'Weiter einkaufen',
+    backToCart: 'Zurück zum Warenkorb',
     chooseLanguage: 'Sprache wählen',
     required: 'Erforderlich.',
     admin: 'Panel',

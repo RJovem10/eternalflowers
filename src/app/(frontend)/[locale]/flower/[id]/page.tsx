@@ -128,7 +128,7 @@ export default async function FlowerDetail({ params }: FlowerPageParams) {
         {dict.backToCatalog}
       </Link>
 
-      <div className="mt-10 grid grid-cols-1 gap-12 md:grid-cols-2 lg:gap-20 xl:gap-24">
+      <div className="mt-10 grid grid-cols-1 gap-8 md:grid-cols-2 lg:gap-16">
         <ProductGallery
           singleImage={flower.image as Media | number | null}
           galleryImages={images as { image: Media; id?: string | null }[] | null}
