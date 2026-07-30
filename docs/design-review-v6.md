@@ -8,7 +8,7 @@
 
 ## Narrativa da Página
 
-A página "Conhecer a Marina" é uma experiência editorial em 10 secções que apresenta a fundadora da Eternal Flowers — Marina — como artesã, naturopata e osteopata.
+A página "Conhecer a Marina" é uma experiência editorial em 10 secções que apresenta a fundadora da Eternal Flowers — Marina — como engenheira agronómica, naturopata e artesã.
 
 **Estrutura narrativa (ordem linear):**
 
@@ -137,6 +137,33 @@ A página alterna entre:
 2. **Fotografia do atelier em ambiente alargado** — para a secção sobre Braga e o espaço de trabalho
 3. **Sessão de processo em passo-a-passo** — 3-4 imagens do processo completo para uma futura página "O Processo"
 4. **Fotografia de equipamento/ferramentas em estilo editorial** — de maior resolução e com styling cuidado
+
+---
+
+## Atualização Editorial (Jul 2026)
+
+O conteúdo biográfico foi revisto e atualizado para incluir factos confirmados:
+
+- **Infância em São Paulo** — nascida em São Paulo, Brasil, filha de pais portugueses, veio para Portugal aos 4 anos
+- **Romãzeira** — aos ~4 anos, uma romãzeira era a sua melhor amiga, revelando uma ligação precoce à natureza
+- **Engenheira Agrónoma** — formação académica explícita, exerceu como engenheira
+- **Quiropraxia Oriental e Medicina Chinesa** — substituiu osteopatia, com métodos não invasivos
+- **Mar&Natur** — clínica em Vila de Prado, Braga, ~16 anos de experiência, formações em PT e estrangeiro
+- **Tailândia** — viagem à Tailândia, visita a um orquidário, origem da paixão por orquídeas
+- **Eternal Flowers** — experimentação em resina epóxi, cursos, aperfeiçoamento técnico
+- **Exposições** — Estepona, Córdoba, Lisboa (Jardim Zoológico), Coimbra e outros locais
+- **Personalidade** — amiga, divertida, prestável, dedicada, exigente com a qualidade
+
+### Referências removidas
+- Avós (todas as referências em 5 idiomas)
+- Osteopatia e osteopata (10 referências em 5 idiomas)
+- "Feira de orquídeas" como origem da paixão
+- Detalhes não confirmados (descrições, localizações, diálogos, sentimentos)
+
+### Tom narrativo
+- Terceira pessoa (exceto citação direta)
+- Factual, sem alegações médicas absolutas
+- Sem invenções biográficas
 
 ---
 

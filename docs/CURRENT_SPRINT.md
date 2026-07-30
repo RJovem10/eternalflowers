@@ -587,7 +587,7 @@ src/app/
 
 **Documento produzido:** `docs/design-review-v6.md`
 
-**Estado:** ✅ Implementada — validação visual humana em curso
+**Estado:** ✅ Implementada — validação visual humana em curso (conteúdo editorial revisto e aprovado)
 
 ---
 
