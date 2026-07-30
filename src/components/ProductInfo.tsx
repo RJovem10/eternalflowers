@@ -27,10 +27,10 @@ interface ProductInfoProps {
 }
 
 const availabilityStyles: Record<string, string> = {
-  available: 'text-emerald-700 bg-emerald-50 border-emerald-200',
-  reserved: 'text-amber-700 bg-amber-50 border-amber-200',
-  sold: 'text-stone-500 bg-stone-100 border-stone-200',
-  preparing: 'text-sky-700 bg-sky-50 border-sky-200',
+  available: 'bg-brand-sage/10 text-brand-sage',
+  reserved: 'bg-brand-blush/10 text-brand-blush',
+  sold: 'bg-brand-charcoal/10 text-brand-charcoal/40',
+  preparing: 'bg-brand-lavender/10 text-brand-lavender',
 }
 
 const availabilityLabels: Record<string, string> = {
@@ -73,67 +73,54 @@ export default function ProductInfo({
   const availLabel = dict[availabilityLabels[availability]] || availability
 
   return (
-    <div className="space-y-8">
-      {/* Nome da Criação */}
-      {creationName && (
-        <h1 className="text-3xl lg:text-4xl font-light tracking-tight text-stone-900 leading-tight">
-          {creationName}
-        </h1>
-      )}
-
-      {/* Nome Científico */}
+    <div className="flex h-full flex-col">
       <div>
-        <p className="text-xs uppercase tracking-widest text-stone-400 mb-1">
-          {dict.scientificName}
-        </p>
-        <p className="text-lg text-stone-600 font-light italic">
+        <h1 className="font-display text-3xl font-light text-brand-charcoal lg:text-4xl">
+          {creationName || flowerName}
+        </h1>
+        <p className="mt-3 font-body text-base italic text-brand-charcoal/50">
           {scientificName}
         </p>
       </div>
 
-      {/* Info chips */}
-      <div className="flex flex-wrap gap-3">
+      <div className="mt-7 flex flex-wrap gap-2">
         {catName && (
-          <span className="text-xs px-3 py-1.5 rounded-full border border-stone-200 text-stone-600 bg-stone-50">
+          <span className="border border-brand-wood/10 bg-brand-wood/5 px-3 py-1.5 text-xs text-brand-wood">
             {catName}
           </span>
         )}
         {colNames.map((n) => (
           <span
             key={n}
-            className="text-xs px-3 py-1.5 rounded-full border border-stone-200 text-stone-600 bg-stone-50"
+            className="border border-brand-wood/10 bg-brand-wood/5 px-3 py-1.5 text-xs text-brand-wood"
           >
             {n}
           </span>
         ))}
-        <span className="text-xs px-3 py-1.5 rounded-full border border-stone-200 text-stone-600 bg-stone-50">
+        <span className="border border-brand-wood/10 bg-brand-wood/5 px-3 py-1.5 text-xs text-brand-wood">
           {dict[productTypeLabels[productType]] || productType}
         </span>
       </div>
 
-      {/* Preço */}
-      <div className="pt-4 border-t border-stone-100">
-        <p className="text-3xl font-light text-stone-900">
+      <div className="mt-10 border-t border-brand-wood/10 pt-8">
+        <p className="font-display text-3xl text-brand-charcoal">
           {price.toFixed(2)} €
         </p>
       </div>
 
-      {/* Disponibilidade */}
-      <div>
-        <span className={`inline-block text-xs font-medium px-3 py-1.5 rounded-full border ${availStyle}`}>
+      <div className="mt-5">
+        <span className={`inline-block px-3 py-1.5 text-xs font-medium ${availStyle}`}>
           {availLabel}
         </span>
       </div>
 
-      {/* Descrição curta */}
       {description && (
-        <p className="text-sm text-stone-500 leading-relaxed whitespace-pre-line">
+        <p className="mt-9 whitespace-pre-line font-body text-brand-charcoal/60">
           {description}
         </p>
       )}
 
-      {/* Botão Adicionar ao Carrinho */}
-      <div className="pt-2">
+      <div className="mt-10">
         <AddToCartButton
           dict={dict}
           item={{
@@ -146,7 +133,9 @@ export default function ProductInfo({
           disabled={soldOut}
         />
         {soldOut && (
-          <p className="text-xs text-stone-400 mt-2">{dict.sold}</p>
+          <p className="mt-3 text-sm leading-relaxed text-brand-charcoal/60">
+            {availLabel}
+          </p>
         )}
       </div>
     </div>

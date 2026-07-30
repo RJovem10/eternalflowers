@@ -21,11 +21,11 @@ export default function RelatedProducts({ products, dict, locale }: RelatedProdu
   if (products.length === 0) return null
 
   return (
-    <div>
-      <h2 className="text-xl font-light text-stone-900 mb-8 tracking-tight">
+    <section>
+      <h2 className="mb-10 font-display text-3xl font-light tracking-tight text-brand-charcoal sm:text-4xl">
         {dict.relatedProducts}
       </h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 md:gap-x-6 lg:grid-cols-4 lg:gap-x-8">
         {products.map((p) => (
           <FlowerCard
             key={p.id}
@@ -41,6 +41,6 @@ export default function RelatedProducts({ products, dict, locale }: RelatedProdu
           />
         ))}
       </div>
-    </div>
+    </section>
   )
 }

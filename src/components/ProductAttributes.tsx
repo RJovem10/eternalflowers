@@ -46,19 +46,19 @@ const items = [
 
 export default function ProductAttributes({ dict }: ProductAttributesProps) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-2 gap-x-5 gap-y-10 lg:grid-cols-4 lg:gap-10">
       {items.map(({ key, icon }) => (
         <div
           key={key}
-          className="group p-6 rounded-2xl border border-stone-100 hover:border-stone-200 hover:bg-stone-50/50 transition-all"
+          className="border-t border-brand-wood/8 bg-brand-cream pt-5"
         >
-          <div className="text-stone-400 group-hover:text-stone-600 transition-colors mb-4">
+          <div className="mb-5 text-brand-gold">
             {icon}
           </div>
-          <h3 className="text-sm font-medium text-stone-800 mb-1.5">
+          <h3 className="mb-2 font-display text-lg font-light leading-tight text-brand-charcoal">
             {dict[key]}
           </h3>
-          <p className="text-xs text-stone-400 leading-relaxed">
+          <p className="text-xs leading-relaxed text-brand-wood sm:text-sm">
             {dict[`${key}Desc`]}
           </p>
         </div>

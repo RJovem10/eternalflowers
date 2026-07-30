@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { getDictionary } from '@/i18n/dictionaries'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
@@ -12,12 +13,52 @@ import type { Flower, Category, Collection, Media } from '@/payload-types'
 
 export const dynamic = 'force-dynamic'
 
+type FlowerPageParams = {
+  params: Promise<{ locale: string; id: string }>
+}
+
 function getLocaleField<T>(record: any, field: string, locale: string, fallback: string): T {
   const suffix = ({ pt: 'Pt', en: 'En', es: 'Es', it: 'It', de: 'De' } as Record<string, string>)[locale] || 'Pt'
   return record[`${field}${suffix}`] ?? record[`${field}Pt`] ?? fallback
 }
 
-export default async function FlowerDetail({ params }: { params: Promise<{ locale: string; id: string }> }) {
+export async function generateMetadata({ params }: FlowerPageParams): Promise<Metadata> {
+  const { locale, id } = await params
+
+  try {
+    const payload = await getPayload({ config })
+    const flower = await payload.findByID({
+      collection: 'flowers',
+      id,
+      depth: 1,
+    })
+    const localizedName = getLocaleField<string>(flower, 'name', locale, '')
+    const title = flower.creationName || localizedName || flower.scientificName
+    const localizedDescription = getLocaleField<string>(flower, 'description', locale, '')
+    const price = `${flower.price.toFixed(2)} €`
+    const productDescription = localizedDescription || flower.scientificName
+    const description = `${productDescription} — ${price}`
+    const imageUrl =
+      flower.image && typeof flower.image !== 'number'
+        ? flower.image.url
+        : null
+
+    return {
+      title,
+      description,
+      openGraph: {
+        title,
+        description,
+        type: 'website',
+        images: imageUrl ? [{ url: imageUrl, alt: title }] : undefined,
+      },
+    }
+  } catch {
+    return {}
+  }
+}
+
+export default async function FlowerDetail({ params }: FlowerPageParams) {
   const { locale, id } = await params
   const dict = getDictionary(locale)
   const payload = await getPayload({ config })
@@ -70,11 +111,10 @@ export default async function FlowerDetail({ params }: { params: Promise<{ local
   }
 
   return (
-    <article className="pt-8 pb-24">
-      {/* Back link — very subtle */}
+    <article className="mx-auto max-w-content px-6 pb-24 lg:px-8 lg:pb-30">
       <Link
         href={`/${locale}/catalog`}
-        className="inline-flex items-center text-xs text-stone-400 hover:text-stone-700 transition-colors tracking-wider uppercase"
+        className="inline-flex items-center text-xs uppercase tracking-[0.18em] text-brand-charcoal/50 transition-colors duration-300 hover:text-brand-gold-dark"
       >
         <svg
           viewBox="0 0 24 24"
@@ -88,8 +128,7 @@ export default async function FlowerDetail({ params }: { params: Promise<{ local
         {dict.backToCatalog}
       </Link>
 
-      {/* Gallery + Info — side by side on desktop */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-16">
+      <div className="mt-10 grid grid-cols-1 gap-12 md:grid-cols-2 lg:gap-20 xl:gap-24">
         <ProductGallery
           singleImage={flower.image as Media | number | null}
           galleryImages={images as { image: Media; id?: string | null }[] | null}
@@ -112,21 +151,19 @@ export default async function FlowerDetail({ params }: { params: Promise<{ local
         />
       </div>
 
-      {/* Story section */}
-      <div className="mt-24 lg:mt-32">
-        <ProductStory story={flower.story} dict={dict} />
-      </div>
+      {flower.story?.trim() && (
+        <div className="mt-24 lg:mt-32">
+          <ProductStory story={flower.story} />
+        </div>
+      )}
 
-      {/* Divider */}
-      <div className="my-20 lg:my-28 border-t border-stone-100" />
+      <div className="my-20 border-t border-brand-wood/15 lg:my-28" />
 
-      {/* Product attributes */}
       <ProductAttributes dict={dict} />
 
-      {/* Related products */}
       {related.length > 0 && (
         <>
-          <div className="my-20 lg:my-28 border-t border-stone-100" />
+          <div className="my-20 border-t border-brand-wood/15 lg:my-28" />
           <RelatedProducts
             products={related.map((r) => ({
               id: r.id,

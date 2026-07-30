@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 
 export type FlowerCardData = {
@@ -12,39 +13,47 @@ export type FlowerCardData = {
 export default function FlowerCard({ flower, dict }: { flower: FlowerCardData; dict: any }) {
   const badge = () => {
     switch (flower.availability) {
-      case 'sold': return <span className="bg-stone-700 text-white text-xs px-2 py-1 rounded">{dict.sold}</span>
-      case 'reserved': return <span className="bg-amber-600 text-white text-xs px-2 py-1 rounded">{dict.reserved}</span>
-      case 'preparing': return <span className="bg-sky-600 text-white text-xs px-2 py-1 rounded">{dict.preparing}</span>
+      case 'sold': return <span className="bg-brand-charcoal px-2.5 py-1.5 text-[0.65rem] uppercase tracking-wider text-brand-cream">{dict.sold}</span>
+      case 'reserved': return <span className="bg-brand-gold px-2.5 py-1.5 text-[0.65rem] uppercase tracking-wider text-brand-charcoal">{dict.reserved}</span>
+      case 'preparing': return <span className="bg-brand-lavender px-2.5 py-1.5 text-[0.65rem] uppercase tracking-wider text-brand-charcoal">{dict.preparing}</span>
       default: return null
     }
   }
 
-  const soldOut = flower.availability === 'sold'
   const displayName = flower.name || '—'
-  const imgSrc = flower.image || null
+  const imgSrc = flower.image || '/hero-fallback.png'
 
   return (
-    <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm hover:shadow-md transition">
-      <Link href={`/${flower.locale}/flower/${flower.id}`}>
-        <div className="aspect-square bg-stone-100 relative">
-          {imgSrc ? (
-            <img src={imgSrc} alt={displayName} className="object-cover w-full h-full" />
+    <article className="group overflow-hidden border border-brand-wood/10 bg-brand-cream transition-colors duration-300 hover:border-brand-gold/30">
+      <Link href={`/${flower.locale}/flower/${flower.id}`} className="block">
+        <div className="relative aspect-square overflow-hidden bg-brand-gold/20">
+          {imgSrc.startsWith('/') ? (
+              <Image
+                src={imgSrc}
+                alt={displayName}
+                fill
+                sizes="(min-width: 1024px) 25vw, 50vw"
+                className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+              />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-5xl">🌷</div>
+            // External image hosts are dynamic, so they cannot be safely passed to
+            // next/image without broadening the application's remote image policy.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={imgSrc} alt={displayName} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
           )}
-          <div className="absolute top-2 left-2">{badge()}</div>
+          <div className="absolute left-3 top-3">{badge()}</div>
         </div>
       </Link>
-      <div className="p-4">
-        <h3 className="font-medium truncate">{displayName}</h3>
-        <p className="text-rose-700 font-semibold mt-1">{flower.price.toFixed(2)} €</p>
+      <div className="border-t border-brand-wood/10 py-5">
+        <h3 className="truncate font-display text-lg font-light text-brand-charcoal">{displayName}</h3>
+        <p className="mt-1 text-sm font-medium text-brand-gold-dark">{flower.price.toFixed(2)} €</p>
         <Link
           href={`/${flower.locale}/flower/${flower.id}`}
-          className="mt-3 inline-block text-sm text-stone-600 hover:underline"
+          className="mt-4 inline-block border-b border-brand-gold/50 pb-1 text-xs uppercase tracking-[0.16em] text-brand-charcoal/65 transition-colors duration-300 hover:border-brand-gold-dark hover:text-brand-charcoal"
         >
           {dict.viewDetails}
         </Link>
       </div>
-    </div>
+    </article>
   )
 }

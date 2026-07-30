@@ -17,7 +17,10 @@ export default function AddToCartButton({
 
   if (disabled) {
     return (
-      <button disabled className="bg-stone-300 text-white px-6 py-3 rounded-lg cursor-not-allowed">
+      <button
+        disabled
+        className="cursor-not-allowed bg-brand-charcoal/20 px-6 py-3 font-medium text-brand-charcoal/50"
+      >
         {dict.sold}
       </button>
     )
@@ -26,7 +29,7 @@ export default function AddToCartButton({
   return (
     <button
       onClick={() => add(item)}
-      className="bg-rose-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-rose-700"
+      className="bg-brand-gold px-6 py-3 font-medium text-white transition-colors duration-300 hover:bg-brand-gold-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold-dark"
     >
       {dict.addToCart}
     </button>
