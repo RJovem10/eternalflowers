@@ -1,4 +1,4 @@
-import './globals.css'
+import '../globals.css'
 import { Cormorant_Garamond, Inter } from 'next/font/google'
 
 const display = Cormorant_Garamond({
@@ -21,7 +21,7 @@ export const metadata = {
     'Joias botânicas em resina para eternizar memórias com alma. Peças únicas feitas à mão com flores reais em Portugal.',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function FrontendLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt" className={`${display.variable} ${body.variable}`}>
       <body className="min-h-screen bg-brand-cream text-brand-charcoal font-body antialiased">

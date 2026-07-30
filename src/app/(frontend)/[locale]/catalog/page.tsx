@@ -10,7 +10,7 @@ export default async function Catalog({ params }: { params: Promise<{ locale: st
   const dict = getDictionary(locale)
   const payload = await getPayload({ config })
 
-  const flowers = await payload.find({ collection: 'flowers', limit: 200, sort: '-createdAt' })
+  const flowers = await payload.find({ collection: 'flowers', limit: 200, sort: '-createdAt', depth: 1 })
 
   const nf = ({ pt: 'namePt', en: 'nameEn', es: 'nameEs', it: 'nameIt', de: 'nameDe' }[locale] || 'namePt')
 
