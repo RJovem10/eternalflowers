@@ -100,6 +100,7 @@ type Dict = {
 }
 
 export type CountryData = {
+  code: 'PT' | 'ES' | 'IT'
   country: string
   cities: string
   description: string
@@ -193,9 +194,9 @@ export const dictionaries: Record<Locale, Dict> = {
     marinaPicksSubtitle: 'Peças selecionadas especialmente para si',
     ctaLabel: 'Eternize uma Memória',
     internationalPresence: [
-      { country: 'Portugal', cities: 'Braga · Lisboa', description: 'Atelier e loja física' },
-      { country: 'Espanha', cities: 'Exposições', description: 'Feiras de orquídeas' },
-      { country: 'Itália', cities: 'Trento · Mati', description: 'Exposições internacionais' },
+      { code: 'PT', country: 'Portugal', cities: 'Braga · Lisboa', description: 'Atelier e loja física' },
+      { code: 'ES', country: 'Espanha', cities: 'Exposições', description: 'Feiras de orquídeas' },
+      { code: 'IT', country: 'Itália', cities: 'Trento · Mati', description: 'Exposições internacionais' },
     ],
   },
   en: {
@@ -285,9 +286,9 @@ export const dictionaries: Record<Locale, Dict> = {
     marinaPicksSubtitle: 'Pieces specially selected for you',
     ctaLabel: 'Make a Memory Eternal',
     internationalPresence: [
-      { country: 'Portugal', cities: 'Braga · Lisbon', description: 'Workshop and physical store' },
-      { country: 'Spain', cities: 'Exhibitions', description: 'Orchid fairs' },
-      { country: 'Italy', cities: 'Trento · Mati', description: 'International exhibitions' },
+      { code: 'PT', country: 'Portugal', cities: 'Braga · Lisbon', description: 'Workshop and physical store' },
+      { code: 'ES', country: 'Spain', cities: 'Exhibitions', description: 'Orchid fairs' },
+      { code: 'IT', country: 'Italy', cities: 'Trento · Mati', description: 'International exhibitions' },
     ],
   },
   es: {
@@ -377,9 +378,9 @@ export const dictionaries: Record<Locale, Dict> = {
     marinaPicksSubtitle: 'Piezas seleccionadas especialmente para ti',
     ctaLabel: 'Eterniza un Recuerdo',
     internationalPresence: [
-      { country: 'Portugal', cities: 'Braga · Lisboa', description: 'Taller y tienda física' },
-      { country: 'España', cities: 'Exposiciones', description: 'Ferias de orquídeas' },
-      { country: 'Italia', cities: 'Trento · Mati', description: 'Exposiciones internacionales' },
+      { code: 'PT', country: 'Portugal', cities: 'Braga · Lisboa', description: 'Taller y tienda física' },
+      { code: 'ES', country: 'España', cities: 'Exposiciones', description: 'Ferias de orquídeas' },
+      { code: 'IT', country: 'Italia', cities: 'Trento · Mati', description: 'Exposiciones internacionales' },
     ],
   },
   it: {
@@ -469,9 +470,9 @@ export const dictionaries: Record<Locale, Dict> = {
     marinaPicksSubtitle: 'Pezzi selezionati apposta per te',
     ctaLabel: 'Rendi Eterno un Ricordo',
     internationalPresence: [
-      { country: 'Portogallo', cities: 'Braga · Lisbona', description: 'Laboratorio e negozio fisico' },
-      { country: 'Spagna', cities: 'Esposizioni', description: 'Fiere di orchidee' },
-      { country: 'Italia', cities: 'Trento · Mati', description: 'Esposizioni internazionali' },
+      { code: 'PT', country: 'Portogallo', cities: 'Braga · Lisbona', description: 'Laboratorio e negozio fisico' },
+      { code: 'ES', country: 'Spagna', cities: 'Esposizioni', description: 'Fiere di orchidee' },
+      { code: 'IT', country: 'Italia', cities: 'Trento · Mati', description: 'Esposizioni internazionali' },
     ],
   },
   de: {
@@ -561,9 +562,9 @@ export const dictionaries: Record<Locale, Dict> = {
     marinaPicksSubtitle: 'Stücke speziell für dich ausgewählt',
     ctaLabel: 'Verewige eine Erinnerung',
     internationalPresence: [
-      { country: 'Portugal', cities: 'Braga · Lissabon', description: 'Atelier und Ladengeschäft' },
-      { country: 'Spanien', cities: 'Ausstellungen', description: 'Orchideenmessen' },
-      { country: 'Italien', cities: 'Trient · Mati', description: 'Internationale Ausstellungen' },
+      { code: 'PT', country: 'Portugal', cities: 'Braga · Lissabon', description: 'Atelier und Ladengeschäft' },
+      { code: 'ES', country: 'Spanien', cities: 'Ausstellungen', description: 'Orchideenmessen' },
+      { code: 'IT', country: 'Italien', cities: 'Trient · Mati', description: 'Internationale Ausstellungen' },
     ],
   }
 }
