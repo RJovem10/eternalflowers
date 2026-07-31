@@ -56,6 +56,8 @@ type Dict = {
   productType: string
   story: string
   storyPlaceholder: string
+  emptyCatalog: string
+  storyHeading: string
   realFlower: string
   realFlowerDesc: string
   handmadePortugal: string
@@ -152,6 +154,8 @@ export const dictionaries: Record<Locale, Dict> = {
     productType: 'Tipo',
     story: 'História',
     storyPlaceholder: 'Cada peça tem a sua própria história. Em breve, poderá ler aqui o significado especial desta criação.',
+    emptyCatalog: 'Não existem peças disponíveis neste momento.',
+    storyHeading: 'A História',
     realFlower: 'Flor Verdadeira',
     realFlowerDesc: 'Cada peça é criada com flores verdadeiras, preservadas para durar.',
     handmadePortugal: 'Feito à Mão em Portugal',
@@ -244,6 +248,8 @@ export const dictionaries: Record<Locale, Dict> = {
     productType: 'Type',
     story: 'Story',
     storyPlaceholder: 'Every piece has its own story. Soon you will be able to read here the special meaning of this creation.',
+    emptyCatalog: 'No pieces are available at the moment.',
+    storyHeading: 'The Story',
     realFlower: 'Real Flower',
     realFlowerDesc: 'Each piece is crafted with real flowers, preserved to last.',
     handmadePortugal: 'Handmade in Portugal',
@@ -336,6 +342,8 @@ export const dictionaries: Record<Locale, Dict> = {
     productType: 'Tipo',
     story: 'Historia',
     storyPlaceholder: 'Cada pieza tiene su propia historia. Pronto podrás leer aquí el significado especial de esta creación.',
+    emptyCatalog: 'No hay piezas disponibles en este momento.',
+    storyHeading: 'La Historia',
     realFlower: 'Flor Verdadera',
     realFlowerDesc: 'Cada pieza está hecha con flores verdaderas, preservadas para durar.',
     handmadePortugal: 'Hecho a Mano en Portugal',
@@ -428,6 +436,8 @@ export const dictionaries: Record<Locale, Dict> = {
     productType: 'Tipo',
     story: 'Storia',
     storyPlaceholder: 'Ogni pezzo ha la sua storia. Presto potrai leggere qui il significato speciale di questa creazione.',
+    emptyCatalog: 'Non ci sono pezzi disponibili al momento.',
+    storyHeading: 'La Storia',
     realFlower: 'Fiore Vero',
     realFlowerDesc: 'Ogni pezzo è realizzato con fiori veri, preservati per durare.',
     handmadePortugal: 'Fatto a Mano in Portogallo',
@@ -520,6 +530,8 @@ export const dictionaries: Record<Locale, Dict> = {
     productType: 'Typ',
     story: 'Geschichte',
     storyPlaceholder: 'Jedes Stück hat seine eigene Geschichte. Bald kannst du hier die besondere Bedeutung dieser Kreation lesen.',
+    emptyCatalog: 'Derzeit sind keine Stücke verfügbar.',
+    storyHeading: 'Die Geschichte',
     realFlower: 'Echte Blume',
     realFlowerDesc: 'Jedes Stück wird mit echten Blumen hergestellt, konserviert um zu halten.',
     handmadePortugal: 'Handgefertigt in Portugal',

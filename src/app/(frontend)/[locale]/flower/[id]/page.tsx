@@ -153,7 +153,7 @@ export default async function FlowerDetail({ params }: FlowerPageParams) {
 
       {flower.story?.trim() && (
         <div className="mt-24 lg:mt-32">
-          <ProductStory story={flower.story} />
+          <ProductStory story={flower.story} dict={dict} />
         </div>
       )}
 

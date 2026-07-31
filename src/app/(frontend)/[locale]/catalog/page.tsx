@@ -43,7 +43,7 @@ export default async function Catalog({ params }: { params: Promise<{ locale: st
       </Link>
       <h1 className="text-2xl font-semibold mb-6">{dict.catalog}</h1>
       {cards.length === 0 ? (
-        <p className="text-stone-500">—</p>
+        <p className="text-stone-500">{dict.emptyCatalog}</p>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {cards.map((c) => (
