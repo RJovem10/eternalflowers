@@ -9,7 +9,16 @@ export type CouponErrorCode =
   | 'INCOMPLETE_DATA'
   | 'NO_CODE'
 
-export const couponErrorToDictKey: Record<CouponErrorCode, string> = {
+export type CouponErrorDictKey =
+  | 'invalidCoupon'
+  | 'expired'
+  | 'minOrder'
+  | 'firstOrderOnly'
+  | 'soldOut'
+  | 'incompleteData'
+  | 'noCode'
+
+export const couponErrorToDictKey: Record<CouponErrorCode, CouponErrorDictKey> = {
   INVALID_COUPON: 'invalidCoupon',
   EXPIRED: 'expired',
   MIN_ORDER: 'minOrder',

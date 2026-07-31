@@ -106,13 +106,11 @@ type Dict = {
   qtyLabel: string
   removeLabel: string
   couponLabel: string
-  itemCount: string
   expired: string
   minOrder: string
   soldOut: string
   incompleteData: string
   noCode: string
-  orderSummary: string
   internationalPresence: CountryData[]
 }
 
@@ -220,13 +218,11 @@ export const dictionaries: Record<Locale, Dict> = {
     qtyLabel: 'Quantidade',
     removeLabel: 'Remover',
     couponLabel: 'Código de desconto',
-    itemCount: '{count} itens',
     expired: 'Cupão expirado.',
     minOrder: 'Valor mínimo não atingido.',
     soldOut: 'Cupão esgotado.',
     incompleteData: 'Dados incompletos.',
     noCode: 'Sem código de cupão.',
-    orderSummary: 'Resumo do pedido',
     internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lisboa', description: 'Atelier e loja física' },
       { code: 'ES', country: 'Espanha', cities: 'Exposições', description: 'Feiras de orquídeas' },
@@ -329,13 +325,11 @@ export const dictionaries: Record<Locale, Dict> = {
     qtyLabel: 'Quantity',
     removeLabel: 'Remove',
     couponLabel: 'Discount code',
-    itemCount: '{count} items',
     expired: 'Coupon expired.',
     minOrder: 'Minimum order not reached.',
     soldOut: 'Coupon fully used.',
     incompleteData: 'Incomplete data.',
     noCode: 'No coupon code.',
-    orderSummary: 'Order summary',
     internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lisbon', description: 'Workshop and physical store' },
       { code: 'ES', country: 'Spain', cities: 'Exhibitions', description: 'Orchid fairs' },
@@ -438,13 +432,11 @@ export const dictionaries: Record<Locale, Dict> = {
     qtyLabel: 'Cantidad',
     removeLabel: 'Eliminar',
     couponLabel: 'Código de descuento',
-    itemCount: '{count} artículos',
     expired: 'Cupón caducado.',
     minOrder: 'Importe mínimo no alcanzado.',
     soldOut: 'Cupón agotado.',
     incompleteData: 'Datos incompletos.',
     noCode: 'Sin código de cupón.',
-    orderSummary: 'Resumen del pedido',
     internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lisboa', description: 'Taller y tienda física' },
       { code: 'ES', country: 'España', cities: 'Exposiciones', description: 'Ferias de orquídeas' },
@@ -547,13 +539,11 @@ export const dictionaries: Record<Locale, Dict> = {
     qtyLabel: 'Quantità',
     removeLabel: 'Rimuovi',
     couponLabel: 'Codice sconto',
-    itemCount: '{count} articoli',
     expired: 'Coupon scaduto.',
     minOrder: 'Importo minimo non raggiunto.',
     soldOut: 'Coupon esaurito.',
     incompleteData: 'Dati incompleti.',
     noCode: 'Nessun codice coupon.',
-    orderSummary: 'Riepilogo ordine',
     internationalPresence: [
       { code: 'PT', country: 'Portogallo', cities: 'Braga · Lisbona', description: 'Laboratorio e negozio fisico' },
       { code: 'ES', country: 'Spagna', cities: 'Esposizioni', description: 'Fiere di orchidee' },
@@ -656,13 +646,11 @@ export const dictionaries: Record<Locale, Dict> = {
     qtyLabel: 'Menge',
     removeLabel: 'Entfernen',
     couponLabel: 'Rabattcode',
-    itemCount: '{count} Artikel',
     expired: 'Gutschein abgelaufen.',
     minOrder: 'Mindestbestellwert nicht erreicht.',
     soldOut: 'Gutschein aufgebraucht.',
     incompleteData: 'Unvollständige Daten.',
     noCode: 'Kein Gutscheincode.',
-    orderSummary: 'Bestellübersicht',
     internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lissabon', description: 'Atelier und Ladengeschäft' },
       { code: 'ES', country: 'Spanien', cities: 'Ausstellungen', description: 'Orchideenmessen' },

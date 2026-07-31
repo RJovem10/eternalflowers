@@ -5,7 +5,7 @@ import { useCart } from '@/components/CartProvider'
 import { useParams, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { getDictionary } from '@/i18n/dictionaries'
-import { couponErrorToDictKey, type CouponErrorCode } from '@/lib/coupon'
+import { couponErrorToDictKey, type CouponErrorCode, type CouponErrorDictKey } from '@/lib/coupon'
 
 export default function Checkout() {
   const { locale } = useParams() as { locale: string }
@@ -34,8 +34,9 @@ export default function Checkout() {
       clear()
       router.push(`/${locale}/thank-you`)
     } else {
-      const errorKey = data.error_code ? couponErrorToDictKey[data.error_code as CouponErrorCode] : null
-      setError(errorKey ? dict[errorKey as keyof typeof dict] : data.error || dict.orderError)
+      const errCode: CouponErrorCode = data.error_code
+      const errorKey: CouponErrorDictKey | null = errCode ? couponErrorToDictKey[errCode] : null
+      setError(errorKey ? dict[errorKey] : data.error || dict.orderError)
     }
   }
 
