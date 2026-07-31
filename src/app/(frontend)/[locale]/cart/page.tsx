@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { useCart } from '@/components/CartProvider'
 import { useParams, useRouter } from 'next/navigation'
 import { getDictionary } from '@/i18n/dictionaries'
+import { couponErrorToDictKey, type CouponErrorCode } from '@/lib/coupon'
 
 export default function Cart() {
   const { locale } = useParams() as { locale: string }
@@ -26,7 +27,8 @@ export default function Cart() {
       setMsg('✓ ' + dict.couponApplied)
     } else {
       setCoupon(null)
-      setMsg('✗ ' + (data.error || dict.invalidCoupon))
+      const errorKey = data.error_code ? couponErrorToDictKey[data.error_code as CouponErrorCode] : null
+      setMsg('✗ ' + (errorKey ? dict[errorKey as keyof typeof dict] : data.error || dict.invalidCoupon))
     }
   }
 
@@ -57,9 +59,10 @@ export default function Cart() {
             <input
               type="number" min={1} value={i.qty}
               onChange={(e) => setQty(i.id, parseInt(e.target.value) || 1)}
+              aria-label={`${dict.qtyLabel} — ${i.name}`}
               className="w-16 border border-stone-300 rounded px-2 py-1 text-center"
             />
-            <button onClick={() => remove(i.id)} className="text-stone-400 hover:text-rose-600 text-sm">✕</button>
+            <button onClick={() => remove(i.id)} aria-label={`${dict.removeLabel} — ${i.name}`} className="text-stone-400 hover:text-rose-600 text-sm">✕</button>
           </div>
         ))}
       </div>
@@ -70,6 +73,7 @@ export default function Cart() {
         <div className="flex gap-2">
           <input
             value={code} onChange={(e) => setCode(e.target.value)} placeholder={dict.couponPlaceholder}
+            aria-label={dict.couponLabel}
             className="flex-1 border border-stone-300 rounded px-2 py-1 text-sm uppercase"
           />
           <button onClick={applyCoupon} className="bg-stone-800 text-white px-3 py-1 rounded text-sm">{dict.applyCoupon}</button>

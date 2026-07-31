@@ -5,6 +5,7 @@ import { useCart } from '@/components/CartProvider'
 import { useParams, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { getDictionary } from '@/i18n/dictionaries'
+import { couponErrorToDictKey, type CouponErrorCode } from '@/lib/coupon'
 
 export default function Checkout() {
   const { locale } = useParams() as { locale: string }
@@ -33,7 +34,8 @@ export default function Checkout() {
       clear()
       router.push(`/${locale}/thank-you`)
     } else {
-      setError(data.error || 'Erro ao finalizar.')
+      const errorKey = data.error_code ? couponErrorToDictKey[data.error_code as CouponErrorCode] : null
+      setError(errorKey ? dict[errorKey as keyof typeof dict] : data.error || dict.orderError)
     }
   }
 
@@ -53,11 +55,13 @@ export default function Checkout() {
       <div>
         <label className="block text-sm font-medium mb-1">{dict.name}</label>
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder={dict.namePlaceholder}
+          aria-label={dict.name}
           className="w-full border border-stone-300 rounded px-3 py-2" />
       </div>
       <div>
         <label className="block text-sm font-medium mb-1">{dict.email}</label>
         <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={dict.emailPlaceholder}
+          aria-label={dict.email}
           className="w-full border border-stone-300 rounded px-3 py-2" />
       </div>
       <div className="bg-white border border-stone-200 rounded-lg p-3 space-y-1">
@@ -77,7 +81,7 @@ export default function Checkout() {
         disabled={busy}
         className="w-full bg-rose-600 text-white py-3 rounded-lg font-medium hover:bg-rose-700 disabled:opacity-50"
       >
-        {busy ? '…' : dict.completeOrder}
+        {busy ? dict.processing : dict.completeOrder}
       </button>
     </div>
   )
