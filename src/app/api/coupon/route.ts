@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   const email = (searchParams.get('email') || '').trim().toLowerCase()
   const subtotal = parseFloat(searchParams.get('subtotal') || '0')
 
-  if (!code) return NextResponse.json({ valid: false, error: 'Sem código.' })
+  if (!code) return NextResponse.json({ valid: false, error: 'Sem código.', error_code: 'NO_CODE' })
 
   const payload = await getPayload({ config })
   const result = await validateCoupon(payload, code, email, subtotal)
@@ -18,5 +18,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ valid: true, discount: result.discount, type: result.type, value: result.value })
   }
 
-  return NextResponse.json({ valid: false, error: result.error })
+  return NextResponse.json({ valid: false, error: result.error, error_code: result.error_code })
 }
