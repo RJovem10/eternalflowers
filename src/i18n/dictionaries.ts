@@ -106,6 +106,7 @@ type Dict = {
   qtyLabel: string
   removeLabel: string
   couponLabel: string
+  catalogDescription: string
   expired: string
   minOrder: string
   soldOut: string
@@ -218,6 +219,7 @@ export const dictionaries: Record<Locale, Dict> = {
     qtyLabel: 'Quantidade',
     removeLabel: 'Remover',
     couponLabel: 'Código de desconto',
+    catalogDescription: 'Descubra as nossas joias botânicas artesanais. Peças únicas feitas com flores reais preservadas em resina.',
     expired: 'Cupão expirado.',
     minOrder: 'Valor mínimo não atingido.',
     soldOut: 'Cupão esgotado.',
@@ -325,6 +327,7 @@ export const dictionaries: Record<Locale, Dict> = {
     qtyLabel: 'Quantity',
     removeLabel: 'Remove',
     couponLabel: 'Discount code',
+    catalogDescription: 'Discover our handcrafted botanical jewellery. Unique pieces made with real flowers preserved in resin.',
     expired: 'Coupon expired.',
     minOrder: 'Minimum order not reached.',
     soldOut: 'Coupon fully used.',
@@ -432,6 +435,7 @@ export const dictionaries: Record<Locale, Dict> = {
     qtyLabel: 'Cantidad',
     removeLabel: 'Eliminar',
     couponLabel: 'Código de descuento',
+    catalogDescription: 'Descubra nuestras joyas botánicas artesanales. Piezas únicas hechas con flores reales preservadas en resina.',
     expired: 'Cupón caducado.',
     minOrder: 'Importe mínimo no alcanzado.',
     soldOut: 'Cupón agotado.',
@@ -539,6 +543,7 @@ export const dictionaries: Record<Locale, Dict> = {
     qtyLabel: 'Quantità',
     removeLabel: 'Rimuovi',
     couponLabel: 'Codice sconto',
+    catalogDescription: 'Scopri i nostri gioielli botanici artigianali. Pezzi unici realizzati con fiori veri preservati nella resina.',
     expired: 'Coupon scaduto.',
     minOrder: 'Importo minimo non raggiunto.',
     soldOut: 'Coupon esaurito.',
@@ -646,6 +651,7 @@ export const dictionaries: Record<Locale, Dict> = {
     qtyLabel: 'Menge',
     removeLabel: 'Entfernen',
     couponLabel: 'Rabattcode',
+    catalogDescription: 'Entdecke unseren handgefertigten botanischen Schmuck. Einzigartige Stücke aus echten Blumen, konserviert in Harz.',
     expired: 'Gutschein abgelaufen.',
     minOrder: 'Mindestbestellwert nicht erreicht.',
     soldOut: 'Gutschein aufgebraucht.',

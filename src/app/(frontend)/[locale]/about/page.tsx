@@ -29,7 +29,7 @@ export async function generateMetadata({
       title: content.meta.title,
       description: content.meta.description,
       images: [{ url: '/marina/marina-hero-orquidea-rosa.jpeg' }],
-      locale: locale === 'pt' ? 'pt_PT' : locale === 'en' ? 'en_GB' : locale,
+      locale: ({ pt: 'pt_PT', en: 'en_GB', es: 'es_ES', it: 'it_IT', de: 'de_DE' } as Record<string, string>)[locale] || 'pt_PT',
     },
   }
 }

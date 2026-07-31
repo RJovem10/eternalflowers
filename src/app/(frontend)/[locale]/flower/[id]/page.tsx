@@ -57,7 +57,7 @@ export async function generateMetadata({ params }: FlowerPageParams): Promise<Me
         description,
         type: 'website',
         images: imageUrl ? [{ url: imageUrl, alt: title }] : undefined,
-        locale: locale === 'pt' ? 'pt_PT' : locale === 'en' ? 'en_GB' : locale,
+        locale: ({ pt: 'pt_PT', en: 'en_GB', es: 'es_ES', it: 'it_IT', de: 'de_DE' } as Record<string, string>)[locale] || 'pt_PT',
       },
     }
   } catch {

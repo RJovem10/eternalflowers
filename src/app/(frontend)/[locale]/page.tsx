@@ -36,7 +36,7 @@ export async function generateMetadata({
     openGraph: {
       title: `Eternal Flowers | ${dict.tagline}`,
       description: dict.heroSubtitleFallback,
-      locale: locale === 'pt' ? 'pt_PT' : locale === 'en' ? 'en_GB' : locale,
+      locale: ({ pt: 'pt_PT', en: 'en_GB', es: 'es_ES', it: 'it_IT', de: 'de_DE' } as Record<string, string>)[locale] || 'pt_PT',
     },
   }
 }

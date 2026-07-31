@@ -11,6 +11,7 @@ export async function generateMetadata({
 
   return {
     title: `${dict.cart} — Eternal Flowers`,
+    description: dict.emptyCart,
     robots: { index: false, follow: false },
   }
 }

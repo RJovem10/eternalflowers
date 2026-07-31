@@ -23,6 +23,7 @@ export async function generateMetadata({
 
   return {
     title: `${dict.catalog} — Eternal Flowers`,
+    description: dict.catalogDescription,
     alternates: {
       canonical: `/${locale}/catalog`,
       languages,
