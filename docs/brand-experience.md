@@ -373,9 +373,8 @@ A página começa com uma fotografia grande da Marina no atelier — sentada à 
 Sou a Marina, a mão por detrás da Eternal Flowers.
 
 Sempre amei flores. Desde pequena que passava horas
-no jardim dos meus avós, em Vila Verde, a observar
-as cores, os cheiros, a forma como cada pétala se abria
-ao sol.
+a observar as cores, os cheiros, a forma como cada pétala
+se abria ao sol.
 
 Anos mais tarde, formei-me em Medicina Natural e fundei
 a Mar&Natur, onde há mais de 16 anos ajudo pessoas
@@ -387,7 +386,7 @@ Mas as flores nunca me deixaram.
 ### Secção 2: "Como nasceu a Eternal Flowers"
 
 ```
-Foi numa feira de orquídeas que tudo começou.
+Foi num orquidário que tudo começou.
 
 Olhei para uma orquídea e pensei:
 "É tão perfeita. E tão efémera. Porque é que

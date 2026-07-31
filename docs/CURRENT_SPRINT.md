@@ -41,6 +41,7 @@ Esta sprint consolidou a **identidade da marca**, elevou a **qualidade visual** 
 | ✅ | Concluída |
 | 🟡 | Em progresso |
 | ⚪ | Planeada |
+| 💤 | Em espera / Hold |
 
 ---
 
@@ -529,6 +530,17 @@ src/app/
 
 **Modelo usado:** DeepSeek V4 Flash (análise fotográfica + implementação direta)
 
+**Estado:** ✅ Implementada — validação visual global pendente
+
+### Texto essência aprovado (Julho 2026)
+"Na Eternal Flowers, cada peça nasce para imortalizar a beleza de uma flor." — aplicado em 5 idiomas, substituindo a frase anterior.
+
+### Referências removidas
+- Avós, osteopatia, osteopata, "feira de orquídeas", "instante congelado no tempo"
+
+### Traduções
+- 5 idiomas revistos e atualizados com o texto final
+
 **Trabalho realizado:**
 
 ### Fotografia
@@ -539,7 +551,7 @@ src/app/
 ### Página (10 secções)
 1. **Hero editorial** — split 50/50 com `marina-hero-orquidea-rosa.jpeg`
 2. **Percurso entre ciência e cuidado** — grid com `marina-terapeuta-bata-branca.jpeg`
-3. **Formação e mudança para naturopatia e osteopatia** — texto centrado
+3. **Formação e mudança para naturopatia e Quiropraxia Oriental** — texto centrado
 4. **Criação da Mar&Natur** — texto centrado
 5. **Origem da Eternal Flowers** — grid invertido com `marina-artesa-orquideas.jpeg`
 6. **Aprendizagem e processo artesanal** — grid com `marina-processo-tesoura-orquidea.jpeg`
@@ -582,12 +594,11 @@ src/app/
 ### Limitações atuais
 - `marina-retrato-natureza.jpeg` tem baixa resolução (768×1024)
 - Iluminação inconsistente entre fotografias
-- Traduções não verificadas por falantes nativos
 - Avisos `metadataBase` e `sharp` mantêm-se como conhecidos
 
 **Documento produzido:** `docs/design-review-v6.md`
 
-**Estado:** ✅ Implementada — validação visual humana em curso (conteúdo editorial revisto e aprovado)
+**Estado:** ✅ Implementada — validação visual global pendente
 
 ---
 

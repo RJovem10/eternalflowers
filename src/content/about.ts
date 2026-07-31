@@ -1,5 +1,5 @@
 // Conteúdo editorial da página "Conhecer a Marina"
-// Texto base aprovado — traduções necessitam de revisão humana antes da produção
+// Texto base aprovado — traduções verificadas (Julho 2026)
 
 export type AboutContent = {
   hero: { label: string; title: string; subtitle: string }
@@ -81,7 +81,7 @@ export const aboutContent: Record<string, AboutContent> = {
       label: 'Essência',
       title: 'A pessoa por detrás de cada peça',
       paragraphs: [
-        'Na Eternal Flowers, cada peça é um instante congelado no tempo.',
+        'Na Eternal Flowers, cada peça nasce para imortalizar a beleza de uma flor.',
         'Não vende simplesmente joias. Ajuda pessoas a guardar memórias que podem usar ao peito, nos dedos, nas orelhas — todos os dias.',
         'Uma flor é efémera. Uma peça Eternal Flowers procura preservar a sua beleza e a memória que lhe está associada.',
         'Marina é amiga, divertida, prestável e dedicada. É exigente com a qualidade e não gosta de deixar clientes ou pacientes insatisfeitos.',
@@ -100,7 +100,7 @@ export const aboutContent: Record<string, AboutContent> = {
     meta: {
       title: 'Conhecer a Marina — Eternal Flowers',
       description:
-        'Conhece a Marina, engenheira agronómica, naturopata e artesã por detrás da Eternal Flowers. A história de como uma viagem à Tailândia e uma paixão por orquídeas deram origem a joias botânicas únicas.',
+        'Conhece a Marina, engenheira agronómica, naturopata e artesã por detrás da Eternal Flowers. A história de como uma viagem à Tailândia e uma paixão por orquídeas deram origem a joias botânicas que imortalizam a beleza das flores.',
     },
   },
 
@@ -142,7 +142,7 @@ export const aboutContent: Record<string, AboutContent> = {
       label: 'The Discovery',
       title: 'From a trip to Thailand, Eternal Flowers was born',
       paragraphs: [
-        'Her passion for orchids was born during a trip to Thailand, when she visited an orchidarium. It was in this contact with the diversity and beauty of these flowers that a connection began — one that would come to mark her artisanal path.',
+        'Her passion for orchids was born during a trip to Thailand, when she visited an orchid nursery. It was in this contact with the diversity and beauty of these flowers that a connection began — one that would come to mark her artisanal path.',
         'Later, she began experimenting with flower drying and preservation in epoxy resin. She took courses and refined the technique.',
         'Eternal Flowers was born and continues to grow.',
       ],
@@ -169,7 +169,7 @@ export const aboutContent: Record<string, AboutContent> = {
       label: 'Essence',
       title: 'The person behind every piece',
       paragraphs: [
-        'At Eternal Flowers, each piece is a moment frozen in time.',
+        'At Eternal Flowers, each piece is born to immortalise the beauty of a flower.',
         'She does not simply sell jewellery. She helps people keep memories they can wear at their chest, on their fingers, on their ears — every day.',
         'A flower is ephemeral. An Eternal Flowers piece seeks to preserve its beauty and the memory associated with it.',
         'Marina is a friend, fun, helpful and dedicated. She is demanding about quality and does not like to leave clients or patients unsatisfied.',
@@ -188,7 +188,7 @@ export const aboutContent: Record<string, AboutContent> = {
     meta: {
       title: 'Meet Marina — Eternal Flowers',
       description:
-        'Meet Marina, agricultural engineer, naturopath and artisan behind Eternal Flowers. The story of how a trip to Thailand and a passion for orchids gave rise to unique botanical jewellery.',
+        'Meet Marina, agricultural engineer, naturopath and artisan behind Eternal Flowers. The story of how a trip to Thailand and a passion for orchids gave rise to unique botanical jewellery that immortalises the beauty of flowers.',
     },
   },
 
@@ -230,7 +230,7 @@ export const aboutContent: Record<string, AboutContent> = {
       label: 'El Descubrimiento',
       title: 'De un viaje a Tailandia nació Eternal Flowers',
       paragraphs: [
-        'Su pasión por las orquídeas nació durante un viaje a Tailandia, cuando visitó un orquidiario. Fue en ese contacto con la diversidad y la belleza de estas flores donde comenzó una conexión que marcaría su camino artesanal.',
+        'Su pasión por las orquídeas nació durante un viaje a Tailandia, cuando visitó un orquidario. Fue en ese contacto con la diversidad y la belleza de estas flores donde comenzó una conexión que marcaría su camino artesanal.',
         'Más tarde, comenzó a experimentar con la deshidratación de flores y su preservación en resina epoxi. Tomó cursos y perfeccionó la técnica.',
         'Eternal Flowers nació y sigue creciendo.',
       ],
@@ -257,7 +257,7 @@ export const aboutContent: Record<string, AboutContent> = {
       label: 'Esencia',
       title: 'La persona detrás de cada pieza',
       paragraphs: [
-        'En Eternal Flowers, cada pieza es un instante congelado en el tiempo.',
+        'En Eternal Flowers, cada pieza nace para inmortalizar la belleza de una flor.',
         'No vende simplemente joyas. Ayuda a personas a guardar recuerdos que pueden llevar al pecho, en los dedos, en las orejas — todos los días.',
         'Una flor es efímera. Una pieza Eternal Flowers busca preservar su belleza y el recuerdo que lleva asociado.',
         'Marina es amiga, divertida, servicial y dedicada. Es exigente con la calidad y no le gusta dejar clientes o pacientes insatisfechos.',
@@ -276,7 +276,7 @@ export const aboutContent: Record<string, AboutContent> = {
     meta: {
       title: 'Conocer a Marina — Eternal Flowers',
       description:
-        'Conoce a Marina, ingeniera agronómica, naturópata y artesana detrás de Eternal Flowers. La historia de cómo un viaje a Tailandia y una pasión por las orquídeas dieron origen a joyas botánicas únicas.',
+        'Conoce a Marina, ingeniera agronómica, naturópata y artesana detrás de Eternal Flowers. La historia de cómo un viaje a Tailandia y una pasión por las orquídeas dieron origen a joyas botánicas que inmortalizan la belleza de las flores.',
     },
   },
 
@@ -318,7 +318,7 @@ export const aboutContent: Record<string, AboutContent> = {
       label: 'La Scoperta',
       title: 'Da un viaggio in Thailandia è nata Eternal Flowers',
       paragraphs: [
-        'La sua passione per le orchidee è nata durante un viaggio in Thailandia, quando ha visitato un orquidario. È stato in quel contatto con la diversità e la bellezza di questi fiori che è iniziato un legame che avrebbe segnato il suo percorso artigianale.',
+        'La sua passione per le orchidee è nata durante un viaggio in Thailandia, quando ha visitato un orchidario. È stato in quel contatto con la diversità e la bellezza di questi fiori che è iniziato un legame che avrebbe segnato il suo percorso artigianale.',
         'Più tardi, ha iniziato a sperimentare la disidratazione dei fiori e la loro conservazione nella resina epossidica. Ha frequentato corsi e perfezionato la tecnica.',
         'Eternal Flowers è nata e continua a crescere.',
       ],
@@ -345,7 +345,7 @@ export const aboutContent: Record<string, AboutContent> = {
       label: 'Essenza',
       title: 'La persona dietro ogni pezzo',
       paragraphs: [
-        'In Eternal Flowers, ogni pezzo è un istante congelato nel tempo.',
+        'In Eternal Flowers, ogni pezzo nasce per immortalare la bellezza di un fiore.',
         'Non vende semplicemente gioielli. Aiuta le persone a conservare ricordi che possono portare al petto, sulle dita, sulle orecchie — tutti i giorni.',
         'Un fiore è effimero. Un pezzo Eternal Flowers cerca di preservare la sua bellezza e il ricordo che porta con sé.',
         'Marina è amica, divertente, disponibile e dedicata. È esigente con la qualità e non le piace lasciare clienti o pazienti insoddisfatti.',
@@ -364,7 +364,7 @@ export const aboutContent: Record<string, AboutContent> = {
     meta: {
       title: 'Conoscere Marina — Eternal Flowers',
       description:
-        'Conosci Marina, ingegnere agronomica, naturopata e artigiana dietro Eternal Flowers. La storia di come un viaggio in Thailandia e una passione per le orchidee hanno dato origine a gioielli botanici unici.',
+        'Conosci Marina, ingegnere agronomica, naturopata e artigiana dietro Eternal Flowers. La storia di come un viaggio in Thailandia e una passione per le orchidee hanno dato origine a gioielli botanici che immortalano la bellezza dei fiori.',
     },
   },
 
@@ -406,7 +406,7 @@ export const aboutContent: Record<string, AboutContent> = {
       label: 'Die Entdeckung',
       title: 'Aus einer Thailand-Reise entstand Eternal Flowers',
       paragraphs: [
-        'Ihre Leidenschaft für Orchideen entstand während einer Reise nach Thailand, als sie ein Orchidarium besuchte. In dieser Begegnung mit der Vielfalt und Schönheit dieser Blumen begann eine Verbindung, die ihren handwerklichen Weg prägen sollte.',
+        'Ihre Leidenschaft für Orchideen entstand während einer Reise nach Thailand, als sie einen Orchideengarten besuchte. In dieser Begegnung mit der Vielfalt und Schönheit dieser Blumen begann eine Verbindung, die ihren handwerklichen Weg prägen sollte.',
         'Später begann sie, mit dem Trocknen von Blumen und ihrer Konservierung in Epoxidharz zu experimentieren. Sie besuchte Kurse und verfeinerte die Technik.',
         'Eternal Flowers entstand und wächst weiter.',
       ],
@@ -433,7 +433,7 @@ export const aboutContent: Record<string, AboutContent> = {
       label: 'Essenz',
       title: 'Die Person hinter jedem Stück',
       paragraphs: [
-        'Bei Eternal Flowers ist jedes Stück ein eingefrorener Augenblick.',
+        'Bei Eternal Flowers entsteht jedes Stück, um die Schönheit einer Blume unsterblich zu machen.',
         'Sie verkauft nicht einfach Schmuck. Sie hilft Menschen, Erinnerungen zu bewahren, die sie an der Brust, an den Fingern, an den Ohren tragen können — jeden Tag.',
         'Eine Blume ist vergänglich. Ein Eternal-Flowers-Stück versucht, ihre Schönheit und die damit verbundene Erinnerung zu bewahren.',
         'Marina ist freundlich, lustig, hilfsbereit und hingebungsvoll. Sie legt Wert auf Qualität und mag es nicht, Kunden oder Patienten unzufrieden zu lassen.',
@@ -452,7 +452,7 @@ export const aboutContent: Record<string, AboutContent> = {
     meta: {
       title: 'Marina kennenlernen — Eternal Flowers',
       description:
-        'Lerne Marina kennen, Agrarwissenschaftlerin, Naturheilpraktikerin und Kunsthandwerkerin hinter Eternal Flowers. Die Geschichte, wie eine Reise nach Thailand und eine Leidenschaft für Orchideen zu einzigartigem botanischem Schmuck führten.',
+        'Lerne Marina kennen, Agrarwissenschaftlerin, Naturheilpraktikerin und Kunsthandwerkerin hinter Eternal Flowers. Die Geschichte, wie eine Reise nach Thailand und eine Leidenschaft für Orchideen zu einzigartigem botanischem Schmuck führten, der die Schönheit der Blumen unsterblich macht.',
     },
   },
 }

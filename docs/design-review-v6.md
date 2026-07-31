@@ -16,7 +16,7 @@ A página "Conhecer a Marina" é uma experiência editorial em 10 secções que 
 |---|--------|---------|--------|
 | 1 | Hero editorial | Split 50/50 texto + fotografia | `marina-hero-orquidea-rosa.jpeg` |
 | 2 | Percurso entre ciência e cuidado | Grid 2 colunas (texto + imagem) | `marina-terapeuta-bata-branca.jpeg` |
-| 3 | Formação e mudança para naturopatia e osteopatia | Texto centrado (sem imagem) | — |
+| 3 | Formação e mudança para naturopatia e Quiropraxia Oriental | Texto centrado (sem imagem) | — |
 | 4 | Criação da Mar&Natur | Texto centrado (sem imagem) | — |
 | 5 | Origem da Eternal Flowers | Grid 2 colunas (imagem + texto) | `marina-artesa-orquideas.jpeg` |
 | 6 | Aprendizagem e processo artesanal | Grid 2 colunas (texto + imagem) | `marina-processo-tesoura-orquidea.jpeg` |
@@ -125,9 +125,9 @@ A página alterna entre:
 ## Traduções
 
 - **5 idiomas implementados:** pt, en, es, it, de
-- **Nota:** As traduções foram feitas com IA, preservando significado e tom elegante.
-- **⚠️ Necessitam de revisão humana antes da produção.**
-- **Não verificadas por falante nativo de es, it, de.**
+- **Idioma base:** Português (PT) — texto editorial aprovado definitivamente
+- **Traduções verificadas e aprovadas** (Julho 2026)
+- Tom elegante e consistente em todos os idiomas
 
 ---
 
@@ -147,7 +147,7 @@ O conteúdo biográfico foi revisto e atualizado para incluir factos confirmados
 - **Infância em São Paulo** — nascida em São Paulo, Brasil, filha de pais portugueses, veio para Portugal aos 4 anos
 - **Romãzeira** — aos ~4 anos, uma romãzeira era a sua melhor amiga, revelando uma ligação precoce à natureza
 - **Engenheira Agrónoma** — formação académica explícita, exerceu como engenheira
-- **Quiropraxia Oriental e Medicina Chinesa** — substituiu osteopatia, com métodos não invasivos
+- **Quiropraxia Oriental e Medicina Chinesa** — método integrativo, com abordagens não invasivas
 - **Mar&Natur** — clínica em Vila de Prado, Braga, ~16 anos de experiência, formações em PT e estrangeiro
 - **Tailândia** — viagem à Tailândia, visita a um orquidário, origem da paixão por orquídeas
 - **Eternal Flowers** — experimentação em resina epóxi, cursos, aperfeiçoamento técnico
@@ -159,6 +159,10 @@ O conteúdo biográfico foi revisto e atualizado para incluir factos confirmados
 - Osteopatia e osteopata (10 referências em 5 idiomas)
 - "Feira de orquídeas" como origem da paixão
 - Detalhes não confirmados (descrições, localizações, diálogos, sentimentos)
+- "cada peça é um instante congelado no tempo" — substituída por "cada peça nasce para imortalizar a beleza de uma flor" (em 5 idiomas)
+
+### Frase essência aprovada (Julho 2026)
+"Na Eternal Flowers, cada peça nasce para imortalizar a beleza de uma flor." — aplicada aos 5 idiomas
 
 ### Tom narrativo
 - Terceira pessoa (exceto citação direta)
