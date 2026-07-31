@@ -55,10 +55,10 @@ export default function FounderHero({
           {/* CTAs */}
           <div className="mt-10 lg:mt-12 flex flex-col sm:flex-row gap-4">
             <Button variant="primary" href={`/${locale}/catalog`}>
-              Descobrir Coleções
+              {dict.heroCtaDiscover}
             </Button>
             <Button variant="secondary" href={`/${locale}/about`}>
-              Conhecer a Marina
+              {dict.heroCtaAbout}
             </Button>
           </div>
 

@@ -76,6 +76,33 @@ type Dict = {
   scroll: string
   rightsReserved: string
   taglineDecor: string
+  heroTitleFallback: string
+  heroSubtitleFallback: string
+  heroCtaDiscover: string
+  heroCtaAbout: string
+  realFlowersTitle: string
+  storyTitleFallback: string
+  storyTextFallback: string
+  internationalTitle: string
+  instagramTitle: string
+  instagramText: string
+  ctaTitleFallback: string
+  ctaButtonText: string
+  categoriesTitle: string
+  categoriesSubtitle: string
+  collectionsTitle: string
+  collectionsSubtitle: string
+  collectionsCta: string
+  marinaPicksTitle: string
+  marinaPicksSubtitle: string
+  ctaLabel: string
+  internationalPresence: CountryData[]
+}
+
+export type CountryData = {
+  country: string
+  cities: string
+  description: string
 }
 
 export const dictionaries: Record<Locale, Dict> = {
@@ -144,6 +171,32 @@ export const dictionaries: Record<Locale, Dict> = {
     scroll: 'Scroll',
     rightsReserved: 'Todos os direitos reservados.',
     taglineDecor: '🌷 Uma flor ｜ 💎 Uma joia ｜ 💖 uma memória eternizada',
+  
+    heroTitleFallback: 'Joias Botânicas\nFeitas à Mão',
+    heroSubtitleFallback: 'Cada peça é uma história que o tempo não apaga. Flores verdadeiras, eternizadas em resina pela Marina, em Braga.',
+    heroCtaDiscover: 'Descobrir Coleções',
+    heroCtaAbout: 'Conhecer a Marina',
+    realFlowersTitle: 'Flores Verdadeiras',
+    storyTitleFallback: 'Do efémero ao eterno',
+    storyTextFallback: 'Cada peça é uma história. Das nossas mãos para as suas, transformamos flores verdadeiras em joias que duram para sempre.',
+    internationalTitle: 'Presença Internacional',
+    instagramTitle: 'Siga-nos no Instagram',
+    instagramText: 'Acompanhe o nosso dia-a-dia, bastidores e novidades em primeira mão.',
+    ctaTitleFallback: 'Pronta para eternizar uma memória?',
+    ctaButtonText: 'Fale connosco',
+    categoriesTitle: 'Categorias',
+    categoriesSubtitle: 'Descubra as nossas joias botânicas por tipo de peça',
+    collectionsTitle: 'Coleções',
+    collectionsSubtitle: 'Inspiradas em momentos especiais',
+    collectionsCta: 'Descobrir →',
+    marinaPicksTitle: 'Escolhas da Marina',
+    marinaPicksSubtitle: 'Peças selecionadas especialmente para si',
+    ctaLabel: 'Eternize uma Memória',
+    internationalPresence: [
+      { country: 'Portugal', cities: 'Braga · Lisboa', description: 'Atelier e loja física' },
+      { country: 'Espanha', cities: 'Exposições', description: 'Feiras de orquídeas' },
+      { country: 'Itália', cities: 'Trento · Mati', description: 'Exposições internacionais' },
+    ],
   },
   en: {
     brand: 'Flores Marina',
@@ -210,6 +263,32 @@ export const dictionaries: Record<Locale, Dict> = {
     scroll: 'Scroll',
     rightsReserved: 'All rights reserved.',
     taglineDecor: '🌷 A flower ｜ 💎 A jewel ｜ 💖 a memory made eternal',
+  
+    heroTitleFallback: 'Botanical Jewellery\nHandmade',
+    heroSubtitleFallback: 'Each piece is a story that time cannot erase. Real flowers, preserved in resin by Marina, in Braga.',
+    heroCtaDiscover: 'Discover Collections',
+    heroCtaAbout: 'Meet Marina',
+    realFlowersTitle: 'Real Flowers',
+    storyTitleFallback: 'From ephemeral to eternal',
+    storyTextFallback: 'Each piece is a story. From our hands to yours, we transform real flowers into jewellery that lasts forever.',
+    internationalTitle: 'International Presence',
+    instagramTitle: 'Follow us on Instagram',
+    instagramText: 'Follow our daily life, behind-the-scenes and news first-hand.',
+    ctaTitleFallback: 'Ready to make a memory eternal?',
+    ctaButtonText: 'Contact us',
+    categoriesTitle: 'Categories',
+    categoriesSubtitle: 'Discover our botanical jewellery by type of piece',
+    collectionsTitle: 'Collections',
+    collectionsSubtitle: 'Inspired by special moments',
+    collectionsCta: 'Discover →',
+    marinaPicksTitle: "Marina's Picks",
+    marinaPicksSubtitle: 'Pieces specially selected for you',
+    ctaLabel: 'Make a Memory Eternal',
+    internationalPresence: [
+      { country: 'Portugal', cities: 'Braga · Lisbon', description: 'Workshop and physical store' },
+      { country: 'Spain', cities: 'Exhibitions', description: 'Orchid fairs' },
+      { country: 'Italy', cities: 'Trento · Mati', description: 'International exhibitions' },
+    ],
   },
   es: {
     brand: 'Flores Marina',
@@ -276,6 +355,32 @@ export const dictionaries: Record<Locale, Dict> = {
     scroll: 'Desplázate',
     rightsReserved: 'Todos los derechos reservados.',
     taglineDecor: '🌷 Una flor ｜ 💎 Una joya ｜ 💖 un recuerdo eterno',
+  
+    heroTitleFallback: 'Joyas Botánicas\nHechas a Mano',
+    heroSubtitleFallback: 'Cada pieza es una historia que el tiempo no borra. Flores verdaderas, eternizadas en resina por Marina, en Braga.',
+    heroCtaDiscover: 'Descubrir Colecciones',
+    heroCtaAbout: 'Conocer a Marina',
+    realFlowersTitle: 'Flores Verdaderas',
+    storyTitleFallback: 'De lo efímero a lo eterno',
+    storyTextFallback: 'Cada pieza es una historia. De nuestras manos a las tuyas, transformamos flores verdaderas en joyas que duran para siempre.',
+    internationalTitle: 'Presencia Internacional',
+    instagramTitle: 'Síguenos en Instagram',
+    instagramText: 'Sigue nuestro día a día, detrás de escena y novedades de primera mano.',
+    ctaTitleFallback: '¿Lista para eternizar un recuerdo?',
+    ctaButtonText: 'Contáctanos',
+    categoriesTitle: 'Categorías',
+    categoriesSubtitle: 'Descubre nuestras joyas botánicas por tipo de pieza',
+    collectionsTitle: 'Colecciones',
+    collectionsSubtitle: 'Inspiradas en momentos especiales',
+    collectionsCta: 'Descubrir →',
+    marinaPicksTitle: 'Selecciones de Marina',
+    marinaPicksSubtitle: 'Piezas seleccionadas especialmente para ti',
+    ctaLabel: 'Eterniza un Recuerdo',
+    internationalPresence: [
+      { country: 'Portugal', cities: 'Braga · Lisboa', description: 'Taller y tienda física' },
+      { country: 'España', cities: 'Exposiciones', description: 'Ferias de orquídeas' },
+      { country: 'Italia', cities: 'Trento · Mati', description: 'Exposiciones internacionales' },
+    ],
   },
   it: {
     brand: 'Flores Marina',
@@ -342,6 +447,32 @@ export const dictionaries: Record<Locale, Dict> = {
     scroll: 'Scorri',
     rightsReserved: 'Tutti i diritti riservati.',
     taglineDecor: '🌷 Un fiore ｜ 💎 Un gioiello ｜ 💖 un ricordo eterno',
+  
+    heroTitleFallback: 'Gioielli Botanici\nFatti a Mano',
+    heroSubtitleFallback: 'Ogni pezzo è una storia che il tempo non cancella. Fiori veri, eternizzati nella resina da Marina, a Braga.',
+    heroCtaDiscover: 'Scopri le Collezioni',
+    heroCtaAbout: 'Conosci Marina',
+    realFlowersTitle: 'Fiori Veri',
+    storyTitleFallback: "Dall'effimero all'eterno",
+    storyTextFallback: 'Ogni pezzo è una storia. Dalle nostre mani alle vostre, trasformiamo fiori veri in gioielli che durano per sempre.',
+    internationalTitle: 'Presenza Internazionale',
+    instagramTitle: 'Seguici su Instagram',
+    instagramText: 'Segui il nostro quotidiano, dietro le quinte e novità in prima persona.',
+    ctaTitleFallback: 'Pronta a rendere eterno un ricordo?',
+    ctaButtonText: 'Contattaci',
+    categoriesTitle: 'Categorie',
+    categoriesSubtitle: 'Scopri i nostri gioielli botanici per tipo di pezzo',
+    collectionsTitle: 'Collezioni',
+    collectionsSubtitle: 'Ispirate a momenti speciali',
+    collectionsCta: 'Scopri →',
+    marinaPicksTitle: 'Scelte di Marina',
+    marinaPicksSubtitle: 'Pezzi selezionati apposta per te',
+    ctaLabel: 'Rendi Eterno un Ricordo',
+    internationalPresence: [
+      { country: 'Portogallo', cities: 'Braga · Lisbona', description: 'Laboratorio e negozio fisico' },
+      { country: 'Spagna', cities: 'Esposizioni', description: 'Fiere di orchidee' },
+      { country: 'Italia', cities: 'Trento · Mati', description: 'Esposizioni internazionali' },
+    ],
   },
   de: {
     brand: 'Flores Marina',
@@ -408,7 +539,33 @@ export const dictionaries: Record<Locale, Dict> = {
     scroll: 'Scrollen',
     rightsReserved: 'Alle Rechte vorbehalten.',
     taglineDecor: '🌷 Eine Blume ｜ 💎 Ein Schmuckstück ｜ 💖 eine ewige Erinnerung',
-  },
+  
+    heroTitleFallback: 'Botanischer Schmuck\nHandgefertigt',
+    heroSubtitleFallback: 'Jedes Stück erzählt eine Geschichte, die die Zeit nicht löscht. Echte Blumen, in Harz verewigt von Marina, in Braga.',
+    heroCtaDiscover: 'Kollektionen entdecken',
+    heroCtaAbout: 'Marina kennenlernen',
+    realFlowersTitle: 'Echte Blumen',
+    storyTitleFallback: 'Vom Vergänglichen zum Ewigen',
+    storyTextFallback: 'Jedes Stück erzählt eine Geschichte. Von unseren Händen zu deinen, verwandeln wir echte Blumen in Schmuck, der für immer hält.',
+    internationalTitle: 'Internationale Präsenz',
+    instagramTitle: 'Folge uns auf Instagram',
+    instagramText: 'Verfolge unseren Alltag, Hinter-den-Kulissen und Neuigkeiten aus erster Hand.',
+    ctaTitleFallback: 'Bereit, eine Erinnerung zu verewigen?',
+    ctaButtonText: 'Kontaktiere uns',
+    categoriesTitle: 'Kategorien',
+    categoriesSubtitle: 'Entdecke unseren botanischen Schmuck nach Stücktyp',
+    collectionsTitle: 'Kollektionen',
+    collectionsSubtitle: 'Inspiriert von besonderen Momenten',
+    collectionsCta: 'Entdecken →',
+    marinaPicksTitle: 'Marinas Auswahl',
+    marinaPicksSubtitle: 'Stücke speziell für dich ausgewählt',
+    ctaLabel: 'Verewige eine Erinnerung',
+    internationalPresence: [
+      { country: 'Portugal', cities: 'Braga · Lissabon', description: 'Atelier und Ladengeschäft' },
+      { country: 'Spanien', cities: 'Ausstellungen', description: 'Orchideenmessen' },
+      { country: 'Italien', cities: 'Trient · Mati', description: 'Internationale Ausstellungen' },
+    ],
+  }
 }
 
 export function getDictionary(locale: string): Dict {

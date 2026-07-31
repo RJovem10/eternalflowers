@@ -6,9 +6,10 @@ interface StoryProps {
   title: string
   text: string
   image?: (number | null) | Media
+  dict: any
 }
 
-export default function StorySection({ title, text, image }: StoryProps) {
+export default function StorySection({ title, text, image, dict }: StoryProps) {
   const img = image && typeof image !== 'number' ? image : null
 
   return (

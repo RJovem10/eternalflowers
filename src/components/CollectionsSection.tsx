@@ -14,15 +14,16 @@ interface CollectionData {
 interface CollectionsSectionProps {
   collections: CollectionData[]
   locale: string
+  dict: any
 }
 
-export default function CollectionsSection({ collections, locale }: CollectionsSectionProps) {
+export default function CollectionsSection({ collections, locale, dict }: CollectionsSectionProps) {
   if (collections.length === 0) return null
 
   return (
     <Section
-      title="Coleções"
-      subtitle="Inspiradas em momentos especiais"
+      title={dict.collectionsTitle}
+      subtitle={dict.collectionsSubtitle}
       align="center"
       size="default"
     >
@@ -68,7 +69,7 @@ export default function CollectionsSection({ collections, locale }: CollectionsS
                   </p>
                 )}
                 <span className="inline-block mt-4 text-[10px] uppercase tracking-[0.25em] text-brand-gold/70 font-body font-medium group-hover:text-brand-gold transition-colors duration-300">
-                  Descobrir →
+                  {dict.collectionsCta}
                 </span>
               </div>
             </Link>

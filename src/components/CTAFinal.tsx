@@ -6,6 +6,7 @@ interface CTAFinalProps {
   buttonText: string
   buttonLink: string
   locale: string
+  dict: any
 }
 
 function safeLink(link: string | undefined | null): string {
@@ -13,7 +14,7 @@ function safeLink(link: string | undefined | null): string {
   return link.startsWith('/') ? link : `/${link}`
 }
 
-export default function CTAFinal({ title, subtitle, buttonText, buttonLink, locale }: CTAFinalProps) {
+export default function CTAFinal({ title, subtitle, buttonText, buttonLink, locale, dict }: CTAFinalProps) {
   return (
     <section className="py-24 lg:py-32 bg-brand-charcoal text-white relative overflow-hidden">
       {/* Background decoration — textura subtil de fundo */}
@@ -26,7 +27,7 @@ export default function CTAFinal({ title, subtitle, buttonText, buttonLink, loca
 
       <div className="relative max-w-2xl mx-auto px-6 lg:px-8 text-center">
         <p className="text-[10px] uppercase tracking-[0.3em] text-brand-gold/50 font-body font-medium mb-5">
-          Eternize uma Memória
+          {dict.ctaLabel}
         </p>
         <h2 className="font-display text-3xl lg:text-[3rem] font-light leading-tight tracking-tight">
           {title}

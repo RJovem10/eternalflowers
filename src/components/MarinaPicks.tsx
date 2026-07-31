@@ -21,8 +21,8 @@ export default function MarinaPicks({ flowers, locale, dict }: MarinaPicksProps)
 
   return (
     <Section
-      title="Escolhas da Marina"
-      subtitle="Peças selecionadas especialmente para si"
+      title={dict.marinaPicksTitle}
+      subtitle={dict.marinaPicksSubtitle}
       align="center"
       background="bg-white"
       size="default"

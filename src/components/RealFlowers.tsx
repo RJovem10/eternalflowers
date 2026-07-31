@@ -4,6 +4,7 @@ import Section from './Section'
 interface RealFlowersProps {
   title: string
   subtitle?: string | null
+  dict: any
 }
 
 const flowers = [

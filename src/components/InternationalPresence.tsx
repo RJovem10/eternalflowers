@@ -3,15 +3,24 @@ import Section from './Section'
 interface InternationalPresenceProps {
   title: string
   subtitle?: string | null
+  dict: any
 }
 
-const locations = [
-  { country: 'Portugal', cities: 'Braga · Lisboa', emoji: '🇵🇹', description: 'Atelier e loja física' },
-  { country: 'Espanha', cities: 'Exposições', emoji: '🇪🇸', description: 'Feiras de orquídeas' },
-  { country: 'Itália', cities: 'Trento · Mati', emoji: '🇮🇹', description: 'Exposições internacionais' },
-]
+const emojis: Record<string, string> = {
+  Portugal: '🇵🇹',
+  Espanha: '🇪🇸',
+  Itália: '🇮🇹',
+  Spain: '🇪🇸',
+  Italy: '🇮🇹',
+  Spagna: '🇪🇸',
+  Italia: '🇮🇹',
+  Spanien: '🇪🇸',
+  Italien: '🇮🇹',
+  España: '🇪🇸',
+  Portogallo: '🇵🇹',
+}
 
-export default function InternationalPresence({ title, subtitle }: InternationalPresenceProps) {
+export default function InternationalPresence({ title, subtitle, dict }: InternationalPresenceProps) {
   return (
     <Section
       title={title}
@@ -22,12 +31,12 @@ export default function InternationalPresence({ title, subtitle }: International
     >
       <div className="max-w-3xl mx-auto">
         <div className="flex flex-col md:flex-row gap-px bg-brand-wood/8">
-          {locations.map((loc) => (
+          {dict.internationalPresence.map((loc: { country: string; cities: string; description: string }) => (
             <div
               key={loc.country}
               className="flex-1 text-center p-8 lg:p-10 bg-white"
             >
-              <span className="text-2xl block mb-4">{loc.emoji}</span>
+              <span className="text-2xl block mb-4">{emojis[loc.country] || '🌍'}</span>
               <h3 className="font-display text-lg font-light text-brand-charcoal">
                 {loc.country}
               </h3>

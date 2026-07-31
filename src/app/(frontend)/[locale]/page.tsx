@@ -78,8 +78,9 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
       {/* ─── ATO 2: VERDADE ─── */}
       {/* Background: branco | Size: compact | Prova botânica */}
       <RealFlowers
-        title={realFlowers?.title || 'Flores Verdadeiras'}
+        title={realFlowers?.title || dict.realFlowersTitle}
         subtitle={realFlowers?.subtitle}
+        dict={dict}
       />
 
       {/* ─── ATO 3: UTILIDADE ─── */}
@@ -92,6 +93,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
           description: c.description,
         }))}
         locale={locale}
+        dict={dict}
       />
 
       {/* ─── ATO 4: EDIÇÃO ─── */}
@@ -105,14 +107,16 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
           image: c.image,
         }))}
         locale={locale}
+        dict={dict}
       />
 
       {/* ─── ATO 5: ALMA ─── */}
       {/* Background: creme | Size: large | Split layout, história */}
       <StorySection
-        title={story?.title || 'Do efémero ao eterno'}
-        text={story?.text || 'Cada peça é uma história. Das nossas mãos para as suas, transformamos flores verdadeiras em joias que duram para sempre.'}
+        title={story?.title || dict.storyTitleFallback}
+        text={story?.text || dict.storyTextFallback}
         image={story?.image}
+        dict={dict}
       />
 
       {/* Background: branco | Size: default | Escolhas curadas */}
@@ -130,25 +134,28 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
       {/* ─── ATO 6: CREDIBILIDADE ─── */}
       {/* Background: creme | Size: default | Prova social */}
       <InternationalPresence
-        title={international?.title || 'Presença Internacional'}
+        title={international?.title || dict.internationalTitle}
         subtitle={international?.subtitle}
+        dict={dict}
       />
 
       {/* Background: branco | Size: compact | Comunidade */}
       <InstagramSection
-        title={instagram?.title || 'Siga-nos no Instagram'}
+        title={instagram?.title || dict.instagramTitle}
         handle={instagram?.handle || 'eternal.flowers.pt'}
-        text={instagram?.text || 'Acompanhe o nosso dia-a-dia, bastidores e novidades em primeira mão.'}
+        text={instagram?.text || dict.instagramText}
+        dict={dict}
       />
 
       {/* ─── ATO 7: FECHO ─── */}
       {/* Background: escuro | Size: grande | O convite emocional */}
       <CTAFinal
-        title={cta?.title || 'Pronta para eternizar uma memória?'}
+        title={cta?.title || dict.ctaTitleFallback}
         subtitle={cta?.subtitle}
-        buttonText={cta?.buttonText || 'Fale connosco'}
+        buttonText={cta?.buttonText || dict.ctaButtonText}
         buttonLink={cta?.buttonLink || '/catalog'}
         locale={locale}
+        dict={dict}
       />
 
       {/* Footer */}

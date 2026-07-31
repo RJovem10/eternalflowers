@@ -4,6 +4,7 @@ interface InstagramSectionProps {
   title: string
   handle: string
   text?: string | null
+  dict: any
 }
 
 function safeHandle(h: string | undefined | null): string {

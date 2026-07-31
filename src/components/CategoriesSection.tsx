@@ -11,6 +11,7 @@ interface CategoryData {
 interface CategoriesSectionProps {
   categories: CategoryData[]
   locale: string
+  dict: any
 }
 
 const categoryIcons: Record<string, string> = {
@@ -23,13 +24,13 @@ const categoryIcons: Record<string, string> = {
   decoracao: '🏺',
 }
 
-export default function CategoriesSection({ categories, locale }: CategoriesSectionProps) {
+export default function CategoriesSection({ categories, locale, dict }: CategoriesSectionProps) {
   if (categories.length === 0) return null
 
   return (
     <Section
-      title="Categorias"
-      subtitle="Descubra as nossas joias botânicas por tipo de peça"
+      title={dict.categoriesTitle}
+      subtitle={dict.categoriesSubtitle}
       align="center"
       background="bg-brand-cream"
       size="default"
