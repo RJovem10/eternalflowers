@@ -11,6 +11,7 @@ interface HeroProps {
   secondaryButtonText?: string | null
   secondaryButtonLink?: string | null
   locale: string
+  dict: any
 }
 
 function safeLink(link: string | undefined | null): string {
@@ -27,6 +28,7 @@ export default function Hero({
   secondaryButtonText,
   secondaryButtonLink,
   locale,
+  dict,
 }: HeroProps) {
   const image = heroImage && typeof heroImage !== 'number' ? heroImage : null
   const hasSecondary =
@@ -100,7 +102,7 @@ export default function Hero({
 
       {/* Scroll indicator — sugestão subtil de que há mais conteúdo */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-white/30">
-        <span className="text-[10px] uppercase tracking-[0.3em] font-body font-light">Scroll</span>
+        <span className="text-[10px] uppercase tracking-[0.3em] font-body font-light">{dict.scroll}</span>
         <div className="w-[1px] h-8 bg-gradient-to-b from-white/40 to-transparent" />
       </div>
     </section>

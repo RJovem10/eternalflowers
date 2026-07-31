@@ -68,6 +68,14 @@ type Dict = {
   productTypePermanente: string
   productTypeSazonal: string
   productTypeExclusivo: string
+  mobileNavLabel: string
+  openMenu: string
+  closeMenu: string
+  contact: string
+  followUs: string
+  scroll: string
+  rightsReserved: string
+  taglineDecor: string
 }
 
 export const dictionaries: Record<Locale, Dict> = {
@@ -128,6 +136,14 @@ export const dictionaries: Record<Locale, Dict> = {
     productTypePermanente: 'Permanente',
     productTypeSazonal: 'Sazonal',
     productTypeExclusivo: 'Exclusivo',
+    mobileNavLabel: 'Navegação mobile',
+    openMenu: 'Abrir menu',
+    closeMenu: 'Fechar menu',
+    contact: 'Contacto',
+    followUs: 'Segue-nos',
+    scroll: 'Scroll',
+    rightsReserved: 'Todos os direitos reservados.',
+    taglineDecor: '🌷 Uma flor ｜ 💎 Uma joia ｜ 💖 uma memória eternizada',
   },
   en: {
     brand: 'Flores Marina',
@@ -186,6 +202,14 @@ export const dictionaries: Record<Locale, Dict> = {
     productTypePermanente: 'Permanent',
     productTypeSazonal: 'Seasonal',
     productTypeExclusivo: 'Exclusive',
+    mobileNavLabel: 'Mobile navigation',
+    openMenu: 'Open menu',
+    closeMenu: 'Close menu',
+    contact: 'Contact',
+    followUs: 'Follow us',
+    scroll: 'Scroll',
+    rightsReserved: 'All rights reserved.',
+    taglineDecor: '🌷 A flower ｜ 💎 A jewel ｜ 💖 a memory made eternal',
   },
   es: {
     brand: 'Flores Marina',
@@ -244,6 +268,14 @@ export const dictionaries: Record<Locale, Dict> = {
     productTypePermanente: 'Permanente',
     productTypeSazonal: 'Estacional',
     productTypeExclusivo: 'Exclusivo',
+    mobileNavLabel: 'Navegación móvil',
+    openMenu: 'Abrir menú',
+    closeMenu: 'Cerrar menú',
+    contact: 'Contacto',
+    followUs: 'Síguenos',
+    scroll: 'Desplázate',
+    rightsReserved: 'Todos los derechos reservados.',
+    taglineDecor: '🌷 Una flor ｜ 💎 Una joya ｜ 💖 un recuerdo eterno',
   },
   it: {
     brand: 'Flores Marina',
@@ -302,6 +334,14 @@ export const dictionaries: Record<Locale, Dict> = {
     productTypePermanente: 'Permanente',
     productTypeSazonal: 'Stagionale',
     productTypeExclusivo: 'Esclusivo',
+    mobileNavLabel: 'Navigazione mobile',
+    openMenu: 'Apri menu',
+    closeMenu: 'Chiudi menu',
+    contact: 'Contatti',
+    followUs: 'Seguici',
+    scroll: 'Scorri',
+    rightsReserved: 'Tutti i diritti riservati.',
+    taglineDecor: '🌷 Un fiore ｜ 💎 Un gioiello ｜ 💖 un ricordo eterno',
   },
   de: {
     brand: 'Flores Marina',
@@ -360,6 +400,14 @@ export const dictionaries: Record<Locale, Dict> = {
     productTypePermanente: 'Dauerhaft',
     productTypeSazonal: 'Saisonal',
     productTypeExclusivo: 'Exklusiv',
+    mobileNavLabel: 'Mobile Navigation',
+    openMenu: 'Menü öffnen',
+    closeMenu: 'Menü schließen',
+    contact: 'Kontakt',
+    followUs: 'Folge uns',
+    scroll: 'Scrollen',
+    rightsReserved: 'Alle Rechte vorbehalten.',
+    taglineDecor: '🌷 Eine Blume ｜ 💎 Ein Schmuckstück ｜ 💖 eine ewige Erinnerung',
   },
 }
 

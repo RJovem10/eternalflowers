@@ -5,6 +5,7 @@ interface FooterProps {
   instagramUrl?: string | null
   whatsappUrl?: string | null
   locale: string
+  dict: any
 }
 
 export default function Footer({
@@ -13,6 +14,8 @@ export default function Footer({
   phone,
   instagramUrl,
   whatsappUrl,
+  locale,
+  dict,
 }: FooterProps) {
   return (
     <footer className="bg-brand-charcoal text-white/55">
@@ -33,14 +36,14 @@ export default function Footer({
               </p>
             )}
             <p className="text-sm text-white/35 mt-6 font-body font-light leading-relaxed">
-              🌷 Uma flor ｜ 💎 Uma joia ｜ 💖 uma memória eternizada
+              {dict.taglineDecor}
             </p>
           </div>
 
-          {/* Contacto */}
+          {/* Contact */}
           <div>
             <h4 className="text-[10px] uppercase tracking-[0.25em] text-white/35 font-body font-medium mb-5">
-              Contacto
+              {dict.contact}
             </h4>
             <ul className="space-y-3 text-sm text-white/45 font-body font-light">
               {email && (
@@ -62,10 +65,10 @@ export default function Footer({
             </ul>
           </div>
 
-          {/* Segue-nos */}
+          {/* Follow us */}
           <div>
             <h4 className="text-[10px] uppercase tracking-[0.25em] text-white/35 font-body font-medium mb-5">
-              Segue-nos
+              {dict.followUs}
             </h4>
             <ul className="space-y-3 text-sm">
               {instagramUrl && (
@@ -100,7 +103,7 @@ export default function Footer({
 
         <div className="mt-14 pt-8 border-t border-white/8 text-center">
           <p className="text-xs text-white/20 font-body font-light">
-            &copy; {new Date().getFullYear()} Eternal Flowers by Mar&Natur&reg;. Todos os direitos reservados.
+            &copy; {new Date().getFullYear()} Eternal Flowers by Mar&Natur&reg;. {dict.rightsReserved}
           </p>
         </div>
       </div>

@@ -72,6 +72,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
         heroTitle={hero.heroTitle || 'Joias Botânicas\nFeitas à Mão'}
         heroSubtitle={hero.heroSubtitle || 'Cada peça é uma história que o tempo não apaga. Flores verdadeiras, eternizadas em resina pela Marina, em Braga.'}
         locale={locale}
+        dict={dict}
       />
 
       {/* ─── ATO 2: VERDADE ─── */}
@@ -158,6 +159,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
         instagramUrl={footer?.instagramUrl}
         whatsappUrl={footer?.whatsappUrl}
         locale={locale}
+        dict={dict}
       />
     </div>
   )

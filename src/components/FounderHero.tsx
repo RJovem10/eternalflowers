@@ -5,6 +5,7 @@ interface FounderHeroProps {
   heroTitle?: string
   heroSubtitle?: string
   locale?: string
+  dict: any
 }
 
 /**
@@ -23,6 +24,7 @@ export default function FounderHero({
   heroTitle = 'Joias Botânicas\nFeitas à Mão',
   heroSubtitle = 'Cada peça é uma história que o tempo não apaga. Flores verdadeiras, eternizadas em resina pela Marina, em Braga.',
   locale = 'pt',
+  dict,
 }: FounderHeroProps) {
   return (
     <section className="relative min-h-screen bg-brand-cream flex flex-col lg:flex-row overflow-hidden">
@@ -95,7 +97,7 @@ export default function FounderHero({
 
       {/* Scroll indicator — apenas visível em desktop */}
       <div className="hidden lg:flex absolute bottom-10 left-1/2 -translate-x-1/2 flex-col items-center gap-2 text-brand-charcoal/20 z-20">
-        <span className="text-[9px] uppercase tracking-[0.3em] font-body font-light">Scroll</span>
+        <span className="text-[9px] uppercase tracking-[0.3em] font-body font-light">{dict.scroll}</span>
         <div className="w-[1px] h-10 bg-gradient-to-b from-brand-charcoal/30 to-transparent" />
       </div>
     </section>

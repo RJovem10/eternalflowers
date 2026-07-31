@@ -135,7 +135,7 @@ export default function Header({
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen((isOpen) => !isOpen)}
-              aria-label={isMobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
+              aria-label={isMobileMenuOpen ? dict.closeMenu : dict.openMenu}
               aria-expanded={isMobileMenuOpen}
               aria-controls="mobile-navigation"
               className="md:hidden inline-flex h-10 w-10 items-center justify-center text-brand-charcoal hover:text-brand-gold transition-colors duration-300"
@@ -181,7 +181,7 @@ export default function Header({
       >
         <nav
           id="mobile-navigation"
-          aria-label="Navegação mobile"
+          aria-label={dict.mobileNavLabel}
           className={`ml-auto h-full w-full max-w-xs overflow-y-auto bg-brand-cream text-brand-charcoal transition-transform duration-300 ${
             isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
           }`}
