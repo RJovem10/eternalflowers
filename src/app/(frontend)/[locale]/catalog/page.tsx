@@ -1,10 +1,35 @@
 import Link from 'next/link'
-import { getDictionary } from '@/i18n/dictionaries'
+import { getDictionary, locales, defaultLocale } from '@/i18n/dictionaries'
+import type { Metadata } from 'next'
 import FlowerCard from '@/components/FlowerCard'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 
 export const dynamic = 'force-dynamic'
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}): Promise<Metadata> {
+  const { locale } = await params
+  const dict = getDictionary(locale)
+
+  const languages: Record<string, string> = {}
+  for (const l of locales) {
+    languages[l] = `/${l}/catalog`
+  }
+  languages['x-default'] = `/${defaultLocale}/catalog`
+
+  return {
+    title: `${dict.catalog} — Eternal Flowers`,
+    alternates: {
+      canonical: `/${locale}/catalog`,
+      languages,
+    },
+    robots: { index: true, follow: true },
+  }
+}
 
 export default async function Catalog({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params

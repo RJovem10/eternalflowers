@@ -1,4 +1,4 @@
-import { getDictionary } from '@/i18n/dictionaries'
+import { getDictionary, locales, defaultLocale } from '@/i18n/dictionaries'
 import { aboutContent } from '@/content/about'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -12,13 +12,24 @@ export async function generateMetadata({
   const { locale } = await params
   const content = aboutContent[locale] || aboutContent.pt
 
+  const languages: Record<string, string> = {}
+  for (const l of locales) {
+    languages[l] = `/${l}/about`
+  }
+  languages['x-default'] = `/${defaultLocale}/about`
+
   return {
     title: content.meta.title,
     description: content.meta.description,
+    alternates: {
+      canonical: `/${locale}/about`,
+      languages,
+    },
     openGraph: {
       title: content.meta.title,
       description: content.meta.description,
       images: [{ url: '/marina/marina-hero-orquidea-rosa.jpeg' }],
+      locale: locale === 'pt' ? 'pt_PT' : locale === 'en' ? 'en_GB' : locale,
     },
   }
 }

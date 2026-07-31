@@ -1,5 +1,6 @@
 import { getPayloadClient } from '@/payload'
-import { getDictionary } from '@/i18n/dictionaries'
+import { getDictionary, locales, defaultLocale } from '@/i18n/dictionaries'
+import type { Metadata } from 'next'
 import Hero from '@/components/FounderHero'
 import RealFlowers from '@/components/RealFlowers'
 import CategoriesSection from '@/components/CategoriesSection'
@@ -10,6 +11,35 @@ import InternationalPresence from '@/components/InternationalPresence'
 import InstagramSection from '@/components/InstagramSection'
 import CTAFinal from '@/components/CTAFinal'
 import Footer from '@/components/Footer'
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}): Promise<Metadata> {
+  const { locale } = await params
+  const dict = getDictionary(locale)
+
+  const languages: Record<string, string> = {}
+  for (const l of locales) {
+    languages[l] = `/${l}`
+  }
+  languages['x-default'] = `/${defaultLocale}`
+
+  return {
+    title: `Eternal Flowers | ${dict.tagline}`,
+    description: dict.heroSubtitleFallback,
+    alternates: {
+      canonical: `/${locale}`,
+      languages,
+    },
+    openGraph: {
+      title: `Eternal Flowers | ${dict.tagline}`,
+      description: dict.heroSubtitleFallback,
+      locale: locale === 'pt' ? 'pt_PT' : locale === 'en' ? 'en_GB' : locale,
+    },
+  }
+}
 
 /**
  * A homepage da Eternal Flowers segue um arco narrativo em 7 atos:

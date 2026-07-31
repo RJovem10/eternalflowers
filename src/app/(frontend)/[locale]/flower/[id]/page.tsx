@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
-import { getDictionary } from '@/i18n/dictionaries'
+import { getDictionary, locales, defaultLocale } from '@/i18n/dictionaries'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import ProductGallery from '@/components/ProductGallery'
@@ -46,11 +46,18 @@ export async function generateMetadata({ params }: FlowerPageParams): Promise<Me
     return {
       title,
       description,
+      alternates: {
+        canonical: `/${locale}/flower/${id}`,
+        languages: Object.fromEntries(
+          locales.map((l) => [l, `/${l}/flower/${id}`])
+        ),
+      },
       openGraph: {
         title,
         description,
         type: 'website',
         images: imageUrl ? [{ url: imageUrl, alt: title }] : undefined,
+        locale: locale === 'pt' ? 'pt_PT' : locale === 'en' ? 'en_GB' : locale,
       },
     }
   } catch {

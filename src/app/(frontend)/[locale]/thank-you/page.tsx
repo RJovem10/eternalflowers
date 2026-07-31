@@ -1,5 +1,21 @@
 import Link from 'next/link'
 import { getDictionary } from '@/i18n/dictionaries'
+import type { Metadata } from 'next'
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}): Promise<Metadata> {
+  const { locale } = await params
+  const dict = getDictionary(locale)
+
+  return {
+    title: `${dict.thankYouTitle} — Eternal Flowers`,
+    description: dict.thankYouMessage,
+    robots: { index: false, follow: false },
+  }
+}
 
 export default async function ThankYou({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
