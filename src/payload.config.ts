@@ -67,7 +67,7 @@ const Flowers: CollectionConfig = {
         },
       ],
     },
-    { name: 'story', type: 'textarea', label: 'História da Peça' },
+    { name: 'story', type: 'textarea', label: 'História da Peça', localized: true },
     {
       name: 'category',
       type: 'relationship',
