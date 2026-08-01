@@ -270,6 +270,17 @@ export default buildConfig({
   collections: [Flowers, Categories, Collections, Media, Coupons, Orders],
   globals: [Homepage],
   db,
+  localization: {
+    locales: [
+      { code: 'pt', label: 'Português' },
+      { code: 'en', label: 'English' },
+      { code: 'es', label: 'Español' },
+      { code: 'it', label: 'Italiano' },
+      { code: 'de', label: 'Deutsch' },
+    ],
+    defaultLocale: 'pt',
+    fallback: true,
+  },
   admin: {
     importMap: {
       baseDir: __dirname,
