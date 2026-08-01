@@ -7,7 +7,9 @@
 
 ## Resumo Executivo da Sprint
 
-Esta sprint consolidou a **identidade da marca**, elevou a **qualidade visual** da homepage e corrigiu **problemas de runtime** detetados em validação real no browser.
+A ISSUE-016 (Full-site Internationalization) foi concluída na totalidade do frontend.
+11 commits, 7 fases, html lang dinâmico, metadata SEO, 404 e error boundary localizados.
+Payload localization (Fase E) permanece em hold.
 
 **O que mudou:**
 - De 11 documentos de marca (filosofia, linguagem visual, fotografia, tom, taxonomia, etc.) que definem como qualquer decisão futura deve ser tomada
@@ -602,6 +604,32 @@ src/app/
 
 ---
 
+## ✅ ISSUE-016 — Full-site Internationalization (Frontend)
+
+**Objetivo:** Localizar todo o frontend em 5 idiomas (pt, en, es, it, de).
+
+**Fases concluídas:**
+- **Fase A** — Componentes partilhados (Header, Footer, acessibilidade)
+- **Fase B** — Homepage e fallbacks
+- **Fase C1** — Catálogo e página de produto (strings frontend)
+- **Fase D** — Carrinho, checkout, thank-you + códigos de erro estáveis
+- **Fase F1** — Metadata, SEO, canonical, hreflang, robots, Open Graph
+- **Fase F2** — 404 localizado, error boundary, loading do catálogo
+- **html lang** — Lang dinâmico por locale no servidor
+
+**Fase E (Payload localization):** 💤 em hold
+
+**11 commits**, implementação frontend concluída.
+
+**Limitações atuais:**
+- Conteúdo dinâmico do Payload (nomes, descrições, categorias, coleções, stories) permanece em português — depende da Fase E
+- 404 pages: `<html id="__next_error__">` sem lang (limitação Next.js)
+- Produto sem loading visual para preservar HTTP 404
+
+**Estado:** ✅ Frontend concluído — Fase E em hold
+
+---
+
 # Próximas Issues
 
 Ordenadas por prioridade estimada.
@@ -718,7 +746,7 @@ brand: {
 
 | Indicador | Valor |
 |-----------|-------|
-| Total de Issues | 21 |
+| Total de Issues | 22 |
 | ✅ Concluídas | 21 |
 | 🟡 Em progresso | 0 |
 | ⚪ Planeadas | 3 |
