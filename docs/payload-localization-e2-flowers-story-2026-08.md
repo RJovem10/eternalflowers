@@ -4,20 +4,15 @@
 > Projeto: Eternal Flowers by Mar&Natur
 > Branch: `feature/issue-016-payload-localization`
 > Commit base: `0f205b2`
+> Commit E2: `40268c6`
 
 ---
 
 ## 1. Objetivo
 
-Piloto de `localized: true` no campo `story` da collection `Flowers`, como primeiro passo da Fase E (Payload localization).
+Piloto de `localized: true` no campo `story` da collection `Flowers`.
 
-## 2. O que foi feito
-
-- Adicionado `localized: true` a `Flowers.story` em `src/payload.config.ts`
-- Criada migration `20260801_083313` que cria `flowers_locales` e backfill dos 10 valores PT
-- Migration DOWN testada com e sem traduções EN
-
-## 3. Schema — antes e depois
+## 2. Schema
 
 ### Antes
 ```
@@ -26,113 +21,146 @@ flowers.story → TEXT (único, não localizado)
 
 ### Depois
 ```
-flowers.story → TEXT (coluna original mantida)
+flowers.story → TEXT (coluna original preservada)
 flowers_locales (NOVA)
   ├── story TEXT
   ├── id INTEGER PK
   ├── _locale TEXT NOT NULL
-  ├── _parent_id INTEGER FK → flowers.id
+  ├── _parent_id INTEGER FK → flowers.id ON DELETE CASCADE
   └── UNIQUE INDEX (_locale, _parent_id)
 ```
 
-O Payload SQLite adapter cria uma tabela separada para valores localizados, preservando a coluna original.
-
-## 4. Dados antes e depois
+## 3. Dados
 
 | Indicador | Antes | Depois |
 |-----------|-------|--------|
 | Flowers | 10 | 10 |
-| Stories preenchidas (PT) | 10 | 10 (em `flowers_locales`) |
-| Stories vazias | 0 | 0 |
+| Stories PT preenchidas | 10 | 10 |
 | integrity_check | ok | ok |
-| foreign_key_check | 0 erros | 0 erros |
+| foreign_key_check | 0 | 0 |
 
-## 5. Migration testada
+## 4. Migration UP
 
-### UP ✅
-- Cria `flowers_locales` com `IF NOT EXISTS`
-- Backfill: copia todas as stories não vazias para `locale='pt'`
-- 10/10 valores preservados
+1. `CREATE TABLE IF NOT EXISTS flowers_locales`
+2. `CREATE UNIQUE INDEX` on `(_locale, _parent_id)`
+3. `INSERT ... SELECT story, 'pt', id FROM flowers WHERE story IS NOT NULL AND story != ''`
 
-### DOWN ✅
-- Restaura PT stories para a coluna `flowers.story`
-- Remove `flowers_locales`
-- **Limitação:** se existirem traduções EN/ES/IT/DE, são perdidas no DOWN
+✅ 10/10 valores PT preservados
 
-## 6. API REST (autenticada)
+## 5. Migration DOWN (patched após revisão)
+
+- Pre-check: avisa se existem `_locale != 'pt'`
+- `COALESCE` para evitar NULL quando registo PT foi apagado
+- Restaura PT, drop `flowers_locales`
+
+⚠️ Perde traduções EN/ES/IT/DE — usar backup para rollback com conteúdo multilingue
+
+## 6. REST API
 
 | Locale | Fallback | story | Resultado |
 |--------|----------|-------|-----------|
-| `pt` | — | valor original | ✅ |
-| `en` | `pt` (default) | valor PT | ✅ (fallback) |
-| `en` | `none` | null | ✅ |
+| pt | on (default) | valor original (424 chars) | ✅ |
+| en | on (default) | valor PT (424 chars) | ✅ |
+| en | off (`none`) | vazio (0 chars) | ✅ |
+| es | off | vazio | ✅ |
+| it | off | vazio | ✅ |
+| de | off | vazio | ✅ |
 
-Campos `namePt..nameDe` e `descriptionPt..descriptionDe` continuam campos separados e inalterados.
+Campos `namePt..nameDe`, `descriptionPt..descriptionDe` mantidos independentes.
 
-## 7. Admin
+## 7. Escrita EN
 
-- Seletor de locale mostra os 5 idiomas
-- PT mostra story original
-- EN permite edição independente
-- Campos suffix (namePt..nameEn, etc.) continuam visíveis
-- Preço, stock, imagens e relações partilhados entre locales
+PATCH `/api/flowers/1?locale=en` com story EN:
+- ✅ EN escrito: "E2 Test: English story..."
+- ✅ PT inalterado
+- ✅ Preço (89), namePt, image, relações intactos
 
-## 8. Frontend (contra base migrada)
+## 8. Admin
 
-- Rotas /pt, /en, /pt/catalog, /pt/flower/10: 200, lang correto
-- 404: HTTP 404, localizado
-- Admin: 200
-- Story PT não visível (frontend queries não enviam locale — E5)
+- Seletor de 5 locales presente
+- PT: 10 stories originais visíveis
+- EN: edição independente
+- Campos suffix (namePt..nameEn) preservados
+- Preço/stock/imagens partilhados
 
-## 9. Tipos gerados
+## 9. Required e Fallback
 
-- `story?: string | null` (tipo correto para campo localizado)
-- `namePt..nameDe` inalterados
+- `story`: `type: 'textarea'`, **não required** (`required` não definido)
+- Fallback `true` na config global → locale vazio mostra PT
+- `fallback-locale=none` → campo vazio/null
+- Guardar locale vazio é permitido (não required)
+- ⚠ `required: true` + `localized: true` validaria por locale; não aplicado aqui
+
+## 10. Tipos
+
+- `story?: string | null` (correto para campo localizado)
+- `namePt..nameDe`, `descriptionPt..descriptionDe` inalterados
 - Categories, Collections, Homepage inalterados
 
-## 10. Build
+## 11. Frontend (contra base migrada)
 
-`npm run build` contra base migrada: ✅ 0 erros
+| Rota | Status | lang | Notas |
+|------|--------|------|-------|
+| /pt | 200 | pt | ✅ |
+| /en | 200 | en | ✅ |
+| /pt/flower/10 | 200 | pt | ✅ |
+| /pt/catalog | 200 | pt | ✅ |
+| /pt/rota-inexistente | 404 | — | ✅ |
+| /pt/flower/999999 | 404 | — | ✅ |
+| /admin | 200 | en | ✅ |
 
-> ⚠ O código após E2 requer a migration aplicada. Falha contra schema antigo é esperada.
+⚠ Story PT visível em todas as línguas (frontend não envia locale — E5)
 
-## 11. Revisão GPT-5.6 Sol
+## 12. Revisão GPT-5.6 Sol
 
-[pendente — resultado será inserido quando disponível]
+**Classificação: B — SQLite validado, PostgreSQL não testado**
 
-## 12. Classificação da Migration
+| Critério | Status |
+|----------|--------|
+| UP data safety | ✅ Correcto |
+| DOWN com dados não-PT | ⚠️ Destrutivo — guarda adicionada (warning) |
+| PostgreSQL abordagem | ✅ Compatível (ambos usam `_locales`) |
+| PostgreSQL SQL portabilidade | ⚠️ Sintaxe difere — usar Drizzle ou E2-PG |
+| DOWN com COALESCE | ✅ Implementado após revisão |
+| Pre-check DOWN | ✅ Implementado após revisão |
 
-**Classificação: B — SQLite validada, PostgreSQL não validada**
+**Recomendações aplicadas:**
+1. ✅ Pre-check no DOWN (conta `_locale != 'pt'`)
+2. ✅ COALESCE no UPDATE para evitar NULL em boa data
+3. ✅ Backup documentado como rollback canónico
 
-- SQLite: UP e DOWN testados em base isolada ✅
-- PostgreSQL: não testado (sem instância local)
-- DOWN com traduções EN: perda documentada
-- Requer subfase E2-PG antes de deploy em produção
+## 13. Risco PostgreSQL
 
-## 13. Limitações
+A migration usa `sql` de `@payloadcms/db-sqlite`. Ambos os adapters estão instalados.
 
-1. Migration PostgreSQL não testada
-2. DOWN destrói traduções não-PT
-3. Frontend não envia locale nas queries (E5)
-4. Apenas `story` localizado — suffix fields mantidos
-5. Base original (`loja.sqlite`) não recebeu a migration
+No VPS Postgres, a migration importaria `sql` do adapter SQLite (instalado) e executaria SQL incompatível — **falharia em runtime**.
 
-## 14. Base original
+**Solução:** E2-PG separada ou integrar a migration via drizzle (geração automática de SQL por adapter).
+
+## 14. Build
+
+| Base | Resultado |
+|------|-----------|
+| Original (`loja.sqlite` — sem migration) | ❌ `no such table: flowers_locales` (esperado) |
+| Migrada (`/tmp/loja-e2-final.sqlite`) | ✅ 0 erros |
+
+⚠ Código E2 requer migration aplicada. Incompatibilidade esperada.
+
+## 15. Ficheiros alterados (6)
+
+| Ficheiro | Ação |
+|----------|------|
+| `src/payload.config.ts` | `story: localized: true` |
+| `src/migrations/20260801_083313.ts` | **NOVO** — UP/DOWN patched |
+| `src/migrations/20260801_083313.json` | **NOVO** — metadata |
+| `src/migrations/index.ts` | alterado |
+| `docs/payload-localization-e2-flowers-story-2026-08.md` | **NOVO** |
+
+## 16. Base original
 
 | Indicador | Valor |
 |-----------|-------|
-| Checksum original | `122d2af7639d...` (inalterado) |
-| integrity_check | ok |
-| Backup E0 | intacto |
-| PostgreSQL | não contactado |
-
-## 15. Ficheiros alterados (2)
-
-| Ficheiro | Alteração |
-|----------|-----------|
-| `src/payload.config.ts` | `story: { localized: true }` |
-| `src/migrations/20260801_083313.ts` | **NOVO** — migration UP/DOWN |
-
-## 16. Próximo passo
-
-E3 — Categories e Collections (não autorizada)
+| Checksum | `122d2af7639d...` ✅ inalterado |
+| Backup E0 | intacto ✅ |
+| PostgreSQL | não contactado ✅ |
+| Push | não feito ✅

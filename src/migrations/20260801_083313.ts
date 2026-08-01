@@ -28,14 +28,23 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
 }
 
 export async function down({ db, payload, req }: MigrateDownArgs): Promise<void> {
-  await db.run(sql`UPDATE \`flowers\` SET \`story\` = (
-    SELECT \`story\` FROM \`flowers_locales\`
-    WHERE \`flowers_locales\`.\`_parent_id\` = \`flowers\`.\`id\`
-    AND \`flowers_locales\`.\`_locale\` = 'pt'
-  ) WHERE EXISTS (
-    SELECT 1 FROM \`flowers_locales\`
-    WHERE \`flowers_locales\`.\`_parent_id\` = \`flowers\`.\`id\`
-    AND \`flowers_locales\`.\`_locale\` = 'pt'
+  // Pre-check: ABORT if non-PT translations exist — they would be lost
+  const result = await db.get(sql`SELECT COUNT(*) AS cnt FROM \`flowers_locales\` WHERE \`_locale\` != 'pt';`)
+  if (result?.cnt > 0) {
+    throw new Error(
+      `[DOWN] ABORTED: ${result.cnt} non-PT locale row(s) found in flowers_locales. ` +
+      `This DOWN would destroy those translations. ` +
+      `Use the pre-migration backup for rollback, or write a preservation migration first.`
+    )
+  }
+
+  // Restore PT stories with COALESCE to avoid NULL-ing good data
+  await db.run(sql`UPDATE \`flowers\` SET \`story\` = COALESCE(
+    (SELECT \`story\` FROM \`flowers_locales\`
+     WHERE \`flowers_locales\`.\`_parent_id\` = \`flowers\`.\`id\`
+     AND \`flowers_locales\`.\`_locale\` = 'pt'),
+    \`flowers\`.\`story\`
   );`)
+
   await db.run(sql`DROP TABLE IF EXISTS \`flowers_locales\`;`)
 }
