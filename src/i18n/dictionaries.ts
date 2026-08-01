@@ -101,6 +101,11 @@ type Dict = {
   thankYouTitle: string
   thankYouMessage: string
   backToHome: string
+  pageNotFoundTitle: string
+  pageNotFoundMessage: string
+  genericErrorTitle: string
+  genericErrorMessage: string
+  tryAgain: string
   orderError: string
   processing: string
   qtyLabel: string
@@ -214,6 +219,11 @@ export const dictionaries: Record<Locale, Dict> = {
     thankYouTitle: 'Obrigado!',
     thankYouMessage: 'Recebemos o teu pedido. A Marina contactará em breve.',
     backToHome: 'Voltar ao início',
+    pageNotFoundTitle: 'Página não encontrada',
+    pageNotFoundMessage: 'A página que procura não existe.',
+    genericErrorTitle: 'Algo correu mal',
+    genericErrorMessage: 'Tente novamente ou volte ao início.',
+    tryAgain: 'Tentar novamente',
     orderError: 'Erro ao finalizar a encomenda.',
     processing: 'A processar…',
     qtyLabel: 'Quantidade',
@@ -322,6 +332,11 @@ export const dictionaries: Record<Locale, Dict> = {
     thankYouTitle: 'Thank you!',
     thankYouMessage: 'We\'ve received your order. Marina will be in touch soon.',
     backToHome: 'Back to home',
+    pageNotFoundTitle: 'Page not found',
+    pageNotFoundMessage: 'The page you are looking for does not exist.',
+    genericErrorTitle: 'Something went wrong',
+    genericErrorMessage: 'Please try again or return to the home page.',
+    tryAgain: 'Try again',
     orderError: 'Error placing your order.',
     processing: 'Processing…',
     qtyLabel: 'Quantity',
@@ -430,6 +445,11 @@ export const dictionaries: Record<Locale, Dict> = {
     thankYouTitle: '¡Gracias!',
     thankYouMessage: 'Hemos recibido tu pedido. Marina se pondrá en contacto pronto.',
     backToHome: 'Volver al inicio',
+    pageNotFoundTitle: 'Página no encontrada',
+    pageNotFoundMessage: 'La página que busca no existe.',
+    genericErrorTitle: 'Algo salió mal',
+    genericErrorMessage: 'Inténtelo de nuevo o vuelva al inicio.',
+    tryAgain: 'Intentar de nuevo',
     orderError: 'Error al finalizar el pedido.',
     processing: 'Procesando…',
     qtyLabel: 'Cantidad',
@@ -538,6 +558,11 @@ export const dictionaries: Record<Locale, Dict> = {
     thankYouTitle: 'Grazie!',
     thankYouMessage: 'Abbiamo ricevuto il tuo ordine. Marina ti contatterà a breve.',
     backToHome: 'Torna alla home',
+    pageNotFoundTitle: 'Pagina non trovata',
+    pageNotFoundMessage: 'La pagina che cerchi non esiste.',
+    genericErrorTitle: 'Qualcosa è andato storto',
+    genericErrorMessage: 'Riprova o torna alla home.',
+    tryAgain: 'Riprova',
     orderError: 'Errore durante l\'elaborazione dell\'ordine.',
     processing: 'Elaborazione…',
     qtyLabel: 'Quantità',
@@ -646,6 +671,11 @@ export const dictionaries: Record<Locale, Dict> = {
     thankYouTitle: 'Vielen Dank!',
     thankYouMessage: 'Wir haben deine Bestellung erhalten. Marina wird sich bald melden.',
     backToHome: 'Zurück zum Start',
+    pageNotFoundTitle: 'Seite nicht gefunden',
+    pageNotFoundMessage: 'Die gesuchte Seite existiert nicht.',
+    genericErrorTitle: 'Etwas ist schiefgelaufen',
+    genericErrorMessage: 'Bitte versuche es erneut oder gehe zur Startseite.',
+    tryAgain: 'Erneut versuchen',
     orderError: 'Fehler beim Abschließen der Bestellung.',
     processing: 'Wird verarbeitet…',
     qtyLabel: 'Menge',
