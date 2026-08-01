@@ -1,0 +1,59 @@
+{
+  "version": "6",
+  "dialect": "postgresql",
+  "tables": {
+    "flowers_locales": {
+      "name": "flowers_locales",
+      "columns": {
+        "story": {
+          "name": "story",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "_locale": {
+          "name": "_locale",
+          "type": "_locales",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "_parent_id": {
+          "name": "_parent_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "flowers_locales_locale_parent_id_unique": {
+          "name": "flowers_locales_locale_parent_id_unique",
+          "columns": ["_locale", "_parent_id"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "flowers_locales_parent_id_fk": {
+          "name": "flowers_locales_parent_id_fk",
+          "tableFrom": "flowers_locales",
+          "tableTo": "flowers",
+          "columnsFrom": ["_parent_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    }
+  }
+}

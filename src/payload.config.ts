@@ -7,7 +7,7 @@ import { sqliteAdapter } from '@payloadcms/db-sqlite'
 const uri = process.env.DATABASE_URI || ''
 const usePostgres = uri.startsWith('postgres')
 const db = usePostgres
-  ? postgresAdapter({ pool: { connectionString: uri } })
+  ? postgresAdapter({ pool: { connectionString: uri }, migrationDir: './src/migrations-pg' })
   : sqliteAdapter({ client: { url: uri.startsWith('file:') ? uri : 'file:./loja.sqlite' }, push: true })
 
 const Flowers: CollectionConfig = {
