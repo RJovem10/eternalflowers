@@ -1,4 +1,4 @@
-export default function Loading() {
+export default function CatalogLoading() {
   return (
     <div
       className="flex items-center justify-center py-32"

@@ -2,18 +2,12 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { getDictionary, locales } from '@/i18n/dictionaries'
-import type { Locale } from '@/i18n/dictionaries'
-
-function getLocaleFromPath(pathname: string | null): Locale {
-  const candidate = pathname?.split('/')[1]
-  const matched = (locales as readonly string[]).includes(candidate ?? '')
-  return (matched ? candidate : 'pt') as Locale
-}
+import { getDictionary } from '@/i18n/dictionaries'
+import { getLocaleFromPathname } from '@/i18n/get-locale-from-pathname'
 
 export default function NotFound() {
   const pathname = usePathname()
-  const locale = getLocaleFromPath(pathname)
+  const locale = getLocaleFromPathname(pathname)
   const dict = getDictionary(locale)
 
   return (
