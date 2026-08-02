@@ -193,11 +193,11 @@ const Homepage: GlobalConfig = {
       label: 'Hero',
       fields: [
         { name: 'heroImage', type: 'upload', relationTo: 'media', label: 'Imagem de Fundo' },
-        { name: 'heroTitle', type: 'text', required: true, label: 'Título' },
-        { name: 'heroSubtitle', type: 'textarea', required: true, label: 'Subtítulo' },
-        { name: 'primaryButtonText', type: 'text', required: true, label: 'Texto (botão primário)' },
+        { name: 'heroTitle', type: 'text', required: true, label: 'Título', localized: true },
+        { name: 'heroSubtitle', type: 'textarea', required: true, label: 'Subtítulo', localized: true },
+        { name: 'primaryButtonText', type: 'text', required: true, label: 'Texto (botão primário)', localized: true },
         { name: 'primaryButtonLink', type: 'text', required: true, label: 'Link (botão primário)' },
-        { name: 'secondaryButtonText', type: 'text', label: 'Texto (botão secundário)' },
+        { name: 'secondaryButtonText', type: 'text', label: 'Texto (botão secundário)', localized: true },
         { name: 'secondaryButtonLink', type: 'text', label: 'Link (botão secundário)' },
       ],
     },
@@ -206,8 +206,8 @@ const Homepage: GlobalConfig = {
       name: 'realFlowers',
       label: 'Flores Verdadeiras',
       fields: [
-        { name: 'title', type: 'text', required: true, label: 'Título' },
-        { name: 'subtitle', type: 'textarea', label: 'Subtítulo' },
+        { name: 'title', type: 'text', required: true, label: 'Título', localized: true },
+        { name: 'subtitle', type: 'textarea', label: 'Subtítulo', localized: true },
       ],
     },
     {
@@ -215,8 +215,8 @@ const Homepage: GlobalConfig = {
       name: 'story',
       label: 'História',
       fields: [
-        { name: 'title', type: 'text', required: true, label: 'Título' },
-        { name: 'text', type: 'textarea', required: true, label: 'Texto' },
+        { name: 'title', type: 'text', required: true, label: 'Título', localized: true },
+        { name: 'text', type: 'textarea', required: true, label: 'Texto', localized: true },
         { name: 'image', type: 'upload', relationTo: 'media', label: 'Imagem' },
       ],
     },
@@ -225,8 +225,8 @@ const Homepage: GlobalConfig = {
       name: 'international',
       label: 'Presença Internacional',
       fields: [
-        { name: 'title', type: 'text', required: true, label: 'Título' },
-        { name: 'subtitle', type: 'textarea', label: 'Subtítulo' },
+        { name: 'title', type: 'text', required: true, label: 'Título', localized: true },
+        { name: 'subtitle', type: 'textarea', label: 'Subtítulo', localized: true },
       ],
     },
     {
@@ -234,9 +234,9 @@ const Homepage: GlobalConfig = {
       name: 'instagram',
       label: 'Instagram',
       fields: [
-        { name: 'title', type: 'text', required: true, label: 'Título' },
+        { name: 'title', type: 'text', required: true, label: 'Título', localized: true },
         { name: 'handle', type: 'text', required: true, label: 'Handle' },
-        { name: 'text', type: 'textarea', label: 'Texto' },
+        { name: 'text', type: 'textarea', label: 'Texto', localized: true },
       ],
     },
     {
@@ -244,9 +244,9 @@ const Homepage: GlobalConfig = {
       name: 'cta',
       label: 'CTA Final',
       fields: [
-        { name: 'title', type: 'text', required: true, label: 'Título' },
-        { name: 'subtitle', type: 'textarea', label: 'Subtítulo' },
-        { name: 'buttonText', type: 'text', required: true, label: 'Texto do botão' },
+        { name: 'title', type: 'text', required: true, label: 'Título', localized: true },
+        { name: 'subtitle', type: 'textarea', label: 'Subtítulo', localized: true },
+        { name: 'buttonText', type: 'text', required: true, label: 'Texto do botão', localized: true },
         { name: 'buttonLink', type: 'text', required: true, label: 'Link do botão' },
       ],
     },
@@ -255,7 +255,7 @@ const Homepage: GlobalConfig = {
       name: 'footer',
       label: 'Footer',
       fields: [
-        { name: 'brandDescription', type: 'textarea', label: 'Descrição da marca' },
+        { name: 'brandDescription', type: 'textarea', label: 'Descrição da marca', localized: true },
         { name: 'email', type: 'text', label: 'Email' },
         { name: 'phone', type: 'text', label: 'Telefone' },
         { name: 'instagramUrl', type: 'text', label: 'URL Instagram' },
