@@ -127,7 +127,7 @@ for (const s of sources) {
   }
   const actualHash = 'sha256:' + sha256(dbVal)
   if (actualHash !== expectedHash) {
-    console.error(`❌ ${s.entity}/${s.field}: SOURCE_DRIFT expected=sha256:${expectedHash} actual=sha256:${actualHash}`)
+    console.error(`❌ ${s.entity}/${s.field}: SOURCE_DRIFT expected=${expectedHash} actual=${actualHash}`)
     srcErr++
   }
 }
