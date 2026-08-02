@@ -112,10 +112,11 @@ for (const s of sources) {
     const id = parseInt(s.field.match(/flower-(\d+)/)?.[1] || '0', 10)
     if (id && fls[id]) {
       const fn = s.field.split('.')[1]
-      // Try PT-specific field first, then base field
-      dbVal = fls[id][fn + 'Pt'] || fls[id][fn] || ''
+      // Payload locale query populates base field name for suffix fields
+      // e.g., namePt → name, story (from locales table) → story
+      dbVal = fls[id][fn] ?? fls[id][fn + 'Pt'] ?? fls[id][fn + '_pt'] ?? ''
     }
-  } else {
+  } else if (s.entity === 'categories' || s.entity === 'collections') {
     const slugVal = s.field.split('.')[0]
     const fn = s.field.split('.')[1]
     const docs = s.entity === 'categories' ? cats : colls
@@ -131,6 +132,7 @@ for (const s of sources) {
 }
 
 // Read existing translations
+if (srcErr > 0) abort(`${srcErr} source drift errors — zero writes`)
 const plan: { entity: string; slug: string; field: string; locale: string; existing: string | null; planned: string; action: 'SKIP_IDENTICAL' | 'PLANNED_WRITE' | 'CONFLICT' }[] = []
 function check(entity: string, slug: string, field: string, loc: string, existing: string | null | undefined, planned: string) {
   const e = existing || ''
