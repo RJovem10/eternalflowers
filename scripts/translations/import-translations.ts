@@ -286,7 +286,13 @@ if (mode === 'apply-sql') {
   }
 
   try {
-    for (const sql of sqlLines) await client.query(sql)
+    for (let i = 0; i < sqlLines.length; i++) {
+      await client.query(sqlLines[i])
+      // Test mode: inject failure at specified op
+      if (testMode && (i + 1) === testFailAfter) {
+        throw new Error(`INJECTED_FAILURE at SQL op ${i + 1}/${sqlLines.length}`)
+      }
+    }
     await client.query('COMMIT')
     console.log(`\n✅ ${writes.length} translations in ${sqlLines.length} SQL statements. Committed.`)
     await client.end()
