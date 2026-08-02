@@ -1,0 +1,131 @@
+{
+  "version": 1,
+  "entity": "categories",
+  "slug": "categories",
+  "sourceLocale": "pt",
+  "targetLocales": [
+    "de"
+  ],
+  "fields": {
+    "colares.name": {
+      "required": true,
+      "source": "Colares",
+      "sourceHash": "sha256:317bb40b2328",
+      "translations": {
+        "de": {
+          "value": "Ketten",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "colares.description": {
+      "required": true,
+      "source": "Pendentes e colares com flores verdadeiras preservadas.",
+      "sourceHash": "sha256:323140f8fbb7",
+      "translations": {
+        "de": {
+          "value": "Anhänger und Ketten mit echten konservierten Blumen.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "brincos.name": {
+      "required": true,
+      "source": "Brincos",
+      "sourceHash": "sha256:6f75caaf58ec",
+      "translations": {
+        "de": {
+          "value": "Ohrringe",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "brincos.description": {
+      "required": true,
+      "source": "Brincos delicados com miniaturas botânicas.",
+      "sourceHash": "sha256:37cfa5d6e8f8",
+      "translations": {
+        "de": {
+          "value": "Zarte Ohrringe mit botanischen Miniaturen.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "pulseiras.name": {
+      "required": true,
+      "source": "Pulseiras",
+      "sourceHash": "sha256:45ed9b21dbc0",
+      "translations": {
+        "de": {
+          "value": "Armbänder",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "pulseiras.description": {
+      "required": true,
+      "source": "Pulseiras artesanais com elementos florais.",
+      "sourceHash": "sha256:325ea8a5b593",
+      "translations": {
+        "de": {
+          "value": "Handgefertigte Armbänder mit floralen Elementen.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "porta-chaves.name": {
+      "required": true,
+      "source": "Porta-chaves",
+      "sourceHash": "sha256:1baf3c231c8d",
+      "translations": {
+        "de": {
+          "value": "Schlüsselanhänger",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "porta-chaves.description": {
+      "required": true,
+      "source": "Pequenas memórias que leva consigo.",
+      "sourceHash": "sha256:341e22d95fc3",
+      "translations": {
+        "de": {
+          "value": "Kleine Erinnerungen, die dich begleiten.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "molduras.name": {
+      "required": true,
+      "source": "Molduras",
+      "sourceHash": "sha256:1c8fd8c3d16f",
+      "translations": {
+        "de": {
+          "value": "Bilderrahmen",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "molduras.description": {
+      "required": true,
+      "source": "Molduras com flores verdadeiras.",
+      "sourceHash": "sha256:239a0b73eb7f",
+      "translations": {
+        "de": {
+          "value": "Bilderrahmen mit echten konservierten Blumen.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    }
+  }
+}

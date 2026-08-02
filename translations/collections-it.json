@@ -1,0 +1,155 @@
+{
+  "version": 1,
+  "entity": "collections",
+  "slug": "collections",
+  "sourceLocale": "pt",
+  "targetLocales": [
+    "it"
+  ],
+  "fields": {
+    "casamentos.name": {
+      "required": true,
+      "source": "Casamentos",
+      "sourceHash": "sha256:865e25c9780c",
+      "translations": {
+        "it": {
+          "value": "Nozze",
+          "status": "ai-reviewed",
+          "notes": "Sol fix"
+        }
+      }
+    },
+    "casamentos.description": {
+      "required": true,
+      "source": "Para celebrar o amor.",
+      "sourceHash": "sha256:7ccb38504281",
+      "translations": {
+        "it": {
+          "value": "Per celebrare l'amore.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "dia-da-mae.name": {
+      "required": true,
+      "source": "Dia da Mãe",
+      "sourceHash": "sha256:697178732957",
+      "translations": {
+        "it": {
+          "value": "Festa della Mamma",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "dia-da-mae.description": {
+      "required": true,
+      "source": "Memórias que florescem para sempre.",
+      "sourceHash": "sha256:5b4060b954b5",
+      "translations": {
+        "it": {
+          "value": "Ricordi che fioriscono per sempre.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "primavera.name": {
+      "required": true,
+      "source": "Primavera",
+      "sourceHash": "sha256:984edb7d6934",
+      "translations": {
+        "it": {
+          "value": "Primavera",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "primavera.description": {
+      "required": true,
+      "source": "Peças frescas e vibrantes.",
+      "sourceHash": "sha256:2332c7c5aeee",
+      "translations": {
+        "it": {
+          "value": "Pezzi freschi e vivaci.",
+          "status": "ai-reviewed",
+          "notes": "Sol fix"
+        }
+      }
+    },
+    "memorias.name": {
+      "required": true,
+      "source": "Memórias",
+      "sourceHash": "sha256:bdf22cc700fc",
+      "translations": {
+        "it": {
+          "value": "Ricordi",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "memorias.description": {
+      "required": true,
+      "source": "Um instante que o tempo não apaga.",
+      "sourceHash": "sha256:6e64fe469b6e",
+      "translations": {
+        "it": {
+          "value": "Un attimo che il tempo non cancella.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "natureza.name": {
+      "required": true,
+      "source": "Natureza",
+      "sourceHash": "sha256:f58c2019b303",
+      "translations": {
+        "it": {
+          "value": "Natura",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "natureza.description": {
+      "required": true,
+      "source": "Inspirado na beleza natural.",
+      "sourceHash": "sha256:7510d15b93ec",
+      "translations": {
+        "it": {
+          "value": "Ispirato alla bellezza naturale.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "edicao-limitada.name": {
+      "required": true,
+      "source": "Edição Limitada",
+      "sourceHash": "sha256:424ad34d282b",
+      "translations": {
+        "it": {
+          "value": "Edizione Limitata",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "edicao-limitada.description": {
+      "required": true,
+      "source": "Criações únicas em tiragem limitada.",
+      "sourceHash": "sha256:4c0790ab6f5f",
+      "translations": {
+        "it": {
+          "value": "Creazioni uniche in tiratura limitata.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    }
+  }
+}
