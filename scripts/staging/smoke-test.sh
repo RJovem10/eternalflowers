@@ -97,17 +97,19 @@ FLOWER_IDS=$(docker exec eternal-flowers-staging-db psql -U "${POSTGRES_USER:-st
 if [ -n "$FLOWER_IDS" ]; then
     FID_COUNT=$(echo "$FLOWER_IDS" | wc -w)
     info "  → $FID_COUNT flor(es) na base"
-    # Testar primeira flor
-    FIRST=$(echo "$FLOWER_IDS" | awk '{print $1}')
-    test_status "/pt/flower/$FIRST" "$BASE/pt/flower/$FIRST" 200
-    # A rota flower detail é dinâmica (ƒ) — se falha 404, é problema da aplicação, não do teste
-    # Registar como FAIL para obrigar a diagnóstico
-    test_status "/en/flower/$FIRST" "$BASE/en/flower/$FIRST" 200
-    # Testar segunda flor
-    SECOND=$(echo "$FLOWER_IDS" | awk '{print $2}')
-    if [ -n "$SECOND" ]; then
-        test_status "/pt/flower/$SECOND" "$BASE/pt/flower/$SECOND" 200
-    fi
+    # Testar todas as flores em PT e EN
+    for fid in $FLOWER_IDS; do
+        test_status "/pt/flower/$fid" "$BASE/pt/flower/$fid" 200
+        test_status "/en/flower/$fid" "$BASE/en/flower/$fid" 200
+    done
+    # Testar um subconjunto noutras locales
+    for fid in 1 5 10; do
+        test_status "/es/flower/$fid" "$BASE/es/flower/$fid" 200
+        test_status "/it/flower/$fid" "$BASE/it/flower/$fid" 200
+        test_status "/de/flower/$fid" "$BASE/de/flower/$fid" 200
+    done
+    # ID inexistente
+    test_status "/pt/flower/99999" "$BASE/pt/flower/99999" 404
 else
     skip "Zero flores na base — falha crítica de dados"
 fi
@@ -141,7 +143,7 @@ fi
 
 # ─── Conteúdo localizado ───────────────────────
 info "7. Conteúdo localizado"
-test_content "/pt hero"      "$BASE/pt"      "Joias Botânicas"
+test_content "/pt hero"      "$BASE/pt"      "Eternizar um Momento"
 test_content "/en hero"      "$BASE/en"      "Botanical"
 test_content "/es hero"      "$BASE/es"      "Joyas Botánicas"
 test_content "/it hero"      "$BASE/it"      "Gioielli Botanici"
