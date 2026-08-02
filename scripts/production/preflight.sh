@@ -33,6 +33,9 @@ check() {
 echo "═══════════════════════════════════════════════"
 echo "  Eternal Flowers — Preflight de Produção"
 echo "═══════════════════════════════════════════════"
+
+MODE="${PREFLIGHT_MODE:-preparation}"
+echo "  Modo: $MODE"
 echo ""
 
 # ── 1. Variáveis obrigatórias ──────────────────────────────────────────
@@ -49,8 +52,8 @@ fi
 DB_URI="${DATABASE_URI:-}"
 if [ -z "$DB_URI" ]; then
     check "DATABASE_URI definida" "fail" "Variável DATABASE_URI não definida"
-elif echo "$DB_URI" | grep -qiE '<DEFINIR|<GERAR|placeholder|change_me|muda_isto'; then
-    check "DATABASE_URI sem placeholder" "fail" "DATABASE_URI contém placeholder: $(echo "$DB_URI" | cut -c1-30)..."
+elif echo "$DB_URI" | grep -qiE '<DEFINIR|<GERAR|placeholder|change_me|muda_isto|dev-secret'; then
+    check "DATABASE_URI sem placeholder" "fail" "DATABASE_URI contém placeholder"
 elif echo "$DB_URI" | grep -q "^postgresql://"; then
     check "DATABASE_URI PostgreSQL" "pass"
 else
@@ -104,19 +107,40 @@ else
     check "Docker Compose disponível" "fail" "Nem 'docker compose' nem 'docker-compose' encontrados"
 fi
 
-# ── 3. Ficheiros e permissões ──────────────────────────────────────────
+# ── 3. Ficheiros ──────────────────────────────────────────────────────
 echo ""
 echo "📁 3. Ficheiros"
 
-if [ -f "docker-compose.production.example.yml" ]; then
-    check "docker-compose.production.yml existe" "warn" "Usar o template .example.yml — copiar para .yml e preencher"
+if [ "$MODE" = "cutover" ]; then
+    # Modo cutover: ficheiros reais são obrigatórios
+    if [ -f "docker-compose.production.yml" ]; then
+        check "docker-compose.production.yml existe" "pass"
+    else
+        check "docker-compose.production.yml existe" "fail" "Criar a partir de .example.yml antes do cutover"
+    fi
+    if [ -f ".env.production" ]; then
+        check ".env.production existe" "pass"
+    else
+        check ".env.production existe" "fail" "Criar a partir de .example antes do cutover"
+    fi
+    if [ -f "configs/production/Caddyfile" ]; then
+        check "Caddyfile existe" "pass"
+    else
+        check "Caddyfile existe" "fail" "Criar a partir de .example antes do cutover"
+    fi
+else
+    # Modo preparation: templates exemplo são suficientes
+    if [ -f "docker-compose.production.example.yml" ]; then
+        check "Template compose production existe" "pass"
+    else
+        check "Template compose production existe" "warn" "Ainda não criado"
+    fi
+    if [ -f "configs/production/Caddyfile.example" ]; then
+        check "Template Caddyfile existe" "pass"
+    fi
 fi
 
-if [ -f "configs/production/Caddyfile.example" ]; then
-    check "Caddyfile template existe" "pass"
-fi
-
-# Media
+# Media (verificar sempre)
 MEDIA_COUNT=$(ls media/ 2>/dev/null | wc -l)
 if [ "$MEDIA_COUNT" -ge 11 ]; then
     check "Media ($MEDIA_COUNT ficheiros)" "pass"
@@ -139,10 +163,15 @@ if [ -f "$COMPOSE_FILE" ]; then
 fi
 
 # Verificar se há passwords default em ficheiros versionados
-if grep -rE 'muda_isto|change_me|staging_password|Admin123' \
+PW_FILES=$(grep -rE 'muda_isto|change_me|staging_password|Admin123' \
     --include='*.yml' --include='*.yaml' --include='*.sh' --include='*.ts' --include='*.example' \
-    -l . 2>/dev/null | grep -v node_modules | grep -v '.git/' | head -5 | grep -q .; then
-    check "Sem passwords default em ficheiros versionados" "warn" "Ainda existem placeholders 'change_me'/'muda_isto' em ficheiros"
+    -l . 2>/dev/null | grep -v node_modules | grep -v '.git/' || true)
+if [ -n "$PW_FILES" ]; then
+    if [ "$MODE" = "cutover" ]; then
+        check "Sem passwords default em ficheiros versionados" "fail" "Ainda existem placeholders em: $(echo "$PW_FILES" | tr '\n' ' ')"
+    else
+        check "Sem passwords default em ficheiros versionados" "warn" "Existem placeholders em ficheiros tracked"
+    fi
 else
     check "Sem passwords default em ficheiros versionados" "pass"
 fi

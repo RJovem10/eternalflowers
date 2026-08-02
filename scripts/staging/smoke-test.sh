@@ -15,8 +15,9 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel 2>/dev/null || echo "${BASH_SOURCE[0]%/*}/../..")"
 
-RED='\033[0;31m'; GREEN='\033[0;32m'; CYAN='\033[0;36m'; NC='\033[0m'
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 ok()   { echo -e "  ${GREEN}✅${NC} $1"; }
+warn() { echo -e "  ${YELLOW}⚠️${NC} $1"; }
 fail() { echo -e "  ${RED}❌${NC} $1"; total_fail=$((total_fail + 1)); }
 info() { echo -e "  ${CYAN}→${NC} $1"; }
 
@@ -86,8 +87,26 @@ info "2. Rotas principais"
 test_status "/pt"           "$BASE/pt"            200
 test_status "/pt/catalog"   "$BASE/pt/catalog"    200
 test_status "/pt/about"     "$BASE/pt/about"      200
-test_status "/pt/flower/1"  "$BASE/pt/flower/1"   200
-test_status "/pt/flower/10" "$BASE/pt/flower/10"  200
+
+# Flores — descobrir IDs dinamicamente
+FLOWER_IDS=$(curl -s --max-time 10 "$BASE/api/flowers?limit=10" 2>/dev/null | python3 -c "
+import sys,json
+try:
+    d=json.load(sys.stdin)
+    ids=[str(doc['id']) for doc in d.get('docs',[])]
+    print(' '.join(ids))
+except: print('')
+" 2>/dev/null)
+
+if [ -n "$FLOWER_IDS" ]; then
+    for fid in $FLOWER_IDS; do
+        test_status "/pt/flower/$fid" "$BASE/pt/flower/$fid" 200
+    done
+    info "  → $(echo "$FLOWER_IDS" | wc -w) flor(es) testada(s)"
+else
+    warn "  → API devolveu 0 flores — a saltar testes de flower detail"
+fi
+
 test_status "/pt/cart"      "$BASE/pt/cart"       200
 test_status "/pt/checkout"  "$BASE/pt/checkout"   200
 

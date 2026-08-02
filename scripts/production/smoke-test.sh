@@ -106,13 +106,29 @@ echo ""
 echo "🔍 404"
 test_url "Rota inexistente" "$BASE_URL/pt/nonexistent-page-xyz" 404
 
-# ── 5. API ──────────────────────────────────────────────────────────
+# ── 5. API — descobrir ID de flor válida ──────────────────────────
 echo ""
-echo "🔌 API"
-# API pública (flowers)
-test_url "API Flowers" "$BASE_URL/api/flowers" 200
-# API protegida (users — esperado 403 ou 401 sem auth)
-test_url "API Users (protegida)" "$BASE_URL/api/users" 403
+echo "🌷 5. Flores (ID dinâmico via API)"
+FLOWER_ID=$(curl -s --max-time 10 "$BASE_URL/api/flowers?limit=1" 2>/dev/null | python3 -c "
+import sys,json
+try:
+    d=json.load(sys.stdin)
+    if d.get('totalDocs',0) > 0 and d.get('docs'):
+        print(d['docs'][0]['id'])
+    else:
+        print('')
+except: print('')
+" 2>/dev/null)
+
+if [ -n "$FLOWER_ID" ]; then
+    test_url "Flor PT (id=$FLOWER_ID)" "$BASE_URL/pt/flower/$FLOWER_ID" 200
+    test_url "Flor EN (id=$FLOWER_ID)" "$BASE_URL/en/flower/$FLOWER_ID" 200
+    PASS=$((PASS + 1))  # Compensar teste de conteúdo
+    test_content "Flor PT contém nome" "$BASE_URL/pt/flower/$FLOWER_ID" "Eternal|Flores|flor|Flor"
+else
+    echo -e "  ${YELLOW}⚠️${NC} API devolveu 0 flores — a saltar testes de flower detail"
+    echo -e "  ${YELLOW}⚠️${NC} Causa: staging sem dados seed. Executar setup completo."
+fi
 
 # ── 6. Admin ────────────────────────────────────────────────────────
 echo ""

@@ -32,7 +32,7 @@ fi
 PG_HOST="${STAGING_PG_HOST:-127.0.0.1}"
 PG_PORT="${STAGING_PG_PORT:-55433}"
 PG_USER="${STAGING_PG_USER:-staging}"
-PG_PASS="${STAGING_PG_PASS:-staging_password_change_me}"
+PG_PASS="${STAGING_PG_PASS:?STAGING_PG_PASS não definido — carregar .env.staging.local}"
 PG_DB="${STAGING_PG_DB:-eternal_flowers_staging}"
 CONTAINER="eternal-flowers-staging-db"
 

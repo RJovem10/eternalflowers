@@ -41,7 +41,7 @@ if [ -f .env.staging.local ]; then
 fi
 
 APP_PORT="${STAGING_APP_PORT:-3003}"
-PG_URI="${DATABASE_URI:-postgresql://staging:staging_password_change_me@127.0.0.1:55433/eternal_flowers_staging}"
+PG_URI="${DATABASE_URI:?DATABASE_URI não definido — carregar .env.staging.local}"
 
 # Arrancar servidor Next.js
 if [ -f /tmp/eternal-staging-pid.txt ]; then
