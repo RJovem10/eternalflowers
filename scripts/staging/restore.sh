@@ -1,85 +1,52 @@
 #!/usr/bin/env bash
-# scripts/staging/restore.sh — Restaurar um backup do PostgreSQL de staging
-#
-# Uso:
-#   bash scripts/staging/restore.sh /caminho/para/backup.dump
-#
-# ATENÇÃO: Substitui TODOS os dados actuais no PostgreSQL de staging.
+# scripts/staging/restore.sh — Restore do PostgreSQL de staging
+# Uso: bash scripts/staging/restore.sh <ficheiro.dump>
 set -euo pipefail
 
-cd "$(git rev-parse --show-toplevel 2>/dev/null || echo "${BASH_SOURCE[0]%/*}/../..")"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
-ok()   { echo -e "  ${GREEN}✅${NC} $1"; }
-fail() { echo -e "  ${RED}❌${NC} $1"; exit 1; }
-info() { echo -e "  ${CYAN}→${NC} $1"; }
-
-if [ $# -lt 1 ]; then
-  echo "Uso: bash scripts/staging/restore.sh /caminho/para/backup.dump"
+if [ $# -lt 1 ] || [ ! -f "$1" ]; then
+  echo "ERRO: Fornecer um ficheiro .dump válido."
+  echo "Uso:  bash scripts/staging/restore.sh backups/staging-<data>.dump"
   exit 1
 fi
 
-DUMP="$1"
-if [ ! -f "$DUMP" ]; then
-  fail "Ficheiro não encontrado: $DUMP"
+DUMP_FILE="$1"
+
+# Load env
+if [ -f "$PROJECT_DIR/.env.staging.local" ]; then
+  set -a
+  source "$PROJECT_DIR/.env.staging.local"
+  set +a
 fi
 
-# Carregar env
-if [ -f .env.staging.local ]; then
-  set -a; source .env.staging.local; set +a
-fi
-
-PG_HOST="${STAGING_PG_HOST:-127.0.0.1}"
-PG_PORT="${STAGING_PG_PORT:-55433}"
-PG_USER="${STAGING_PG_USER:-staging}"
-PG_PASS="${STAGING_PG_PASS:?STAGING_PG_PASS não definido — carregar .env.staging.local}"
-PG_DB="${STAGING_PG_DB:-eternal_flowers_staging}"
+POSTGRES_USER="${POSTGRES_USER:?POSTGRES_USER não definido — carregar .env.staging.local}"
+POSTGRES_PASSWORD="${POSTGRES_PASSWORD:?POSTGRES_PASSWORD não definido — carregar .env.staging.local}"
+POSTGRES_DB="${POSTGRES_DB:?POSTGRES_DB não definido — carregar .env.staging.local}"
 CONTAINER="eternal-flowers-staging-db"
 
-# Verificar container
-if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER}$"; then
-  fail "PostgreSQL staging não está em execução"
+echo "═══════════════════════════════════════"
+echo "  Staging Restore"
+echo "═══════════════════════════════════════"
+echo "  Fonte: $DUMP_FILE"
+echo "  Tamanho: $(du -h "$DUMP_FILE" | cut -f1)"
+echo "  SHA-256: $(sha256sum "$DUMP_FILE" | cut -d' ' -f1)"
+echo ""
+
+read -r -p "Escreve CONFIRMAR para prosseguir: " CONFIRM
+if [ "$CONFIRM" != "CONFIRMAR" ]; then
+  echo "❌ Restore cancelado."
+  exit 1
 fi
 
-echo ""
-echo -e "${YELLOW}═══════════════════════════════════════════${NC}"
-echo -e "${YELLOW}  ATENÇÃO: RESTORE — DADOS SUBSTITUÍDOS   ${NC}"
-echo -e "${YELLOW}═══════════════════════════════════════════${NC}"
-echo ""
-echo "  Isto irá SUBSTITUIR todos os dados actuais no staging."
-echo "  Backup: $DUMP"
-echo ""
-read -rp "  Escreva RESTORE para confirmar: " CONFIRM
-if [ "$CONFIRM" != "RESTORE" ]; then
-  echo "  Cancelado."
-  exit 0
-fi
-
-# Parar servidor se estiver a correr
-if [ -f /tmp/eternal-staging-pid.txt ]; then
-  PID=$(cat /tmp/eternal-staging-pid.txt)
-  if kill -0 "$PID" 2>/dev/null; then
-    info "A parar servidor Next.js..."
-    kill "$PID" 2>/dev/null || true
-    sleep 1
-  fi
-fi
-
-info "A restaurar backup..."
-# Recriar DB vazia
-docker exec "$CONTAINER" psql -U "$PG_USER" -c "DROP DATABASE IF EXISTS ${PG_DB};" >/dev/null
-docker exec "$CONTAINER" psql -U "$PG_USER" -c "CREATE DATABASE ${PG_DB};" >/dev/null
-
-# Restaurar
-PGPASSWORD="$PG_PASS" pg_restore \
-  -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+docker cp "$DUMP_FILE" "$CONTAINER:/tmp/staging-restore.dump" >/dev/null
+docker exec "$CONTAINER" pg_restore \
+  --verbose --clean --if-exists \
   --no-owner --no-acl \
-  "$DUMP"
+  -U "$POSTGRES_USER" \
+  -d "$POSTGRES_DB" \
+  /tmp/staging-restore.dump 2>&1 | tail -5
 
-ok "Restauro concluído"
-
-# Voltar a arrancar servidor
-info "A rearrancar servidor..."
-bash scripts/staging/start.sh 2>&1 | tail -5
-
-echo ""
+docker exec "$CONTAINER" rm /tmp/staging-restore.dump
+echo "  ✅ Restore concluído."

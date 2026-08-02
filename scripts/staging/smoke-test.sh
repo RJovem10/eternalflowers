@@ -19,6 +19,7 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC
 ok()   { echo -e "  ${GREEN}✅${NC} $1"; }
 warn() { echo -e "  ${YELLOW}⚠️${NC} $1"; }
 fail() { echo -e "  ${RED}❌${NC} $1"; total_fail=$((total_fail + 1)); }
+skip() { echo -e "  ${YELLOW}⊘${NC} $1"; total_skip=$((total_skip + 1)); }
 info() { echo -e "  ${CYAN}→${NC} $1"; }
 
 VERBOSE=false
@@ -27,8 +28,9 @@ VERBOSE=false
 PORT="${STAGING_APP_PORT:-3003}"
 BASE="http://127.0.0.1:${PORT}"
 total=0
-total_fail=0
 total_ok=0
+total_fail=0
+total_skip=0
 
 test_status() {
   local label="$1" url="$2" expected="${3:-200}"
@@ -88,23 +90,26 @@ test_status "/pt"           "$BASE/pt"            200
 test_status "/pt/catalog"   "$BASE/pt/catalog"    200
 test_status "/pt/about"     "$BASE/pt/about"      200
 
-# Flores — descobrir IDs dinamicamente
-FLOWER_IDS=$(curl -s --max-time 10 "$BASE/api/flowers?limit=10" 2>/dev/null | python3 -c "
-import sys,json
-try:
-    d=json.load(sys.stdin)
-    ids=[str(doc['id']) for doc in d.get('docs',[])]
-    print(' '.join(ids))
-except: print('')
-" 2>/dev/null)
+# Flores — descobrir IDs via PostgreSQL (não via API REST)
+info "3. Flores (via PostgreSQL)"
+FLOWER_IDS=$(docker exec eternal-flowers-staging-db psql -U "${POSTGRES_USER:-staging}" -d "${POSTGRES_DB:-eternal_flowers_staging}" -tA -c "SELECT id FROM flowers ORDER BY id LIMIT 10" 2>/dev/null | tr '\n' ' ')
 
 if [ -n "$FLOWER_IDS" ]; then
-    for fid in $FLOWER_IDS; do
-        test_status "/pt/flower/$fid" "$BASE/pt/flower/$fid" 200
-    done
-    info "  → $(echo "$FLOWER_IDS" | wc -w) flor(es) testada(s)"
+    FID_COUNT=$(echo "$FLOWER_IDS" | wc -w)
+    info "  → $FID_COUNT flor(es) na base"
+    # Testar primeira flor
+    FIRST=$(echo "$FLOWER_IDS" | awk '{print $1}')
+    test_status "/pt/flower/$FIRST" "$BASE/pt/flower/$FIRST" 200
+    # A rota flower detail é dinâmica (ƒ) — se falha 404, é problema da aplicação, não do teste
+    # Registar como FAIL para obrigar a diagnóstico
+    test_status "/en/flower/$FIRST" "$BASE/en/flower/$FIRST" 200
+    # Testar segunda flor
+    SECOND=$(echo "$FLOWER_IDS" | awk '{print $2}')
+    if [ -n "$SECOND" ]; then
+        test_status "/pt/flower/$SECOND" "$BASE/pt/flower/$SECOND" 200
+    fi
 else
-    warn "  → API devolveu 0 flores — a saltar testes de flower detail"
+    skip "Zero flores na base — falha crítica de dados"
 fi
 
 test_status "/pt/cart"      "$BASE/pt/cart"       200
@@ -144,12 +149,17 @@ test_content "/de hero"      "$BASE/de"      "Botanische"
 
 # ─── Resumo ────────────────────────────────────
 echo ""
-echo -e "${GREEN}═══════════════════════════════════════${NC}"
-echo -e "  ${total_ok}/${total} testes passaram, ${total_fail} falhas"
-if [ "$total_fail" -gt 0 ]; then
-  echo -e "  ${RED}FALHOU — ${total_fail} teste(s) com erro${NC}"
+echo "═══════════════════════════════════════"
+echo "  $total_ok/$total testes passaram, $total_fail falhas, $total_skip ignorados"
+if [ "$total_fail" -gt 0 ] || [ "$total_skip" -gt 0 ]; then
+  if [ "$total_fail" -gt 0 ]; then
+    echo "  FALHOU — $total_fail teste(s) com erro"
+  fi
+  if [ "$total_skip" -gt 0 ]; then
+    echo "  SKIP — $total_skip teste(s) ignorado(s)"
+  fi
   exit 1
 else
-  echo -e "  ${GREEN}TODOS OS TESTES PASSARAM${NC}"
+  echo "  TODOS OS TESTES PASSARAM"
+  exit 0
 fi
-echo ""

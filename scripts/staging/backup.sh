@@ -1,46 +1,43 @@
 #!/usr/bin/env bash
 # scripts/staging/backup.sh — Backup do PostgreSQL de staging
-#
-# Uso:
-#   bash scripts/staging/backup.sh                    # Backup timestamped
-#   bash scripts/staging/backup.sh /caminho/output.dump  # Backup para caminho específico
-#
-# NOTA: Nunca envia dados para fora do ambiente local.
 set -euo pipefail
 
-cd "$(git rev-parse --show-toplevel 2>/dev/null || echo "${BASH_SOURCE[0]%/*}/../..")"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-RED='\033[0;31m'; GREEN='\033[0;32m'; CYAN='\033[0;36m'; NC='\033[0m'
-ok()   { echo -e "  ${GREEN}✅${NC} $1"; }
-fail() { echo -e "  ${RED}❌${NC} $1"; exit 1; }
-info() { echo -e "  ${CYAN}→${NC} $1"; }
-
-# Carregar env
-if [ -f .env.staging.local ]; then
-  set -a; source .env.staging.local; set +a
+# Load env
+if [ -f "$PROJECT_DIR/.env.staging.local" ]; then
+  set -a
+  source "$PROJECT_DIR/.env.staging.local"
+  set +a
 fi
 
-PG_HOST="${STAGING_PG_HOST:-127.0.0.1}"
-PG_PORT="${STAGING_PG_PORT:-55433}"
-PG_USER="${STAGING_PG_USER:-staging}"
-PG_PASS="${STAGING_PG_PASS:?STAGING_PG_PASS não definido — carregar .env.staging.local}"
-PG_DB="${STAGING_PG_DB:-eternal_flowers_staging}"
+POSTGRES_USER="${POSTGRES_USER:?POSTGRES_USER não definido — carregar .env.staging.local}"
+POSTGRES_PASSWORD="${POSTGRES_PASSWORD:?POSTGRES_PASSWORD não definido — carregar .env.staging.local}"
+POSTGRES_DB="${POSTGRES_DB:?POSTGRES_DB não definido — carregar .env.staging.local}"
+BACKUP_DIR="${BACKUP_DIR:-$PROJECT_DIR/backups}"
+CONTAINER="eternal-flowers-staging-db"
 
-# Verificar container
-if ! docker ps --format '{{.Names}}' | grep -q '^eternal-flowers-staging-db$'; then
-  fail "PostgreSQL staging não está em execução"
-fi
+mkdir -p "$BACKUP_DIR"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+DUMP_FILE="$BACKUP_DIR/staging-$TIMESTAMP.dump"
 
-OUTPUT="${1:-backups/staging-$(date +%Y%m%d_%H%M%S).dump}"
-mkdir -p "$(dirname "$OUTPUT")"
+echo "═══════════════════════════════════════"
+echo "  Staging Backup"
+echo "═══════════════════════════════════════"
 
-info "A criar backup: $OUTPUT"
-PGPASSWORD="$PG_PASS" pg_dump \
-  -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" \
+docker exec "$CONTAINER" pg_dump \
+  -U "$POSTGRES_USER" \
   --no-owner --no-acl \
-  -F c \
-  -f "$OUTPUT"
+  --format=custom \
+  --file=/tmp/staging-dump.dump \
+  "$POSTGRES_DB" 2>&1 || { echo "❌ pg_dump falhou"; exit 1; }
 
-SIZE=$(stat -c%s "$OUTPUT" 2>/dev/null || stat -f%z "$OUTPUT" 2>/dev/null)
-ok "Backup criado: $OUTPUT ($SIZE bytes)"
-echo ""
+docker cp "$CONTAINER:/tmp/staging-dump.dump" "$DUMP_FILE" >/dev/null
+docker exec "$CONTAINER" rm /tmp/staging-dump.dump
+
+echo "  ✅ Backup: $DUMP_FILE"
+echo "  Tamanho: $(du -h "$DUMP_FILE" | cut -f1)"
+sha256sum "$DUMP_FILE"
+
+echo "  ✅ Backup concluído."

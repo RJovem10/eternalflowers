@@ -18,9 +18,9 @@ services:
     ports:
       - "127.0.0.1:55433:5432"
     environment:
-      POSTGRES_USER: staging
+      POSTGRES_USER: ${POSTGRES_USER:-staging}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: eternal_flowers_staging
+      POSTGRES_DB: ${POSTGRES_DB:-eternal_flowers_staging}
     env_file:
       - .env.staging.local
     healthcheck:
