@@ -2,7 +2,7 @@
 
 **ESTADO FORENSE:** O ficheiro `loja.sqlite` atual (421888 bytes, SHA-256 `ad1307926d722d11d4808b9eae1667f0b572b7174538c6431049204baae9bb55`) NÃO é a SQLite original. Foi modificado pela aplicação das migrations E2–E4 e importação de traduções. A SQLite original (372736 bytes, SHA-256 `122d2af7639d26ff98224cefbc9eaefddf11ce78a5729a6d8154e49f5d3e90ee`) existe em `~/backups/eternalflowers/testing/e2/e2-validation.sqlite`. O runbook abaixo refere-se à migração a partir do ficheiro original.
 
-**Estado:** Planeamento  
+**Estado:** ENSAIO REAL VALIDADO ✅ — Migração de 52 registos de negócio executada com sucesso via `migrate-from-sqlite.ts --apply`.  
 **Branch:** `feature/issue-018-postgresql-deployment-runbook`  
 **HEAD:** `$(git rev-parse HEAD)`  
 **Data:** 2026-08-02  
