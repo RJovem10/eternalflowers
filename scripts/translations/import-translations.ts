@@ -288,27 +288,31 @@ try {
     if (testMode && ops === Number(testFailAfter)) throw new Error(`INJECTED_FAILURE at op ${ops}`)
   }
 
-  // Verify
+  // Verify — todas as leituras dentro da mesma transação (req)
   for (const p of writes) {
+    if (testMode && ops + 1 === Number(testFailAfter)) throw new Error(`INJECTED_FAILURE at verify op ${ops + 1}`)
     let v: any
     if (p.entity === 'homepage') {
-      v = await payload.findGlobal({ slug: 'homepage', locale: p.locale as any, fallbackLocale: false }) as any
+      v = await payload.findGlobal({ slug: 'homepage', locale: p.locale as any, fallbackLocale: false, req }) as any
       const [grp, fld] = p.field.split('.')
-      if (v[grp]?.[fld] !== p.planned) errs.push(`VERIFY ${p.entity}/${p.field} (${p.locale})`)
+      if (v[grp]?.[fld] !== p.planned) errs.push(`VERIFY ${p.entity}/${p.field} (${p.locale}) expected="${p.planned}" actual="${v[grp]?.[fld]}"`)
     } else if (['categories', 'collections'].includes(p.entity)) {
       const map = p.entity === 'categories' ? cats : colls
-      v = await payload.findByID({ collection: p.entity as any, id: map[p.slug].id, locale: p.locale as any, fallbackLocale: false }) as any
-      if (v[p.field] !== p.planned) errs.push(`VERIFY ${p.entity}/${p.slug}/${p.field} (${p.locale})`)
-    } else {
+      v = await payload.findByID({ collection: p.entity as any, id: map[p.slug].id, locale: p.locale as any, fallbackLocale: false, req }) as any
+      if (v[p.field] !== p.planned) errs.push(`VERIFY ${p.entity}/${p.slug}/${p.field} (${p.locale}) expected="${p.planned}" actual="${v[p.field]}"`)
+    } else if (p.field === 'story') {
       const id = Number(p.slug.replace('flower-', ''))
-      if (p.field === 'story') {
-        v = await payload.findByID({ collection: 'flowers', id, locale: p.locale as any, fallbackLocale: false }) as any
-        if (v.story !== p.planned) errs.push(`VERIFY flowers/${p.slug}/story (${p.locale})`)
-      } else {
-        v = await payload.findByID({ collection: 'flowers', id, locale: 'pt' as any, fallbackLocale: false }) as any
-        if (v[p.field] !== p.planned) errs.push(`VERIFY flowers/${p.slug}/${p.field} (${p.locale})`)
-      }
+      v = await payload.findByID({ collection: 'flowers', id, locale: p.locale as any, fallbackLocale: false, req }) as any
+      if (v.story !== p.planned) errs.push(`VERIFY flowers/${p.slug}/story (${p.locale}) expected="${p.planned}" actual="${v.story}"`)
     }
+  }
+
+  // Verificação de suffix fields (nameEn, descriptionEn etc) — ler sem locale (base table)
+  for (const p of writes) {
+    if (p.entity !== 'flowers' || p.field === 'story') continue
+    const id = Number(p.slug.replace('flower-', ''))
+    const v = await payload.findByID({ collection: 'flowers', id, req }) as any
+    if (v[p.field] !== p.planned) errs.push(`VERIFY flowers/${p.slug}/${p.field} expected="${p.planned}" actual="${v[p.field]}"`)
   }
 
   if (errs.length > 0) {

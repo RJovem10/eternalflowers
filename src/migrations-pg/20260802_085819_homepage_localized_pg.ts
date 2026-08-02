@@ -102,6 +102,25 @@ export async function down({ db, payload, req }: MigrateArgs): Promise<void> {
   const nonPtCount = nonPtResult?.rows?.[0]?.cnt ?? 0
   if (nonPtCount > 0) throw new Error(`[DOWN] ABORTED: ${nonPtCount} non-PT locale row(s) found.`)
 
+  // 2. Recreate the 16 dropped columns — as nullable first to allow data restoration
+  await db.execute(sql`ALTER TABLE "homepage" ADD COLUMN "hero_hero_title" varchar;`);
+  await db.execute(sql`ALTER TABLE "homepage" ADD COLUMN "hero_hero_subtitle" varchar;`);
+  await db.execute(sql`ALTER TABLE "homepage" ADD COLUMN "hero_primary_button_text" varchar;`);
+  await db.execute(sql`ALTER TABLE "homepage" ADD COLUMN "hero_secondary_button_text" varchar;`);
+  await db.execute(sql`ALTER TABLE "homepage" ADD COLUMN "real_flowers_title" varchar;`);
+  await db.execute(sql`ALTER TABLE "homepage" ADD COLUMN "real_flowers_subtitle" varchar;`);
+  await db.execute(sql`ALTER TABLE "homepage" ADD COLUMN "story_title" varchar;`);
+  await db.execute(sql`ALTER TABLE "homepage" ADD COLUMN "story_text" varchar;`);
+  await db.execute(sql`ALTER TABLE "homepage" ADD COLUMN "international_title" varchar;`);
+  await db.execute(sql`ALTER TABLE "homepage" ADD COLUMN "international_subtitle" varchar;`);
+  await db.execute(sql`ALTER TABLE "homepage" ADD COLUMN "instagram_title" varchar;`);
+  await db.execute(sql`ALTER TABLE "homepage" ADD COLUMN "instagram_text" varchar;`);
+  await db.execute(sql`ALTER TABLE "homepage" ADD COLUMN "cta_title" varchar;`);
+  await db.execute(sql`ALTER TABLE "homepage" ADD COLUMN "cta_subtitle" varchar;`);
+  await db.execute(sql`ALTER TABLE "homepage" ADD COLUMN "cta_button_text" varchar;`);
+  await db.execute(sql`ALTER TABLE "homepage" ADD COLUMN "footer_brand_description" varchar;`);
+
+  // 3. Restore PT data from locales table
   await db.execute(sql`
     UPDATE "homepage" SET
       "hero_hero_title" = COALESCE((SELECT "hero_hero_title" FROM "homepage_locales" WHERE "homepage_locales"."_parent_id" = "homepage"."id" AND "homepage_locales"."_locale" = 'pt'::text::"_locales"), "homepage"."hero_hero_title"),

@@ -87,7 +87,11 @@ export async function down({ db, payload, req }: MigrateArgs): Promise<void> {
     )
   }
 
-  // 2. Restore PT name
+  // 2. Recreate the dropped columns before restoring data
+  await db.execute(sql`ALTER TABLE "collections" ADD COLUMN "name" varchar;`);
+  await db.execute(sql`ALTER TABLE "collections" ADD COLUMN "description" varchar;`);
+
+  // 3. Restore PT name
   await db.execute(sql`
     UPDATE "collections"
     SET "name" = COALESCE(

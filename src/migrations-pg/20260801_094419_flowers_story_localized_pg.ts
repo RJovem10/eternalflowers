@@ -87,7 +87,10 @@ export async function down({ db, payload, req }: MigrateArgs): Promise<void> {
     )
   }
 
-  // 2. Restore PT stories — only rows that had non-empty story
+  // 2. Recreate the dropped column before restoring data
+  await db.execute(sql`ALTER TABLE "flowers" ADD COLUMN "story" varchar;`)
+
+  // 3. Restore PT stories — only rows that had non-empty story
   await db.execute(sql`
     UPDATE "flowers"
     SET "story" = COALESCE(
@@ -98,17 +101,17 @@ export async function down({ db, payload, req }: MigrateArgs): Promise<void> {
     );
   `)
 
-  // 3. Drop the unique index
+  // 4. Drop the unique index
   await db.execute(sql`
     DROP INDEX IF EXISTS "flowers_locales_locale_parent_id_unique";
   `)
 
-  // 4. Drop the foreign key constraint
+  // 5. Drop the foreign key constraint
   await db.execute(sql`
     ALTER TABLE "flowers_locales" DROP CONSTRAINT IF EXISTS "flowers_locales_parent_id_fk";
   `)
 
-  // 5. Drop the locales table (cascades the sequence)
+  // 6. Drop the locales table (cascades the sequence)
   await db.execute(sql`
     DROP TABLE IF EXISTS "flowers_locales";
   `)
