@@ -8,7 +8,7 @@ const uri = process.env.DATABASE_URI || ''
 const usePostgres = uri.startsWith('postgres')
 const db = usePostgres
   ? postgresAdapter({ pool: { connectionString: uri }, migrationDir: './src/migrations-pg', push: process.env.PAYLOAD_PG_PUSH === 'true' })
-  : sqliteAdapter({ client: { url: uri.startsWith('file:') ? uri : 'file:./loja.sqlite' }, push: process.env.PAYLOAD_SQLITE_PUSH !== 'false' })
+  : sqliteAdapter({ client: { url: uri.startsWith('file:') ? uri : 'file:./loja.sqlite' }, push: process.env.PAYLOAD_SQLITE_PUSH !== 'false', transactionOptions: {}})
 
 const Flowers: CollectionConfig = {
   slug: 'flowers',

@@ -98,11 +98,32 @@ const flDocs = await payload.find({ collection: 'flowers', limit: 20, locale: 'p
 const fls: Record<string, any> = {}
 for (const d of flDocs.docs as any[]) fls[d.id] = d
 
-// Source hash validation (use manifest source for basic check; full DB validation added later)
+// Source hash validation — compares manifest sourceHash against DB PT values
 let srcErr = 0
 for (const s of sources) {
-  const actualHash = sha256(s.source)
-  const expectedHash = s.hash.replace('sha256:', '')
+  const expectedHash = s.hash
+  let dbVal = ''
+  // Read PT value from DB via Local API (no fallback)
+  if (s.entity === 'homepage') {
+    const hp = await payload.findGlobal({ slug: 'homepage', locale: 'pt', fallbackLocale: false }) as any
+    const [grp, fld] = s.field.split('.')
+    dbVal = hp[grp]?.[fld] ?? ''
+  } else if (s.entity === 'flowers') {
+    const id = parseInt(s.field.match(/flower-(\d+)/)?.[1] || '0', 10)
+    if (id && fls[id]) {
+      const fn = s.field.split('.')[1]
+      // Try PT-specific field first, then base field
+      dbVal = fls[id][fn + 'Pt'] || fls[id][fn] || ''
+    }
+  } else {
+    const slugVal = s.field.split('.')[0]
+    const fn = s.field.split('.')[1]
+    const docs = s.entity === 'categories' ? cats : colls
+    if (docs[slugVal]) {
+      dbVal = docs[slugVal][fn] ?? ''
+    }
+  }
+  const actualHash = 'sha256:' + sha256(dbVal)
   if (actualHash !== expectedHash) {
     console.error(`❌ ${s.entity}/${s.field}: SOURCE_DRIFT expected=sha256:${expectedHash} actual=sha256:${actualHash}`)
     srcErr++
