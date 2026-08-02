@@ -77,6 +77,7 @@ export async function up({ db, payload, req }: MigrateArgs): Promise<void> {
   }
 
   // Drop old localized columns from base table
+  await db.execute(sql`DROP INDEX IF EXISTS "categories_name_idx";`);
   await db.execute(sql`ALTER TABLE "categories" DROP COLUMN "name";`);
   await db.execute(sql`ALTER TABLE "categories" DROP COLUMN "description";`);
 }

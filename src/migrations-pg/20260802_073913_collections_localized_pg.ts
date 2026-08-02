@@ -69,6 +69,7 @@ export async function up({ db, payload, req }: MigrateArgs): Promise<void> {
   if (count < 1) throw new Error('[UP] Backfill inserted 0 rows.');
 
   // Drop old localized columns from base table
+  await db.execute(sql`DROP INDEX IF EXISTS "collections_name_idx";`);
   await db.execute(sql`ALTER TABLE "collections" DROP COLUMN "name";`);
   await db.execute(sql`ALTER TABLE "collections" DROP COLUMN "description";`);
 }
