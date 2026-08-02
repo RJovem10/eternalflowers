@@ -66,7 +66,11 @@ export async function up({ db, payload, req }: MigrateArgs): Promise<void> {
   // 9. Confirm backfill count
   const countResult = await db.execute(sql`SELECT COUNT(*)::int AS cnt FROM "collections_locales";`)
   const count = countResult?.rows?.[0]?.cnt ?? 0
-  if (count < 1) throw new Error('[UP] Backfill inserted 0 rows.')
+  if (count < 1) throw new Error('[UP] Backfill inserted 0 rows.');
+
+  // Drop old localized columns from base table
+  await db.execute(sql`ALTER TABLE "collections" DROP COLUMN "name";`);
+  await db.execute(sql`ALTER TABLE "collections" DROP COLUMN "description";`);
 }
 
 export async function down({ db, payload, req }: MigrateArgs): Promise<void> {

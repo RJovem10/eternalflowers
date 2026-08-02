@@ -76,6 +76,23 @@ export async function up({ db, payload, req }: MigrateArgs): Promise<void> {
   const countResult = await db.execute(sql`SELECT COUNT(*)::int AS cnt FROM "homepage_locales";`)
   const count = countResult?.rows?.[0]?.cnt ?? 0
   if (count < 1) throw new Error('[UP] Backfill inserted 0 rows.')
+
+    await db.execute(sql`ALTER TABLE "homepage" DROP COLUMN "hero_hero_title";`);
+  await db.execute(sql`ALTER TABLE "homepage" DROP COLUMN "hero_hero_subtitle";`);
+  await db.execute(sql`ALTER TABLE "homepage" DROP COLUMN "hero_primary_button_text";`);
+  await db.execute(sql`ALTER TABLE "homepage" DROP COLUMN "hero_secondary_button_text";`);
+  await db.execute(sql`ALTER TABLE "homepage" DROP COLUMN "real_flowers_title";`);
+  await db.execute(sql`ALTER TABLE "homepage" DROP COLUMN "real_flowers_subtitle";`);
+  await db.execute(sql`ALTER TABLE "homepage" DROP COLUMN "story_title";`);
+  await db.execute(sql`ALTER TABLE "homepage" DROP COLUMN "story_text";`);
+  await db.execute(sql`ALTER TABLE "homepage" DROP COLUMN "international_title";`);
+  await db.execute(sql`ALTER TABLE "homepage" DROP COLUMN "international_subtitle";`);
+  await db.execute(sql`ALTER TABLE "homepage" DROP COLUMN "instagram_title";`);
+  await db.execute(sql`ALTER TABLE "homepage" DROP COLUMN "instagram_text";`);
+  await db.execute(sql`ALTER TABLE "homepage" DROP COLUMN "cta_title";`);
+  await db.execute(sql`ALTER TABLE "homepage" DROP COLUMN "cta_subtitle";`);
+  await db.execute(sql`ALTER TABLE "homepage" DROP COLUMN "cta_button_text";`);
+  await db.execute(sql`ALTER TABLE "homepage" DROP COLUMN "footer_brand_description";`);
 }
 
 export async function down({ db, payload, req }: MigrateArgs): Promise<void> {

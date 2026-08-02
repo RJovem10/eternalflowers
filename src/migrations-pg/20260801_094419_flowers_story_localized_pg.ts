@@ -68,6 +68,9 @@ export async function up({ db, payload, req }: MigrateArgs): Promise<void> {
   if (count < 1) {
     throw new Error(`[UP] Backfill inserted 0 rows — no flowers with non-empty story found.`)
   }
+
+  // Drop old localized column from base table
+  await db.execute(sql`ALTER TABLE "flowers" DROP COLUMN "story";`);
 }
 
 export async function down({ db, payload, req }: MigrateArgs): Promise<void> {
