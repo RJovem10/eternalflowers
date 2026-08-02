@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "payload": "payload",
-    "generate:types": "payload generate:types"
+    "generate:types": "payload generate:types",
+    "translations:validate": "npx tsx scripts/translations/import-translations.ts",
+    "translations:import": "NODE_OPTIONS='--import ./scripts/translations/preload-env.mjs' PAYLOAD_SQLITE_PUSH=false npx tsx scripts/translations/import-translations.ts"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "^3.0.0",
