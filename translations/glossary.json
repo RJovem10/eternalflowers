@@ -1,0 +1,109 @@
+{
+  "version": 1,
+  "sourceLocale": "pt",
+  "terms": {
+    "flor verdadeira": {
+      "en": "real flower",
+      "es": "flor verdadera",
+      "it": "fiore vero",
+      "de": "echte Blume",
+      "notes": "Termo central da marca. Manter itálico ou destaque quando referido como conceito.",
+      "status": "ai-reviewed"
+    },
+    "flor preservada": {
+      "en": "preserved flower",
+      "es": "flor preservada",
+      "it": "fiore conservato",
+      "de": "konservierte Blume",
+      "notes": "Técnica artesanal de preservação em resina.",
+      "status": "ai-reviewed"
+    },
+    "joia botânica": {
+      "en": "botanical jewellery",
+      "es": "joya botánica",
+      "it": "gioiello botanico",
+      "de": "botanischer Schmuck",
+      "notes": "Termo-chave para SEO e identidade. EN: British spelling 'jewellery'.",
+      "status": "ai-reviewed"
+    },
+    "feito à mão": {
+      "en": "handmade",
+      "es": "hecho a mano",
+      "it": "fatto a mano",
+      "de": "handgefertigt",
+      "notes": "Valor central da marca. Usar em todas as descrições.",
+      "status": "ai-reviewed"
+    },
+    "artesanal": {
+      "en": "handcrafted",
+      "es": "artesanal",
+      "it": "artigianale",
+      "de": "handwerklich",
+      "notes": "Sinónimo de 'feito à mão'. Preferir 'handcrafted' a 'artisanal' em EN.",
+      "status": "ai-reviewed"
+    },
+    "peça única": {
+      "en": "unique piece",
+      "es": "pieza única",
+      "it": "pezzo unico",
+      "de": "einzigartiges Stück",
+      "notes": "Cada criação é uma edição limitada.",
+      "status": "ai-reviewed"
+    },
+    "edição limitada": {
+      "en": "limited edition",
+      "es": "edición limitada",
+      "it": "edizione limitata",
+      "de": "limitierte Auflage",
+      "notes": "",
+      "status": "ai-reviewed"
+    },
+    "resina": {
+      "en": "resin",
+      "es": "resina",
+      "it": "resina",
+      "de": "Harz",
+      "notes": "Material de preservação.",
+      "status": "ai-reviewed"
+    },
+    "eternizar": {
+      "en": "to make eternal / to preserve forever",
+      "es": "eternizar",
+      "it": "eternizzare",
+      "de": "verewigen",
+      "notes": "Conceito emocional central. Em EN, usar 'to make eternal' ou 'to preserve forever' conforme o contexto.",
+      "status": "ai-reviewed"
+    },
+    "memória": {
+      "en": "memory",
+      "es": "recuerdo",
+      "it": "ricordo",
+      "de": "Erinnerung",
+      "notes": "ES prefere 'recuerdo' a 'memoria' para o sentido emocional.",
+      "status": "ai-reviewed"
+    },
+    "natural / natureza": {
+      "en": "natural / nature",
+      "es": "natural / naturaleza",
+      "it": "naturale / natura",
+      "de": "natürlich / Natur",
+      "notes": "",
+      "status": "ai-reviewed"
+    },
+    "personalizado": {
+      "en": "custom / personalised",
+      "es": "personalizado",
+      "it": "personalizzato",
+      "de": "personalisiert",
+      "notes": "EN: usar 'custom' para peças, 'personalised' para experiência.",
+      "status": "ai-reviewed"
+    }
+  },
+  "notTranslated": [
+    "Eternal Flowers",
+    "Mar&Natur",
+    "Marina",
+    "eternal.flowers.pt",
+    "Braga"
+  ]
+}
