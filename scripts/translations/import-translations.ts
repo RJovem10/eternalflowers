@@ -36,7 +36,7 @@ function log(m: string) { console.log(`  ${m}`) }
 ;(async () => {
 
 const args = process.argv.slice(2)
-let mode: 'validate' | 'dry-run' | 'apply' = 'dry-run'
+let mode: 'validate' | 'dry-run' | 'apply' | 'apply-sql' = 'dry-run'
 let confirmToken = '', snapshotDir = '', verbose = false
 let testMode = process.env.TRANSLATION_IMPORT_TEST_MODE ? '1' : '', testFailAfter = Number(process.env.TRANSLATION_IMPORT_TEST_MODE) || -1
 let failDuringVerify = process.env.TRANSLATION_IMPORT_FAIL_DURING_VERIFY === '1'
@@ -44,6 +44,7 @@ let failDuringVerify = process.env.TRANSLATION_IMPORT_FAIL_DURING_VERIFY === '1'
 for (const a of args) {
   if (a === '--dry-run') mode = 'dry-run'
   else if (a === '--apply') mode = 'apply'
+  else if (a === '--apply-sql') mode = 'apply-sql'
   else if (a.startsWith('--confirm=')) confirmToken = a.split('=')[1]
   else if (a.startsWith('--snapshot-dir=')) snapshotDir = a.split('=')[1]
   else if (a === '--verbose') verbose = true
@@ -204,7 +205,99 @@ fs.writeFileSync(snapPath, JSON.stringify({
 }, null, 2))
 console.log(`Snapshot: ${snapPath}`)
 
-if (mode !== 'apply') { console.log(`\n✅ ${mode} — zero writes.`); process.exit(0) }
+if (mode !== 'apply' && mode !== 'apply-sql') { console.log(`\n✅ ${mode} — zero writes.`); process.exit(0) }
+
+// ─── APPLY VIA SQL DIRECTO ───────────────────────────
+// Usado quando Payload Local API rejeita locale updates devido a
+// objetos populados herdados da migracao SQLite original.
+// Nao substitui o modo --apply, apenas oferece alternativa.
+
+if (mode === 'apply-sql') {
+  console.log(`\n=== APPLY VIA SQL DIRETO ===`)
+  const pg = (await import('pg')).default
+  const client = new pg.Client({ connectionString: uri })
+  await client.connect()
+  await client.query('BEGIN')
+
+  const sqlLines: string[] = []
+
+  // Homepage locales — INSERT ON CONFLICT
+  for (const loc of LOCALES) {
+    const cols: string[] = ['"_locale"', '"_parent_id"']
+    const vals: string[] = [`'${loc}'`, '1']
+    const updates: string[] = []
+    for (const fp of Object.keys(manifests.homepage.fields)) {
+      const [grp, fld] = fp.split('.')
+      const pgCol = `${grp.replace(/([A-Z])/g, '_$1').toLowerCase()}_${fld.replace(/([A-Z])/g, '_$1').toLowerCase()}`
+      const sharedSubFields: Record<string, string[]> = {
+        story: ['image'], instagram: ['handle'],
+        cta: ['buttonLink'], footer: ['email', 'phone', 'instagramUrl', 'whatsappUrl']
+      }
+      if (fld === 'heroImage') continue
+      if (sharedSubFields[grp]?.includes(fld)) continue
+      const val = manifests.homepage.fields[fp].translations[loc].value
+      const esc = "'" + String(val).replace(/'/g, "''") + "'"
+      cols.push(`"${pgCol}"`)
+      vals.push(esc)
+      updates.push(`"${pgCol}" = ${esc}`)
+    }
+    sqlLines.push(`INSERT INTO "homepage_locales" (${cols.join(', ')}) VALUES (${vals.join(', ')}) ON CONFLICT ("_locale", "_parent_id") DO UPDATE SET ${updates.join(', ')};`)
+  }
+
+  // Categories locales — INSERT ON CONFLICT
+  for (const slug of Object.keys(cats)) {
+    for (const loc of LOCALES) {
+      const name = "'" + String(manifests.categories.fields[`${slug}.name`].translations[loc].value).replace(/'/g, "''") + "'"
+      const desc = "'" + String(manifests.categories.fields[`${slug}.description`].translations[loc].value).replace(/'/g, "''") + "'"
+      sqlLines.push(`INSERT INTO "categories_locales" ("name", "description", "_locale", "_parent_id") VALUES (${name}, ${desc}, '${loc}', ${cats[slug].id}) ON CONFLICT ("_locale", "_parent_id") DO UPDATE SET "name" = ${name}, "description" = ${desc};`)
+    }
+  }
+
+  // Collections locales — INSERT ON CONFLICT
+  for (const slug of Object.keys(colls)) {
+    for (const loc of LOCALES) {
+      const name = "'" + String(manifests.collections.fields[`${slug}.name`].translations[loc].value).replace(/'/g, "''") + "'"
+      const desc = "'" + String(manifests.collections.fields[`${slug}.description`].translations[loc].value).replace(/'/g, "''") + "'"
+      sqlLines.push(`INSERT INTO "collections_locales" ("name", "description", "_locale", "_parent_id") VALUES (${name}, ${desc}, '${loc}', ${colls[slug].id}) ON CONFLICT ("_locale", "_parent_id") DO UPDATE SET "name" = ${name}, "description" = ${desc};`)
+    }
+  }
+
+  // Flowers locales (story) — INSERT ON CONFLICT
+  for (const idStr of Object.keys(fls)) {
+    for (const loc of LOCALES) {
+      const story = "'" + String(manifests.flowers.fields[`flower-${idStr}.story`].translations[loc].value).replace(/'/g, "''") + "'"
+      sqlLines.push(`INSERT INTO "flowers_locales" ("story", "_locale", "_parent_id") VALUES (${story}, '${loc}', ${idStr}) ON CONFLICT ("_locale", "_parent_id") DO UPDATE SET "story" = ${story};`)
+    }
+  }
+
+  // Flowers suffix fields (name_en, description_en etc)
+  for (const idStr of Object.keys(fls)) {
+    const id = Number(idStr)
+    const updates: string[] = []
+    for (const loc of LOCALES) {
+      const nf = `name_${loc}`
+      const df = `description_${loc}`
+      const name = manifests.flowers.fields[`flower-${id}.name`].translations[loc].value
+      const desc = manifests.flowers.fields[`flower-${id}.description`].translations[loc].value
+      updates.push(`"${nf}" = '${String(name).replace(/'/g, "''")}'`)
+      updates.push(`"${df}" = '${String(desc).replace(/'/g, "''")}'`)
+    }
+    sqlLines.push(`UPDATE "flowers" SET ${updates.join(', ')} WHERE "id" = ${id};`)
+  }
+
+  try {
+    for (const sql of sqlLines) await client.query(sql)
+    await client.query('COMMIT')
+    console.log(`\n✅ ${writes.length} translations in ${sqlLines.length} SQL statements. Committed.`)
+    await client.end()
+    process.exit(0)
+  } catch (e: any) {
+    try { await client.query('ROLLBACK'); console.log('Rollback') } catch {}
+    console.error(`\n❌ ERROR: ${e.message}`)
+    try { await client.end() } catch {}
+    process.exit(1)
+  }
+}
 
 // ─── APPLY ────────────────────────────────────────
 console.log(`\n=== APPLYING ===`)
