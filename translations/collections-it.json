@@ -15,7 +15,7 @@
         "it": {
           "value": "Nozze",
           "status": "ai-reviewed",
-          "notes": "Sol fix"
+          "notes": "Sol: Matrimoni→Nozze (mais natural para coleção)"
         }
       }
     },
@@ -75,7 +75,7 @@
         "it": {
           "value": "Pezzi freschi e vivaci.",
           "status": "ai-reviewed",
-          "notes": "Sol fix"
+          "notes": "Sol: vibranti→vivaci (mais natural em italiano)"
         }
       }
     },

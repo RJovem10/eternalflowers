@@ -97,9 +97,9 @@
       "sourceHash": "sha256:8ccd8d8322c8",
       "translations": {
         "en": {
-          "value": "Eternal Flowers was born from a simple desire",
+          "value": "Eternal Flowers was born from a simple desire: to capture the beauty of flowers and make it last forever.\n\nIn a world where everything fades, we believe there are moments that deserve to endure. Each piece we create starts with a real flower — lovingly cultivated, harvested at its peak, and preserved by hand.\n\nOur workshop is in Braga, Portugal. Here, Marina and her team transform fresh flowers into jewellery that defies time. We use no moulds or mass production — every piece is unique, like the memory it holds.\n\nWe believe nature gives us the most perfect materials. Our work is simply to guide them, with respect and tenderness, into a new way of being.",
           "status": "ai-reviewed",
-          "notes": "Fix: wish→desire"
+          "notes": "Fix Sol review: wish→desire for intensity"
         }
       }
     },
