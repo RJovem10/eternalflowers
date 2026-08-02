@@ -38,7 +38,7 @@ function log(m: string) { console.log(`  ${m}`) }
 const args = process.argv.slice(2)
 let mode: 'validate' | 'dry-run' | 'apply' = 'dry-run'
 let confirmToken = '', snapshotDir = '', verbose = false
-let testMode = process.env.TRANSLATION_IMPORT_TEST_MODE || '', testFailAfter = -1
+let testMode = process.env.TRANSLATION_IMPORT_TEST_MODE ? '1' : '', testFailAfter = Number(process.env.TRANSLATION_IMPORT_TEST_MODE) || -1
 
 for (const a of args) {
   if (a === '--dry-run') mode = 'dry-run'
@@ -190,7 +190,16 @@ let ops = 0, errs: string[] = []
 
 try {
   for (const loc of LOCALES) {
+    // Read current homepage to get all field values (preserves NOT NULL constraints)
+    const currHP = await payload.findGlobal({ slug: 'homepage', locale: 'pt', fallbackLocale: false }) as any
     const data: any = {}
+    // Start with current PT state for all groups
+    for (const [grp, fields] of Object.entries(currHP)) {
+      if (typeof fields === 'object' && fields !== null && !Array.isArray(fields)) {
+        data[grp] = { ...fields }
+      }
+    }
+    // Overwrite localized fields with translation values for this locale
     for (const fp of Object.keys(manifests.homepage.fields)) {
       const [grp, fld] = fp.split('.')
       // Skip shared (non-localized) fields — they must not be sent in locale updates
