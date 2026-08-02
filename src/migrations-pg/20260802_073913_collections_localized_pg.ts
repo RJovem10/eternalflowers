@@ -113,7 +113,11 @@ export async function down({ db, payload, req }: MigrateArgs): Promise<void> {
     );
   `)
 
-  // 4. Drop indexes
+  // 4. Recreate NOT NULL and unique index as per original schema
+  await db.execute(sql`ALTER TABLE "collections" ALTER COLUMN "name" SET NOT NULL;`);
+  await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS "collections_name_idx" ON "collections" USING btree ("name");`);
+
+  // 5. Drop locale indexes
   await db.execute(sql`DROP INDEX IF EXISTS "collections_locales_name_locale_unique";`)
   await db.execute(sql`DROP INDEX IF EXISTS "collections_locales_locale_parent_id_unique";`)
 

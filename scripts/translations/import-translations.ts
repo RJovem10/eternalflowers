@@ -39,6 +39,7 @@ const args = process.argv.slice(2)
 let mode: 'validate' | 'dry-run' | 'apply' = 'dry-run'
 let confirmToken = '', snapshotDir = '', verbose = false
 let testMode = process.env.TRANSLATION_IMPORT_TEST_MODE ? '1' : '', testFailAfter = Number(process.env.TRANSLATION_IMPORT_TEST_MODE) || -1
+let failDuringVerify = process.env.TRANSLATION_IMPORT_FAIL_DURING_VERIFY === '1'
 
 for (const a of args) {
   if (a === '--dry-run') mode = 'dry-run'
@@ -289,8 +290,9 @@ try {
   }
 
   // Verify — todas as leituras dentro da mesma transação (req)
+  let verifyOps = 0
   for (const p of writes) {
-    if (testMode && ops + 1 === Number(testFailAfter)) throw new Error(`INJECTED_FAILURE at verify op ${ops + 1}`)
+    if (testMode && ops + 1 === Number(testFailAfter)) throw new Error(`INJECTED_FAILURE at op ${ops + 1}`)
     let v: any
     if (p.entity === 'homepage') {
       v = await payload.findGlobal({ slug: 'homepage', locale: p.locale as any, fallbackLocale: false, req }) as any
@@ -305,6 +307,8 @@ try {
       v = await payload.findByID({ collection: 'flowers', id, locale: p.locale as any, fallbackLocale: false, req }) as any
       if (v.story !== p.planned) errs.push(`VERIFY flowers/${p.slug}/story (${p.locale}) expected="${p.planned}" actual="${v.story}"`)
     }
+    verifyOps++
+    if (failDuringVerify && verifyOps >= 2) throw new Error(`INJECTED_FAILURE_VERIFY after ${verifyOps} verified, before commit`)
   }
 
   // Verificação de suffix fields (nameEn, descriptionEn etc) — ler sem locale (base table)
@@ -313,6 +317,8 @@ try {
     const id = Number(p.slug.replace('flower-', ''))
     const v = await payload.findByID({ collection: 'flowers', id, req }) as any
     if (v[p.field] !== p.planned) errs.push(`VERIFY flowers/${p.slug}/${p.field} expected="${p.planned}" actual="${v[p.field]}"`)
+    verifyOps++
+    if (failDuringVerify && verifyOps >= 2) throw new Error(`INJECTED_FAILURE_VERIFY after ${verifyOps} verified, before commit`)
   }
 
   if (errs.length > 0) {
