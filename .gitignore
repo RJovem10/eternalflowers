@@ -5,6 +5,10 @@ out/
 .env.local
 *.sqlite
 *.sqlite3
+*.db
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
 src/payload-types.ts
 public/media/
 .DS_Store

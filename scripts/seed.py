@@ -10,13 +10,30 @@ BASE = "http://localhost:3457/api"
 HEADERS = {"Content-Type": "application/json"}
 SEED_DIR = Path(__file__).parent.parent / "seed-images"
 
+# ===== Credenciais obrigatórias (variáveis de ambiente) =====
+SEED_ADMIN_EMAIL = os.environ.get("SEED_ADMIN_EMAIL")
+SEED_ADMIN_PASSWORD = os.environ.get("SEED_ADMIN_PASSWORD")
+
+if not SEED_ADMIN_EMAIL or not SEED_ADMIN_PASSWORD:
+    print("ERRO: Define SEED_ADMIN_EMAIL e SEED_ADMIN_PASSWORD no ambiente.")
+    print("Exemplo:")
+    print("  export SEED_ADMIN_EMAIL='admin@exemplo.pt'")
+    print("  export SEED_ADMIN_PASSWORD='<uma-password-forte>'")
+    sys.exit(1)
+
+# Proteção contra execução acidental em produção
+NODE_ENV = os.environ.get("NODE_ENV", "development")
+if NODE_ENV == "production":
+    print("ERRO: Este script NÃO deve ser executado em produção (NODE_ENV=production).")
+    sys.exit(1)
+
 # Login/create first user
 def get_token():
     """Obtain an auth token."""
     # Try first-register (new DB)
     try:
         url = BASE.replace("/api", "/api/users/first-register")
-        r = requests.post(url, json={"email": "admin@eternalflowers.pt", "password": "Admin123!"}, timeout=15)
+        r = requests.post(url, json={"email": SEED_ADMIN_EMAIL, "password": SEED_ADMIN_PASSWORD}, timeout=15)
         if r.status_code == 200:
             return r.json().get("token")
     except:
@@ -24,7 +41,7 @@ def get_token():
     # Try login (existing user)
     try:
         url = BASE.replace("/api", "/api/users/login")
-        r = requests.post(url, json={"email": "admin@eternalflowers.pt", "password": "Admin123!"}, timeout=15)
+        r = requests.post(url, json={"email": SEED_ADMIN_EMAIL, "password": SEED_ADMIN_PASSWORD}, timeout=15)
         if r.status_code == 200:
             return r.json().get("token")
     except:
