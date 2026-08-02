@@ -1,5 +1,7 @@
 import { getPayloadClient } from '@/payload'
 import { getDictionary, locales, defaultLocale } from '@/i18n/dictionaries'
+import type { Locale } from '@/i18n/dictionaries'
+import { payloadLocaleOptions } from '@/lib/payload-locale'
 import type { Metadata } from 'next'
 import Hero from '@/components/FounderHero'
 import RealFlowers from '@/components/RealFlowers'
@@ -71,17 +73,32 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
   const { locale } = await params
   const dict = getDictionary(locale)
   const payload = await getPayloadClient()
-  const homepage = await payload.findGlobal({ slug: 'homepage' })
+  const homepage = await payload.findGlobal({
+    slug: 'homepage',
+    ...payloadLocaleOptions(locale as Locale),
+  })
 
   const [categoriesData, collectionsData, flowersData] = await Promise.all([
-    payload.find({ collection: 'categories', limit: 20, sort: 'name' }),
+    payload.find({
+      collection: 'categories',
+      limit: 20,
+      sort: 'name',
+      ...payloadLocaleOptions(locale as Locale),
+    }),
     payload.find({
       collection: 'collections',
       limit: 20,
       sort: 'name',
       where: { isActive: { equals: true } },
+      ...payloadLocaleOptions(locale as Locale),
     }),
-    payload.find({ collection: 'flowers', limit: 8, sort: '-createdAt', depth: 1 }),
+    payload.find({
+      collection: 'flowers',
+      limit: 8,
+      sort: '-createdAt',
+      depth: 1,
+      ...payloadLocaleOptions(locale as Locale),
+    }),
   ])
 
   const hero = homepage.hero

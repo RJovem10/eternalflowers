@@ -2,8 +2,10 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { getDictionary, locales, defaultLocale } from '@/i18n/dictionaries'
+import type { Locale } from '@/i18n/dictionaries'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
+import { payloadLocaleOptions } from '@/lib/payload-locale'
 import ProductGallery from '@/components/ProductGallery'
 import ProductInfo from '@/components/ProductInfo'
 import ProductStory from '@/components/ProductStory'
@@ -31,6 +33,7 @@ export async function generateMetadata({ params }: FlowerPageParams): Promise<Me
       collection: 'flowers',
       id,
       depth: 1,
+      ...payloadLocaleOptions(locale as Locale),
     })
     const localizedName = getLocaleField<string>(flower, 'name', locale, '')
     const title = flower.creationName || localizedName || flower.scientificName
@@ -76,6 +79,7 @@ export default async function FlowerDetail({ params }: FlowerPageParams) {
       collection: 'flowers',
       id,
       depth: 2,
+      ...payloadLocaleOptions(locale as Locale),
     })
   } catch {
     notFound()
@@ -110,6 +114,7 @@ export default async function FlowerDetail({ params }: FlowerPageParams) {
           id: { not_equals: Number(id) },
         },
         limit: 8,
+        ...payloadLocaleOptions(locale as Locale),
       })
       related = relatedRes.docs
     } catch {

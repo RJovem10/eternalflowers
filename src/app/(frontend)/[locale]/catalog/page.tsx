@@ -1,9 +1,11 @@
 import Link from 'next/link'
 import { getDictionary, locales, defaultLocale } from '@/i18n/dictionaries'
+import type { Locale } from '@/i18n/dictionaries'
 import type { Metadata } from 'next'
 import FlowerCard from '@/components/FlowerCard'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
+import { payloadLocaleOptions } from '@/lib/payload-locale'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,7 +39,13 @@ export default async function Catalog({ params }: { params: Promise<{ locale: st
   const dict = getDictionary(locale)
   const payload = await getPayload({ config })
 
-  const flowers = await payload.find({ collection: 'flowers', limit: 200, sort: '-createdAt', depth: 1 })
+  const flowers = await payload.find({
+    collection: 'flowers',
+    limit: 200,
+    sort: '-createdAt',
+    depth: 1,
+    ...payloadLocaleOptions(locale as Locale),
+  })
 
   const nf = ({ pt: 'namePt', en: 'nameEn', es: 'nameEs', it: 'nameIt', de: 'nameDe' }[locale] || 'namePt')
 
