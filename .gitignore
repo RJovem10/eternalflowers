@@ -12,3 +12,8 @@ coverage/
 *.log
 .hermes/
 tsconfig.tsbuildinfo
+
+# Staging
+.env.staging.local
+media-staging/
+backups/staging-*

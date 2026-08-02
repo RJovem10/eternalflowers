@@ -10,7 +10,17 @@
     "generate:types": "payload generate:types",
     "translations:validate": "npx tsx scripts/translations/import-translations.ts",
     "translations:import": "PAYLOAD_SQLITE_PUSH=false npx tsx scripts/translations/import-translations.ts",
-    "postinstall": "node scripts/patch-load-env.js"
+    "postinstall": "node scripts/patch-load-env.js",
+    "staging:setup": "bash scripts/staging/setup.sh",
+    "staging:start": "bash scripts/staging/start.sh",
+    "staging:stop": "bash scripts/staging/stop.sh",
+    "staging:status": "bash scripts/staging/status.sh",
+    "staging:test": "bash scripts/staging/smoke-test.sh",
+    "staging:logs": "docker logs eternal-flowers-staging-db",
+    "staging:backup": "bash scripts/staging/backup.sh",
+    "staging:restore": "bash scripts/staging/restore.sh",
+    "staging:teardown": "bash scripts/staging/teardown.sh",
+    "staging:purge": "bash scripts/staging/teardown.sh --purge"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "^3.0.0",
