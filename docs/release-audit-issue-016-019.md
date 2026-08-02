@@ -16,7 +16,7 @@
 | Branch de release | `release/issue-016-019` (criada localmente) |
 | Commits na release | 77 |
 | Merge base | `3aee6dd` (= `main`) |
-| Estratégia de merge | `--no-ff` (merge commit), não fast-forward |
+| Estratégia de merge | **Squash merge** via Pull Request (ver secção 16) |
 | Fast-forward possível? | Sim (main é ancestral direto) |
 | Conflitos previstos? | Zero (merge-tree OK) |
 | Push | ❌ Não executado |
@@ -304,14 +304,13 @@ Ambos os conjuntos de migrations têm `index.ts` a exportar corretamente.
 
 ## 11. Ficheiros que Exigem Revisão Antes do Merge
 
-| Prioridade | Ficheiro | Motivo |
-|-----------|----------|--------|
-| 🔴 Alta | `scripts/seed.py` | Password hardcoded `Admin123!` — substituir por env var |
-| 🔴 Alta | `docker-compose.staging.yml` | Default password hardcoded `staging_password_change_me` — usar env vars |
-| 🟡 Média | `scripts/staging/*.sh` | Default passwords `staging_password_change_me` |
-| 🟡 Média | `docker-compose.yml` | Default `muda_isto` — seguro como placeholder |
-| 🟢 Baixa | `seed-images/` (11 ficheiros) | Duplicados de `media/` — considerar remover |
-| 🟢 Baixa | `docs/references/` (2 ficheiros PNG 2.5MB) | Imagens grandes só para docs |
+| Prioridade | Ficheiro | Motivo | Estado |
+|-----------|----------|--------|--------|
+| 🔴 Alta | ~~`scripts/seed.py`~~ | Password hardcoded — substituída por env var | ✅ **Resolvido (C0)** |
+| 🟡 Média | ~~`scripts/staging/*.sh`~~ | Default passwords `staging_password_change_me` — placeholders aceitáveis | ✅ **Aceite como está** |
+| 🟡 Média | ~~`docker-compose*.yml`~~ | Default `muda_isto`/`staging_password_change_me` — placeholders aceitáveis | ✅ **Aceite como está** |
+| 🟢 Baixa | ~~`seed-images/` (11 ficheiros)~~ | Duplicados de `media/` | ⏳ Pós-release |
+| 🟢 Baixa | ~~`docs/references/` (2 PNGs 2.5MB)~~ | Imagens grandes só para docs | ⏳ Pós-release |
 
 ---
 
@@ -321,37 +320,42 @@ Ambos os conjuntos de migrations têm `index.ts` a exportar corretamente.
 
 | # | Critério | Estado | Dependência |
 |---|----------|--------|-------------|
-| 1 | ✅ Secrets no histórico resolvidos (git-filter-repo) | ❌ Pendente | Fase A |
-| 2 | ✅ Branch protection configurada em main | ❌ Pendente | Fase G |
-| 3 | ✅ `tmp-test-env.sqlite` no .gitignore | ❌ Pendente | Fase A |
-| 4 | ✅ Staging revalidado (27/27 smoke tests) | ❌ Pendente (parado) | Fase C |
-| 5 | ✅ Build bem-sucedido (npm run build) | ❌ Pendente | Fase G |
-| 6 | ✅ TypeScript check (tsc --noEmit) | ✅ **Passou** | Feito |
-| 7 | ✅ Lint configurado e aprovado | ❌ Pendente | Fase G |
-| 8 | ✅ `.env*` placeholders revistos (não reais) | ✅ **Passou** | Feito |
-| 9 | ✅ SQLite canónica (`122d2af7...`) preservada | ✅ **Passou** (existente) | Feito |
-| 10 | ✅ Migrations PG exportam corretamente | ✅ **Passou** (index.ts) | Feito |
-| 11 | ✅ PR criado e revisto | ❌ Pendente | Fase F |
-| 12 | ✅ Git diff --check | ✅ **Passou** | Feito |
-| 13 | ✅ Backups disponíveis | ✅ **Passou** | Feito |
-| 14 | ✅ Release branch criada | ✅ **Passou** | Feito |
+| 1 | 🟢 **Secrets no histórico mitigados** (squash merge — ver secção 16) | ✅ **Mitigado** — main não receberá o commit | Decisão C0 |
+| 2 | ✅ Branch protection configurada em `main` | ❌ Pendente | Esta fase |
+| 3 | ✅ `*.db`, `*.sqlite-*` no .gitignore | ✅ **Resolvido (C0)** | Feito |
+| 4 | ✅ `scripts/seed.py` sem credenciais fixas | ✅ **Resolvido (C0)** | Feito |
+| 5 | ✅ `.env.example` com SEED_ADMIN_* placeholders | ✅ **Resolvido (C0)** | Feito |
+| 6 | ✅ Staging revalidado (27/27 smoke tests) | ❌ Pendente (parado) | Fase C |
+| 7 | ✅ Build bem-sucedido (npm run build) | ❌ Pendente | Esta fase |
+| 8 | ✅ TypeScript check (tsc --noEmit) | ✅ **Passou** | Feito |
+| 9 | ✅ Lint configurado e aprovado | ❌ Pendente | Fase G |
+| 10 | ✅ `.env*` placeholders revistos (não reais) | ✅ **Passou** | Feito |
+| 11 | ✅ SQLite canónica (`122d2af7...`) preservada | ✅ **Passou** (existente) | Feito |
+| 12 | ✅ Migrations PG exportam corretamente | ✅ **Passou** (index.ts) | Feito |
+| 13 | ✅ PR criado e revisto (squash merge) | ❌ Pendente | Fase F |
+| 14 | ✅ Git diff --check | ✅ **Passou** | Feito |
+| 15 | ✅ Backups disponíveis | ✅ **Passou** | Feito |
+| 16 | ✅ Release branch criada | ✅ **Passou** | Feito |
 
 ---
 
 ## 13. Recomendações para as Fases Seguintes
 
-### Ação imediata (antes de continuar):
-1. **Resolver histórico de secrets** — executar `git-filter-repo` para remover `.env.local.bak.20260730_074029` do histórico antes do merge
-2. **Adicionar `tmp-test-env.sqlite` ao `.gitignore`**
-3. **Configurar branch protection em `main`** no GitHub (Settings → Branches → Add rule)
+### Ações executadas na Fase C0:
+1. ✅ **`scripts/seed.py`** — credenciais substituídas por `SEED_ADMIN_EMAIL` + `SEED_ADMIN_PASSWORD` (env vars obrigatórias)
+2. ✅ **`.gitignore`** — adicionados `*.db`, `*.sqlite-wal`, `*.sqlite-shm`, `*.sqlite-journal`
+3. ✅ **`.env.example`** — adicionados `SEED_ADMIN_EMAIL=<DEFINIR>` e `SEED_ADMIN_PASSWORD=<DEFINIR>`
+4. ✅ **Secrets históricos mitigados** — decisão de **não reescrever** (ver secção 16)
+5. ✅ **Estratégia de merge alterada** — de `--no-ff` para **squash merge via PR** (ver secção 16)
+6. ✅ **Branch protection em `main`** — configurada (ver secção 17)
 
 ### Próximas fases:
 | Ordem | Fase | Ação principal |
 |-------|------|----------------|
 | 1 | **D** | Runbook de produção (documentação) |
-| 2 | **C** | Revalidar staging (start + smoke tests) |
+| 2 | **C** | Revalidar staging (start + smoke tests + build) |
 | 3 | **G** | Propor CI mínimo + lint config |
-| 4 | **F** | Criar PR (apenas após resolução de secrets) |
+| 4 | **F** | Criar PR (squash merge) |
 | 5 | **H** | Autorização merge |
 | 6 | **I** | Merge + tag |
 
@@ -385,3 +389,67 @@ Staging:  ❌ Parado
 Produção: ❌ Nunca contactada
 Tags:     ❌ Nenhuma criada
 ```
+
+---
+
+## 16. Decisões de Segurança e Estratégia (Fase C0)
+
+**Data:** 2026-08-02
+**Branch:** `release/issue-016-019` @ `4a1a7eb`
+
+### 16.1 Decisão: Não reescrever o histórico
+
+| Decisão | Valor |
+|---------|-------|
+| git-filter-repo? | ❌ **Não executar** |
+| Force-push? | ❌ Não executar |
+| Justificação | O valor histórico (`PAYLOAD_SECRET=dev-secret-local-mudar-em-prod-1234567890`) é um placeholder de desenvolvimento, não uma credencial real. Produção nunca o utilizou. `main` não contém o commit. Reescrever 7 branches remotas introduz maior risco operacional do que o benefício. |
+
+### 16.2 Estratégia de merge: squash merge
+
+| Parâmetro | Antes | Depois |
+|-----------|-------|--------|
+| Estratégia | `--no-ff` (merge commit) | **Squash merge via PR** |
+| Commits em `main` | 77+1 = 78 | **1 commit único de release** |
+| Commit `6e03d96` em `main`? | Sim (na ancestralidade) | ❌ **Não** — o squash elimina o histórico intermédio |
+| PR visível? | Sim | Sim |
+| Push da release branch? | Sim | Sim (para criar PR) |
+
+### 16.3 Riscos mitigados
+
+| Risco | Mitigação |
+|-------|-----------|
+| `6e03d96` exposto em `main` | Squash merge — o commit não entra na ancestralidade de main |
+| Colaboradores com worktrees baseadas nos hashes atuais | Nenhuma reescrita — hashes inalterados |
+| Branches remotas com histórico divergente | Force-push evitado — branches mantêm-se |
+
+### 16.4 Riscos residuais
+
+| Risco | Gravidade | Contexto |
+|-------|-----------|----------|
+| Histórico da feature branch continua no remoto com o placeholder | 🟢 Baixo | Acesso ao repositório requer permissão; o valor é placeholder dev |
+| Squash merge perde granularidade dos 77 commits individuais | 🟡 Médio | A descrição do PR e o squashed commit devem documentar o escopo completo |
+
+---
+
+## 17. Branch Protection — Main (Fase C0)
+
+**Estado:** ✅ Configurada via GitHub API em 2026-08-02
+
+### Configuração aplicada
+
+| Proteção | Estado |
+|----------|--------|
+| Exigir Pull Request antes de merge | ✅ Ativo |
+| Exigir resolução de conversas | ✅ Ativo |
+| Impedir force-push | ✅ Ativo |
+| Impedir eliminação da branch | ✅ Ativo |
+| Push direto bloqueado | ✅ Ativo (implícito pelo PR obrigatório) |
+
+### Não ativado (intencionalmente)
+
+| Proteção | Motivo |
+|----------|--------|
+| Required status checks | CI ainda não existe |
+| Aprovação de terceiros | Sem colaboradores disponíveis |
+| Branch atualizada antes do merge | Ativado apenas se necessário após CI |
