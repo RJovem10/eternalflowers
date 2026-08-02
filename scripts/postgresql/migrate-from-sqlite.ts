@@ -26,7 +26,9 @@
 import fs from 'fs'
 import crypto from 'crypto'
 import Database from 'better-sqlite3'
-import { execSync } from 'child_process'
+import pg from 'pg'
+
+;(async () => {
 
 const APPROVED_SQLITE_HASH = '122d2af7639d26ff98224cefbc9eaefddf11ce78a5729a6d8154e49f5d3e90ee'
 
@@ -196,27 +198,32 @@ if (mode !== 'apply') {
   process.exit(0)
 }
 
-// ─── APPLY: EXECUTAR VIA psql ──────────────────────
+// ─── APPLY: EXECUTAR VIA CLIENTE PG ────────────────
 
 console.log(`\n=== APPLY ===`)
 
-// Extrair comando psql da URI — usar docker exec
-let psqlCmd: string
-if (targetUri.startsWith('postgres://')) {
-  const url = new URL(targetUri)
-  const user = url.username
-  const db = url.pathname.replace('/', '')
-  psqlCmd = `docker exec -i pg-e6e-mig psql -U ${user} -d ${db} -q -v ON_ERROR_STOP=1`
-} else {
-  psqlCmd = `docker exec -i pg-e6e-mig psql "${targetUri}" -q -v ON_ERROR_STOP=1`
-}
+const client = new pg.Client({ connectionString: targetUri })
 
 try {
-  execSync(psqlCmd, { input: sql, timeout: 30000, maxBuffer: 5 * 1024 * 1024 })
+  await client.connect()
+  await client.query('BEGIN')
+
+  for (const line of lines) {
+    await client.query(line)
+  }
+
+  await client.query('COMMIT')
   console.log(`✅ ${totalBusiness} registos migrados em ${tableCounts.length} batches. Committed.`)
   console.log(`\n✅ SUCCESS — migração concluída.`)
+  await client.end()
 } catch (e: any) {
+  try {
+    await client.query('ROLLBACK')
+    console.log('Rollback executado.')
+  } catch {}
   console.error(`\n❌ ERROR — transação revertida.`)
-  console.error(`  ${e.stderr?.toString() || e.message}`)
+  console.error(`  ${e.message || e}`)
+  try { await client.end() } catch {}
   process.exit(1)
-}
+  }
+})()

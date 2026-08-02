@@ -217,12 +217,19 @@ try {
     // Read current homepage to get all field values (preserves NOT NULL constraints)
     const currHP = await payload.findGlobal({ slug: 'homepage', locale: 'pt', fallbackLocale: false }) as any
     const data: any = {}
-    // Start with current PT state for all groups
+    // Start with current PT state for all groups — excluir campos internos
     const EXCLUDE_TOP = new Set(['id', 'createdAt', 'updatedAt', '_locales'])
     for (const [grp, fields] of Object.entries(currHP)) {
       if (EXCLUDE_TOP.has(grp)) continue
       if (typeof fields === 'object' && fields !== null && !Array.isArray(fields)) {
         data[grp] = { ...fields }
+        // Remover campos populados por relação — Payload rejeita objetos completos
+        // e espera apenas o ID númerico
+        for (const [fieldKey, val] of Object.entries(data[grp] as any)) {
+          if (val && typeof val === 'object' && 'id' in val) {
+            data[grp][fieldKey] = val.id
+          }
+        }
       }
     }
     // Overwrite localized fields with translation values for this locale
