@@ -147,6 +147,20 @@ public/marina/ (6)   → marina-artesa-orquideas, marina-detalhe-ferramentas,
                        marina-retrato-natureza, marina-terapeuta-bata-branca
 ```
 
+#### Documentação (1 ficheiro)
+
+| Ficheiro | Finalidade | Tracked |
+|----------|-----------|---------|
+| `docs/instagram-insights.md` | Análise de público, padrões visuais e métricas do Instagram | ✅ Sim |
+
+#### Ficheiro excluído (não tracked)
+
+| Ficheiro | Finalidade | Tracked | Motivo da exclusão |
+|----------|-----------|---------|--------------------|
+| `docs/instagram-analysis-2026-07.md` | Análise detalhada com dados de seguidores | ❌ **Não** (ignorado via `.git/info/exclude`) | Contém dados analíticos não autorizados na release |
+
+**Verificação:** `git check-ignore -v docs/instagram-analysis-2026-07.md` confirma exclusão em `.git/info/exclude:7`. Zero ocorrências no histórico git. Nenhuma ação necessária.
+
 #### Potencialmente dispensáveis (13 ficheiros)
 
 ```
