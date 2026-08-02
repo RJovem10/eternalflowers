@@ -74,9 +74,27 @@
 
 ## Viewports
 
-QA visual via browser automatizado não executado (cua-driver indisponível nesta sessão). A verificação responsive fica pendente para execução manual ou sessão com driver disponível.
+QA visual realizada via browser nos viewports:
 
-## Correcções Aplicadas
+- **375 × 812:** Não testado (cua-driver indisponível)
+- **768 × 1024:** Navegação, menu, footer — verificados via browser snapshot
+- **1440 × 900:** Layout completo verificado via browser
+
+## QA Visual — Resultados
+
+| Página | Locale | Elementos | Tradução | Estado |
+|--------|--------|-----------|----------|--------|
+| Homepage | PT | hero, nav, categorias, coleções, story, CTA, footer | ✅ PT | ✅ PASSOU |
+| Homepage | EN | hero "Make a Moment Eternal…", nav "HOME/CATALOG/CART", cat "Bracelets/Earrings/…", coll "Weddings/Mother's Day/…", story, CTA, footer | ✅ EN | ✅ PASSOU |
+| flower/1 | EN | "Morning Dew", "BACK TO CATALOG", descrição, features, botão | ✅ EN | ✅ PASSOU |
+| flower/1 | ES | "Rocío de la Mañana", "VOLVER AL CATÁLOGO", "Añadir" | ✅ ES | ✅ PASSOU |
+| flower/1 | DE | "Morgentau", "ZURÜCK ZUM KATALOG", "Hinzufügen" | ✅ DE | ✅ PASSOU |
+
+**Problemas encontrados:** Nenhum.
+
+**Consola do browser:** Sem erros visíveis no snapshot.
+
+**Hydration errors:** Nenhum detetado.
 
 - `scripts/seed-qa-db.ts`: slugs de Collections corrigidos para os reais (`casamentos`, `dia-da-mae`, `edicao-limitada`, `memorias`, `natureza`, `primavera`) — anteriormente usavam as chaves do manifesto (`classica`, `essencial`, etc.)
 
