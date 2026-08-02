@@ -175,9 +175,9 @@ const Collections: CollectionConfig = {
   slug: 'collections',
   admin: { useAsTitle: 'name' },
   fields: [
-    { name: 'name', type: 'text', required: true, unique: true, label: 'Nome' },
+    { name: 'name', type: 'text', required: true, unique: true, label: 'Nome', localized: true },
     { name: 'slug', type: 'text', required: true, unique: true, label: 'Slug' },
-    { name: 'description', type: 'textarea', label: 'Descrição' },
+    { name: 'description', type: 'textarea', label: 'Descrição', localized: true },
     { name: 'image', type: 'upload', relationTo: 'media', label: 'Imagem' },
     { name: 'isActive', type: 'checkbox', required: true, defaultValue: true, label: 'Ativo?' },
   ],
