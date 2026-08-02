@@ -218,7 +218,9 @@ try {
     const currHP = await payload.findGlobal({ slug: 'homepage', locale: 'pt', fallbackLocale: false }) as any
     const data: any = {}
     // Start with current PT state for all groups
+    const EXCLUDE_TOP = new Set(['id', 'createdAt', 'updatedAt', '_locales'])
     for (const [grp, fields] of Object.entries(currHP)) {
+      if (EXCLUDE_TOP.has(grp)) continue
       if (typeof fields === 'object' && fields !== null && !Array.isArray(fields)) {
         data[grp] = { ...fields }
       }
