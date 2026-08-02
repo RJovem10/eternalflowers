@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "payload": "payload",
-    "generate:types": "payload generate:types"
+    "generate:types": "payload generate:types",
+    "translations:validate": "npx tsx scripts/translations/import-translations.ts",
+    "translations:import": "PAYLOAD_SQLITE_PUSH=false npx tsx scripts/translations/import-translations.ts",
+    "postinstall": "node scripts/patch-load-env.js"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "^3.0.0",

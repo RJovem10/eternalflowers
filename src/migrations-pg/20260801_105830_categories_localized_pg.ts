@@ -75,6 +75,11 @@ export async function up({ db, payload, req }: MigrateArgs): Promise<void> {
   if (count < 1) {
     throw new Error('[UP] Backfill inserted 0 rows.')
   }
+
+  // Drop old localized columns from base table
+  await db.execute(sql`DROP INDEX IF EXISTS "categories_name_idx";`);
+  await db.execute(sql`ALTER TABLE "categories" DROP COLUMN "name";`);
+  await db.execute(sql`ALTER TABLE "categories" DROP COLUMN "description";`);
 }
 
 export async function down({ db, payload, req }: MigrateArgs): Promise<void> {
@@ -91,7 +96,11 @@ export async function down({ db, payload, req }: MigrateArgs): Promise<void> {
     )
   }
 
-  // 2. Restore PT name
+  // 2. Recreate the dropped columns before restoring data
+  await db.execute(sql`ALTER TABLE "categories" ADD COLUMN "name" varchar;`);
+  await db.execute(sql`ALTER TABLE "categories" ADD COLUMN "description" varchar;`);
+
+  // 3. Restore PT name
   await db.execute(sql`
     UPDATE "categories"
     SET "name" = COALESCE(
@@ -113,7 +122,11 @@ export async function down({ db, payload, req }: MigrateArgs): Promise<void> {
     );
   `)
 
-  // 4. Drop indexes
+  // 4. Recreate NOT NULL and unique index as per original schema
+  await db.execute(sql`ALTER TABLE "categories" ALTER COLUMN "name" SET NOT NULL;`);
+  await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS "categories_name_idx" ON "categories" USING btree ("name");`);
+
+  // 5. Drop locale indexes
   await db.execute(sql`DROP INDEX IF EXISTS "categories_locales_name_locale_unique";`)
   await db.execute(sql`DROP INDEX IF EXISTS "categories_locales_locale_parent_id_unique";`)
 
