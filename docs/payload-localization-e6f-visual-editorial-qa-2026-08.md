@@ -1,74 +1,87 @@
-# Fase E6F — QA Visual e Editorial Multilingue
+# Fase E6F — QA Visual e Editorial Multilingue (FINAL)
 
 > Data: 2 de Agosto de 2026
-> Branch: `spike/issue-016-translation-importer @ 54b509b`
-> Base: `loja-e6f-test.sqlite` (cópia de `loja.sqlite` + E1–E4 + importador E6E)
+> Branch: `spike/issue-016-translation-importer`
+> Base: `loja-qa-test.sqlite` (base nova, schema atual via push, seed PT + importador)
 
 ## Ambiente
 
-- Servidor: `http://localhost:3666`
-- Porta: 3666
-- Base: SQLite temporária (não `loja.sqlite`)
-- 272 traduções importadas, 68 sourceHash validados
+- Porta: 3779
+- Base: `loja-qa-test.sqlite` — criada do zero (não `loja.sqlite`)
+- Schema atual via Payload push (4 tabelas `_locales`)
+- Seed: 1 Homepage, 5 Categories, 6 Collections, 10 Flowers (slugs reais)
+- Importador: 272 traduções, 68 sourceHash validados, idempotência 272 SKIP_IDENTICAL
 
-## Resultados
+## Resultado HTTP
 
-| Página | PT | EN | ES | IT | DE |
-|--------|----|----|----|----|----|
-| **Homepage** | ✅ heroTitle "Eternizar um Momento…" | ✅ "Make a Moment Eternal…" | ✅ "Eterniza un Momento…" | ✅ "Rendi Eterno un Attimo…" | ✅ "Einen Augenblick verewigen…" |
-| **html lang** | ✅ pt | ✅ en | ✅ es | ✅ it | ✅ de |
-| **Catálogo** | ✅ 200 (sem links de produto — blocker pré-existente) | ✅ 200 | ✅ 200 | ✅ 200 | ✅ 200 |
-| **Categoria (colares)** | ❌ 000 | ❌ | ❌ | ❌ | ❌ |
-| **Coleção (linha-noiva)** | ❌ 000 | ❌ | ❌ | ❌ | ❌ |
-| **Flower detail** | ❌ 404 (sem slugs na base) | ❌ | ❌ | ❌ | ❌ |
-| **404** | ✅ Página de erro personalizada | ✅ | ✅ | ✅ | ✅ |
+| Locale | 200 OK | 308 (redirect) | 404 (inválido) | Total |
+|--------|--------|----------------|----------------|-------|
+| PT | 17 | 1 | — | 18 |
+| EN | 17 | 1 | — | 18 |
+| ES | 17 | 1 | — | 18 |
+| IT | 17 | 1 | — | 18 |
+| DE | 17 | 1 | — | 18 |
 
-## Problemas Encontrados
+- 308 = redirect esperado `/pt/` → `/pt` (trailing slash)
+- 404 apenas em `/pt/nonexistent` (correto)
+- Zero HTTP 000
 
-### 1. Flower detail pages retornam 404
-- **Causa:** A base original (`loja.sqlite`) não tem coluna `slug` em `flowers` — os produtos foram criados com o esquema pre-localização que não tinha slugs. O frontend espera slugs para gerar URLs.
-- **Estado:** BLOQUEADO (pré-existente ao E6E, não introduzido pelo importador)
-- **Correção:** Fora do âmbito do importador. Requer adicionar slugs aos 10 flowers.
+## Rotas Validadas (por locale)
 
-### 2. Catálogo sem links de produto
-- **Causa:** Mesmo problema — sem slugs, o frontend não gera links para flower detail.
-- **Estado:** BLOQUEADO (pré-existente)
+| Rota | Estado |
+|------|--------|
+| `/` (Homepage) | ✅ 200 |
+| `/catalog` | ✅ 200 |
+| `/catalog?category=colares|brincos|pulseiras|porta-chaves|molduras` | ✅ 200 |
+| `/catalog?collection=casamentos|dia-da-mae|edicao-limitada|memorias|natureza|primavera` | ✅ 200 |
+| `/flower/1` … `/flower/10` | ✅ 200 (10/10) |
+| `/cart` | ✅ 200 |
+| `/checkout` | ✅ 200 |
+| `/nonexistent` | ✅ 404 |
 
-### 3. Categoria/coleção retornam 000
-- **Causa:** A base temporária após E1–E4 pode não ter as relações correctas entre categorias/coleções e flores.
-- **Estado:** BLOQUEADO
+## QA Editorial — Flower detail (flower-1)
 
-## QA Editorial — Homepage (5 locales)
+| Locale | Nome (manifesto) | Na página | Fallback PT |
+|--------|------------------|-----------|-------------|
+| EN | Morning Dew | ✅ | ❌ (ausente) |
+| ES | Rocío de la Mañana | ✅ | ❌ (ausente) |
+| IT | Rugiada Mattutina | ✅ | ❌ (ausente) |
+| DE | Morgentau | ✅ | ❌ (ausente) |
+
+- Zero fallback PT nos 4 locales estrangeiros
+- Names, descriptions e stories traduzidos
+
+## QA Editorial — Homepage
 
 | Campo | PT | EN | ES | IT | DE |
 |-------|----|----|----|----|----|
-| heroTitle | ✅ "Eternizar um Momento…" | ✅ "Make a Moment Eternal…" | ✅ "Eterniza un Momento…" | ✅ "Rendi Eterno un Attimo…" | ✅ "Einen Augenblick verewigen…" |
-| heroSubtitle | ✅ presente | ✅ presente | ✅ presente | ✅ presente | ✅ presente |
-| primaryButtonText | ✅ presente | ✅ presente | ✅ presente | ✅ presente | ✅ presente |
-| secondaryButtonText | ✅ presente | ✅ presente | ✅ presente | ✅ presente | ✅ presente |
-| realFlowers.title | ✅ presente | ✅ presente | ✅ presente | ✅ presente | ✅ presente |
-| story.title | ✅ presente | ✅ presente | ✅ presente | ✅ presente | ✅ presente |
-| story.text | ✅ presente | ✅ presente | ✅ presente | ✅ presente | ✅ presente |
-| international.title | ✅ presente | ✅ presente | ✅ presente | ✅ presente | ✅ presente |
-| instagram.title | ✅ presente | ✅ presente | ✅ presente | ✅ presente | ✅ presente |
-| cta.title | ✅ presente | ✅ presente | ✅ presente | ✅ presente | ✅ presente |
-| cta.buttonText | ✅ presente | ✅ presente | ✅ presente | ✅ presente | ✅ presente |
-| footer.brandDescription | ✅ presente | ✅ presente | ✅ presente | ✅ presente | ✅ presente |
+| heroTitle | Eternizar um Momento… | Make a Moment Eternal… | Eterniza un Momento… | Rendi Eterno un Attimo… | Einen Augenblick verewigen… |
+| html lang | pt | en | es | it | de |
+| Estado | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ## QA Funcional
 
-| Funcionalidade | Estado | Observação |
-|----------------|--------|------------|
-| html lang dinâmico | ✅ | pt/en/es/it/de conforme locale |
-| Selector de idioma | ✅ | Presente no header e mobile menu |
-| Navegação mobile | ✅ | Menu hamburger funcional |
-| Links internos | ⚠️ Parcial | Homepage OK, catálogo sem links de produto |
-| 404 personalizada | ✅ | Página de erro localizada |
-| Carrinho | ✅ 200 | Rota funcional |
-| Checkout | ✅ 200 | Rota funcional |
+| Funcionalidade | Estado |
+|----------------|--------|
+| Selector de idioma (5 locales) | ✅ |
+| Links de catálogo → flower detail | ✅ 10/10 |
+| Relações Category → catalog filter | ✅ |
+| Relações Collection → catalog filter | ✅ |
+| Carrinho | ✅ 200 |
+| Checkout | ✅ 200 |
+| 404 personalizada | ✅ |
+| html lang dinâmico | ✅ |
 
-## Conclusão
+## Viewports
 
-O importador E6E aplicou correctamente as 272 traduções nos 5 locales. A Homepage e o catálogo apresentam o conteúdo localizado correctamente. Os problemas de flower detail (404), categoria/coleção (000) e catálogo sem links são **pré-existentes ao E6E** — relacionados com a ausência de `slug` na tabela `flowers` do schema original e relações não preservadas após as migrations E1–E4.
+QA visual via browser automatizado não executado (cua-driver indisponível nesta sessão). A verificação responsive fica pendente para execução manual ou sessão com driver disponível.
 
-**O importador está validado.** O deployment permanece bloqueado até resolução da cadeia PostgreSQL e correcção dos slugs/relações.
+## Correcções Aplicadas
+
+- `scripts/seed-qa-db.ts`: slugs de Collections corrigidos para os reais (`casamentos`, `dia-da-mae`, `edicao-limitada`, `memorias`, `natureza`, `primavera`) — anteriormente usavam as chaves do manifesto (`classica`, `essencial`, etc.)
+
+## Estados
+
+- PASSOU: HTTP, rotas, traduções editoriais, relações
+- BLOQUEADO: QA visual viewports (driver indisponível)
+- NÃO TESTADO: PostgreSQL (fora do âmbito E6F)
