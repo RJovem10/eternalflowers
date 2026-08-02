@@ -214,40 +214,22 @@ let ops = 0, errs: string[] = []
 
 try {
   for (const loc of LOCALES) {
-    // Read current homepage to get all field values (preserves NOT NULL constraints)
+    // Read current PT state to get shared field IDs (heroImage, story.image)
     const currHP = await payload.findGlobal({ slug: 'homepage', locale: 'pt', fallbackLocale: false }) as any
+    // Para locales nao-PT, enviar apenas os campos traduzidos e os campos
+    // partilhados obrigatorios (heroImage, storyImage). Nao copiar PT state
+    // para evitar objetos populados que geram 'invalid id'.
     const data: any = {}
-    // Start with current PT state for all groups — excluir campos internos
-    const EXCLUDE_TOP = new Set(['id', 'createdAt', 'updatedAt', '_locales'])
-    for (const [grp, fields] of Object.entries(currHP)) {
-      if (EXCLUDE_TOP.has(grp)) continue
-      if (typeof fields === 'object' && fields !== null && !Array.isArray(fields)) {
-        data[grp] = { ...fields }
-        // Remover campos populados por relação — Payload rejeita objetos completos
-        // e espera apenas o ID númerico
-        for (const [fieldKey, val] of Object.entries(data[grp] as any)) {
-          if (val && typeof val === 'object' && 'id' in val) {
-            data[grp][fieldKey] = val.id
-          }
-        }
-      }
-    }
-    // Overwrite localized fields with translation values for this locale
     for (const fp of Object.keys(manifests.homepage.fields)) {
       const [grp, fld] = fp.split('.')
-      // Skip shared (non-localized) fields — they must not be sent in locale updates
-      const sharedFields = ['heroImage', 'primaryButtonLink', 'secondaryButtonLink']
-      const sharedSubFields: Record<string, string[]> = {
-        story: ['image'],
-        instagram: ['handle'],
-        cta: ['buttonLink'],
-        footer: ['email', 'phone', 'instagramUrl', 'whatsappUrl']
-      }
-      if (fld === 'heroImage') continue
-      if (sharedSubFields[grp]?.includes(fld)) continue
       if (!data[grp]) data[grp] = {}
       data[grp][fld] = manifests.homepage.fields[fp].translations[loc].value
     }
+    // Campos partilhados obrigatorios para locale update preservar relacoes
+    data.hero = data.hero || {}
+    data.story = data.story || {}
+    data.hero.heroImage = currHP.hero?.heroImage?.id ?? currHP.hero?.heroImage ?? 1
+    data.story.image = currHP.story?.image?.id ?? currHP.story?.image ?? 1
     await payload.updateGlobal({ slug: 'homepage', data, locale: loc as any, req })
     ops++
     if (testMode && ops === Number(testFailAfter)) throw new Error(`INJECTED_FAILURE at op ${ops}`)
