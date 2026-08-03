@@ -47,10 +47,8 @@ pg_backup() {
     echo ""
     echo "📦 PostgreSQL → $dump_file"
 
-    # Password via PGPASSWORD (não na linha de comandos)
+    # Password via PGPASSWORD — extrair da DATABASE_URI se disponivel
     if [ -z "${PGPASSWORD:-}" ]; then
-        echo "  A ler PGPASSWORD de DATABASE_URI..."
-        # Extrair password da DATABASE_URI
         DB_URI="${DATABASE_URI:-}"
         if echo "$DB_URI" | grep -qE '^postgresql://[^:]+:([^@]+)@'; then
             export PGPASSWORD=$(echo "$DB_URI" | sed -E 's|^postgresql://[^:]+:([^@]+)@.*|\1|')
@@ -59,38 +57,28 @@ pg_backup() {
             PGPORT=$(echo "$DB_URI" | sed -E 's|^postgresql://[^:]+:[^@]+@[^:]+:([^/]+)/.*|\1|')
             PGDATABASE=$(echo "$DB_URI" | sed -E 's|^postgresql://[^:]+:[^@]+@[^:]+:[^/]+/(.+)|\1|')
         else
-            # Tentar variáveis individuais
             PGUSER="${PGUSER:-loja}"
             PGPORT="${PGPORT:-5432}"
             PGDATABASE="${PGDATABASE:-loja_flores}"
             echo "  ⚠️  DATABASE_URI não parseável. Usar env vars individuais."
-            echo "  PGUSER=$PGUSER PGHOST=$PGHOST PGPORT=$PGPORT PGDATABASE=$PGDATABASE"
         fi
     fi
 
-    if command -v pg_dump &>/dev/null; then
-        pg_dump \
-            --no-owner --no-acl \
-            --format=custom \
-            --file="$dump_file" \
-            2>&1 && echo -e "  ${GREEN}✅${NC} PostgreSQL dump concluído" || {
-            echo -e "  ${RED}❌${NC} pg_dump falhou"
-            return 1
-        }
+    # Usar docker compose exec para pg_dump (sem depender do host)
+    local compose_file="${COMPOSE_FILE:-docker-compose.production.yml}"
+    if docker compose -f "$compose_file" exec -T postgres pg_dump \
+        -U "${PGUSER:-loja}" \
+        --no-owner --no-acl \
+        --format=custom \
+        --file=/tmp/pg-dump.dump \
+        "${PGDATABASE:-loja_flores}" 2>&1; then
+        docker compose -f "$compose_file" cp "postgres:/tmp/pg-dump.dump" "$dump_file" >/dev/null 2>&1 || \
+            docker cp "eternal-flowers-postgres:/tmp/pg-dump.dump" "$dump_file" >/dev/null 2>&1
+        docker compose -f "$compose_file" exec -T postgres rm /tmp/pg-dump.dump 2>/dev/null || true
+        echo -e "  ${GREEN}✅${NC} PostgreSQL dump concluído"
     else
-        echo "  ⚠️  pg_dump não encontrado. Tentar via Docker..."
-        docker exec eternal-flowers-postgres pg_dump \
-            -U "${PGUSER:-loja}" \
-            --no-owner --no-acl \
-            --format=custom \
-            --file=/tmp/pg-dump.dump \
-            "${PGDATABASE:-loja_flores}" && \
-        docker cp eternal-flowers-postgres:/tmp/pg-dump.dump "$dump_file" && \
-        docker exec eternal-flowers-postgres rm /tmp/pg-dump.dump && \
-        echo -e "  ${GREEN}✅${NC} PostgreSQL dump via Docker concluído" || {
-            echo -e "  ${RED}❌${NC} pg_dump via Docker falhou"
-            return 1
-        }
+        echo -e "  ${RED}❌${NC} pg_dump falhou"
+        return 1
     fi
 
     # Validar dump

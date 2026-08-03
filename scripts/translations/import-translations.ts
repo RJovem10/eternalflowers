@@ -236,6 +236,7 @@ if (mode === 'apply-sql') {
       if (fld === 'heroImage') continue
       if (sharedSubFields[grp]?.includes(fld)) continue
       const val = manifests.homepage.fields[fp].translations[loc].value
+      if (val === null || val === undefined) abort(`[homepage] ${fp}/${loc} is null/undefined`)
       const esc = "'" + String(val).replace(/'/g, "''") + "'"
       cols.push(`"${pgCol}"`)
       vals.push(esc)
@@ -247,8 +248,11 @@ if (mode === 'apply-sql') {
   // Categories locales — INSERT ON CONFLICT
   for (const slug of Object.keys(cats)) {
     for (const loc of LOCALES) {
-      const name = "'" + String(manifests.categories.fields[`${slug}.name`].translations[loc].value).replace(/'/g, "''") + "'"
-      const desc = "'" + String(manifests.categories.fields[`${slug}.description`].translations[loc].value).replace(/'/g, "''") + "'"
+      const nameRaw = manifests.categories.fields[`${slug}.name`].translations[loc].value
+      const descRaw = manifests.categories.fields[`${slug}.description`].translations[loc].value
+      if (nameRaw === null || nameRaw === undefined || descRaw === null || descRaw === undefined) abort(`[categories] ${slug}/${loc} is null/undefined`)
+      const name = "'" + String(nameRaw).replace(/'/g, "''") + "'"
+      const desc = "'" + String(descRaw).replace(/'/g, "''") + "'"
       sqlLines.push(`INSERT INTO "categories_locales" ("name", "description", "_locale", "_parent_id") VALUES (${name}, ${desc}, '${loc}', ${cats[slug].id}) ON CONFLICT ("_locale", "_parent_id") DO UPDATE SET "name" = ${name}, "description" = ${desc};`)
     }
   }

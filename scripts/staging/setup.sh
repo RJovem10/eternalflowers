@@ -208,8 +208,11 @@ ok "Traduções importadas"
 # ═══════════════════════════════════════════════════
 title "7. Admin"
 
-ADMIN_EMAIL="${SEED_ADMIN_EMAIL:-staging@eternalflowers.pt}"
-ADMIN_PASSWORD="${SEED_ADMIN_PASSWORD:-$(openssl rand -hex 16)}"
+# Limpar temp script mesmo em caso de erro
+trap 'rm -f /tmp/create-admin.ts' EXIT
+
+STAGING_ADMIN_EMAIL="${STAGING_ADMIN_EMAIL:?STAGING_ADMIN_EMAIL nao definido — definir em .env.staging.local}"
+STAGING_ADMIN_PASSWORD="${STAGING_ADMIN_PASSWORD:?STAGING_ADMIN_PASSWORD nao definido — definir em .env.staging.local}"
 echo "  A criar admin..."
 
 # Criar admin via Payload run
@@ -219,24 +222,29 @@ import { config } from './src/payload.config'
 
 async function main() {
   const payload = await getPayload({ config })
-  const existing = await payload.find({ collection: 'users', where: { email: { equals: process.env.SEED_ADMIN_EMAIL || 'staging@eternalflowers.pt' } } })
+  const email = process.env.STAGING_ADMIN_EMAIL
+  const password = process.env.STAGING_ADMIN_PASSWORD
+  if (!email || !password) {
+    console.error('STAGING_ADMIN_EMAIL e STAGING_ADMIN_PASSWORD obrigatorios')
+    process.exit(1)
+  }
+  const existing = await payload.find({ collection: 'users', where: { email: { equals: email } } })
   if (existing.totalDocs > 0) {
-    console.log('Admin already exists, skipping')
+    console.log('Admin ja existe, a ignorar')
     return
   }
   await payload.create({
     collection: 'users',
-    data: {
-      email: process.env.SEED_ADMIN_EMAIL || 'staging@eternalflowers.pt',
-      password: process.env.SEED_ADMIN_PASSWORD || 'changeme',
-    }
+    data: { email, password },
   })
-  console.log('Admin created')
+  console.log('Admin criado')
 }
 main().catch(console.error)
 ADMIN_SCRIPT
 
-DATABASE_URI="$DATABASE_URI" npx tsx /tmp/create-admin.ts 2>&1 | tail -3
+DATABASE_URI="$DATABASE_URI" STAGING_ADMIN_EMAIL="$STAGING_ADMIN_EMAIL" STAGING_ADMIN_PASSWORD="$STAGING_ADMIN_PASSWORD" npx tsx /tmp/create-admin.ts 2>&1 | tail -3
+rm -f /tmp/create-admin.ts
+trap - EXIT
 ok "Admin verificado"
 
 # ═══════════════════════════════════════════════════
