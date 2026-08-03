@@ -236,6 +236,45 @@ const Collections: CollectionConfig = {
   ],
 }
 
+const StockReservations: CollectionConfig = {
+  slug: 'stock-reservations',
+  admin: {
+    useAsTitle: 'id',
+    group: 'Loja',
+    description: 'Reservas temporárias de stock. Apenas consulta.',
+  },
+  access: {
+    read: ({ req }: any) => req?.user?.collection === 'users',
+    create: () => false,
+    update: () => false,
+    delete: () => false,
+  },
+  fields: [
+    { name: 'flower', type: 'relationship', relationTo: 'flowers', required: true, index: true, label: 'Produto' },
+    { name: 'quantity', type: 'number', required: true, min: 1, defaultValue: 1, label: 'Quantidade' },
+    {
+      name: 'status', type: 'select', required: true, defaultValue: 'active',
+      options: [
+        { label: 'Ativa', value: 'active' },
+        { label: 'Confirmada', value: 'confirmed' },
+        { label: 'Expirada', value: 'expired' },
+        { label: 'Libertada', value: 'released' },
+      ],
+      index: true, label: 'Estado',
+    },
+    {
+      name: 'idempotencyKeyHash', type: 'text', required: true, unique: true,
+      admin: { hidden: true },
+      access: { read: () => false, create: () => false, update: () => false },
+    },
+    { name: 'order', type: 'relationship', relationTo: 'orders', label: 'Encomenda', admin: { readOnly: true } },
+    { name: 'expiresAt', type: 'date', required: true, label: 'Expira em', admin: { readOnly: true } },
+    { name: 'confirmedAt', type: 'date', label: 'Confirmada em', admin: { readOnly: true } },
+    { name: 'expiredAt', type: 'date', label: 'Expirada em', admin: { readOnly: true } },
+    { name: 'releasedAt', type: 'date', label: 'Libertada em', admin: { readOnly: true } },
+  ],
+}
+
 const Homepage: GlobalConfig = {
   slug: 'homepage',
   label: 'Homepage',
@@ -320,7 +359,7 @@ const Homepage: GlobalConfig = {
 
 export default buildConfig({
   serverURL: process.env.NEXT_PUBLIC_SERVER_URL || '',
-  collections: [Flowers, Categories, Collections, Media, Coupons, Orders],
+  collections: [Flowers, Categories, Collections, Media, Coupons, Orders, StockReservations],
   globals: [Homepage],
   db,
   localization: {
