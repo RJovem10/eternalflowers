@@ -1,0 +1,1 @@
+A Eternal Flowers não vende apenas joias com flores naturais. Proporciona uma experiência humana, acolhedora e artesanal, onde cada cliente é recebida como se estivesse a entrar no atelier da própria artesã.

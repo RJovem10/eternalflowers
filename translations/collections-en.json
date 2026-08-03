@@ -1,0 +1,155 @@
+{
+  "version": 1,
+  "entity": "collections",
+  "slug": "collections",
+  "sourceLocale": "pt",
+  "targetLocales": [
+    "en"
+  ],
+  "fields": {
+    "casamentos.name": {
+      "required": true,
+      "source": "Casamentos",
+      "sourceHash": "sha256:865e25c9780c",
+      "translations": {
+        "en": {
+          "value": "Weddings",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "casamentos.description": {
+      "required": true,
+      "source": "Para celebrar o amor.",
+      "sourceHash": "sha256:7ccb38504281",
+      "translations": {
+        "en": {
+          "value": "To celebrate love.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "dia-da-mae.name": {
+      "required": true,
+      "source": "Dia da Mãe",
+      "sourceHash": "sha256:697178732957",
+      "translations": {
+        "en": {
+          "value": "Mother's Day",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "dia-da-mae.description": {
+      "required": true,
+      "source": "Memórias que florescem para sempre.",
+      "sourceHash": "sha256:5b4060b954b5",
+      "translations": {
+        "en": {
+          "value": "Memories that bloom forever.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "primavera.name": {
+      "required": true,
+      "source": "Primavera",
+      "sourceHash": "sha256:984edb7d6934",
+      "translations": {
+        "en": {
+          "value": "Spring",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "primavera.description": {
+      "required": true,
+      "source": "Peças frescas e vibrantes.",
+      "sourceHash": "sha256:2332c7c5aeee",
+      "translations": {
+        "en": {
+          "value": "Fresh and vibrant pieces.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "memorias.name": {
+      "required": true,
+      "source": "Memórias",
+      "sourceHash": "sha256:bdf22cc700fc",
+      "translations": {
+        "en": {
+          "value": "Memories",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "memorias.description": {
+      "required": true,
+      "source": "Um instante que o tempo não apaga.",
+      "sourceHash": "sha256:6e64fe469b6e",
+      "translations": {
+        "en": {
+          "value": "A moment that time cannot erase.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "natureza.name": {
+      "required": true,
+      "source": "Natureza",
+      "sourceHash": "sha256:f58c2019b303",
+      "translations": {
+        "en": {
+          "value": "Nature",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "natureza.description": {
+      "required": true,
+      "source": "Inspirado na beleza natural.",
+      "sourceHash": "sha256:7510d15b93ec",
+      "translations": {
+        "en": {
+          "value": "Inspired by natural beauty.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "edicao-limitada.name": {
+      "required": true,
+      "source": "Edição Limitada",
+      "sourceHash": "sha256:424ad34d282b",
+      "translations": {
+        "en": {
+          "value": "Limited Edition",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "edicao-limitada.description": {
+      "required": true,
+      "source": "Criações únicas em tiragem limitada.",
+      "sourceHash": "sha256:4c0790ab6f5f",
+      "translations": {
+        "en": {
+          "value": "Unique creations in limited runs.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    }
+  }
+}

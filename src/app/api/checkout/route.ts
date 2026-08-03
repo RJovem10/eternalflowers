@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   const { email, name, items, coupon, locale, subtotal } = body
 
   if (!email || !items?.length)
-    return NextResponse.json({ ok: false, error: 'Dados incompletos.' })
+    return NextResponse.json({ ok: false, error: 'Dados incompletos.', error_code: 'INCOMPLETE_DATA' })
 
   const payload = await getPayload({ config })
 

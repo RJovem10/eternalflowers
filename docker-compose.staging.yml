@@ -1,0 +1,73 @@
+# docker-compose.staging.yml — Ambiente de Staging Isolado
+# Uso:
+#   docker compose -f docker-compose.staging.yml up -d
+#   docker compose -f docker-compose.staging.yml down
+#   docker compose -f docker-compose.staging.yml logs -f
+#
+# Todas as portas expostas APENAS em 127.0.0.1 (sem acesso externo).
+# Nenhum recurso tem prefixo que colida com produção ou dev.
+# POSTGRES_PASSWORD lido de .env.staging.local (via env_file).
+
+services:
+  eternal-flowers-staging-db:
+    container_name: eternal-flowers-staging-db
+    image: postgres:16-alpine
+    restart: unless-stopped
+    expose:
+      - "5432"
+    ports:
+      - "127.0.0.1:55433:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-staging}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-eternal_flowers_staging}
+    env_file:
+      - .env.staging.local
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U staging -d eternal_flowers_staging"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    volumes:
+      - eternal-flowers-staging-postgres-data:/var/lib/postgresql/data
+    networks:
+      - eternal-flowers-staging-network
+
+  eternal-flowers-staging-app:
+    container_name: eternal-flowers-staging-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      eternal-flowers-staging-db:
+        condition: service_healthy
+    expose:
+      - "3000"
+    ports:
+      - "127.0.0.1:3003:3000"
+    env_file:
+      - .env.staging.local
+    environment:
+      DATABASE_URI: postgresql://staging:***@eternal-flowers-staging-db:5432/eternal_flowers_staging
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:?PAYLOAD_SECRET obrigatorio}
+      PAYLOAD_PG_PUSH: "false"
+      NODE_ENV: production
+      NEXT_PUBLIC_SERVER_URL: http://localhost:3003
+      NEXT_PUBLIC_SITE_URL: http://localhost:3003
+    volumes:
+      - eternal-flowers-staging-media:/app/media
+    networks:
+      - eternal-flowers-staging-network
+
+volumes:
+  eternal-flowers-staging-postgres-data:
+    name: eternal-flowers-staging-postgres-data
+  eternal-flowers-staging-media:
+    name: eternal-flowers-staging-media
+
+networks:
+  eternal-flowers-staging-network:
+    name: eternal-flowers-staging-network
+    driver: bridge

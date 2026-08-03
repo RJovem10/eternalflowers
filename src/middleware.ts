@@ -10,8 +10,15 @@ function getLocaleFromCookie(req: NextRequest): string | undefined {
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  // não tocar em /admin (Painel da Marina) nem assets/api
-  if (pathname.startsWith('/admin') || pathname.startsWith('/api') || pathname.startsWith('/_next') || pathname.startsWith('/media')) {
+  // não tocar em /admin (Painel da Marina), assets, api, ou ficheiros estáticos
+  if (
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/api') ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/media') ||
+    pathname.startsWith('/instagram') ||
+    pathname.match(/\.(jpg|jpeg|png|gif|svg|webp|ico|css|js|woff2?|ttf|eot|pdf)$/)
+  ) {
     return NextResponse.next()
   }
 
@@ -26,5 +33,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next|api|admin|media|favicon.ico).*)'],
+  matcher: ['/((?!_next|api|admin|media|favicon.ico|.*\\.(?:jpg|jpeg|png|gif|svg|webp|ico|css|js|woff2?|ttf|eot|pdf)).*)'],
 }

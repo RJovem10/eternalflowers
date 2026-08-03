@@ -1,4 +1,4 @@
-import { buildConfig, type CollectionConfig } from 'payload'
+import { buildConfig, type CollectionConfig, type GlobalConfig } from 'payload'
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { sqliteAdapter } from '@payloadcms/db-sqlite'
 
@@ -7,8 +7,8 @@ import { sqliteAdapter } from '@payloadcms/db-sqlite'
 const uri = process.env.DATABASE_URI || ''
 const usePostgres = uri.startsWith('postgres')
 const db = usePostgres
-  ? postgresAdapter({ pool: { connectionString: uri } })
-  : sqliteAdapter({ client: { url: uri.startsWith('file:') ? uri : 'file:./loja.sqlite' }, push: true })
+  ? postgresAdapter({ pool: { connectionString: uri }, migrationDir: './src/migrations-pg', push: process.env.PAYLOAD_PG_PUSH === 'true' })
+  : sqliteAdapter({ client: { url: uri.startsWith('file:') ? uri : 'file:./loja.sqlite' }, push: process.env.PAYLOAD_SQLITE_PUSH !== 'false', transactionOptions: {}})
 
 const Flowers: CollectionConfig = {
   slug: 'flowers',
@@ -19,6 +19,20 @@ const Flowers: CollectionConfig = {
     { name: 'nameEs', type: 'text', label: 'Nome (ES)' },
     { name: 'nameIt', type: 'text', label: 'Nome (IT)' },
     { name: 'nameDe', type: 'text', label: 'Nome (DE)' },
+    {
+      name: 'productType',
+      type: 'select',
+      required: true,
+      defaultValue: 'permanente',
+      label: 'Tipo de Produto',
+      options: [
+        { label: 'Permanente', value: 'permanente' },
+        { label: 'Sazonal', value: 'sazonal' },
+        { label: 'Exclusivo', value: 'exclusivo' },
+      ],
+    },
+    { name: 'scientificName', type: 'text', required: true, label: 'Nome Científico' },
+    { name: 'creationName', type: 'text', label: 'Nome da Criação' },
     { name: 'price', type: 'number', required: true, label: 'Preço (€)', min: 0 },
     { name: 'descriptionPt', type: 'textarea', label: 'Descrição (PT)' },
     { name: 'descriptionEn', type: 'textarea', label: 'Descrição (EN)' },
@@ -40,10 +54,33 @@ const Flowers: CollectionConfig = {
     },
     { name: 'sku', type: 'text', label: 'Código (SKU)' },
     {
-      name: 'collections',
+      name: 'images',
       type: 'array',
+      label: 'Galeria de Imagens',
+      fields: [
+        {
+          name: 'image',
+          type: 'upload',
+          relationTo: 'media',
+          required: true,
+          label: 'Imagem',
+        },
+      ],
+    },
+    { name: 'story', type: 'textarea', label: 'História da Peça', localized: true },
+    {
+      name: 'category',
+      type: 'relationship',
+      relationTo: 'categories',
+      label: 'Categoria',
+      hasMany: false,
+    },
+    {
+      name: 'collections',
+      type: 'relationship',
+      relationTo: 'collections',
       label: 'Coleções',
-      fields: [{ name: 'collection', type: 'text', label: 'Coleção (ex: Casamentos)' }],
+      hasMany: true,
     },
   ],
 }
@@ -56,6 +93,9 @@ const Media: CollectionConfig = {
       { name: 'thumbnail', width: 400, height: 400, position: 'centre' },
       { name: 'card', width: 600, height: 600, position: 'centre' },
     ],
+  },
+  access: {
+    read: () => true,
   },
   fields: [],
 }
@@ -121,10 +161,131 @@ const Orders: CollectionConfig = {
   ],
 }
 
+const Categories: CollectionConfig = {
+  slug: 'categories',
+  admin: { useAsTitle: 'name' },
+  fields: [
+    { name: 'name', type: 'text', required: true, unique: true, label: 'Nome', localized: true },
+    { name: 'slug', type: 'text', required: true, unique: true, label: 'Slug' },
+    { name: 'description', type: 'textarea', label: 'Descrição', localized: true },
+  ],
+}
+
+const Collections: CollectionConfig = {
+  slug: 'collections',
+  admin: { useAsTitle: 'name' },
+  fields: [
+    { name: 'name', type: 'text', required: true, unique: true, label: 'Nome', localized: true },
+    { name: 'slug', type: 'text', required: true, unique: true, label: 'Slug' },
+    { name: 'description', type: 'textarea', label: 'Descrição', localized: true },
+    { name: 'image', type: 'upload', relationTo: 'media', label: 'Imagem' },
+    { name: 'isActive', type: 'checkbox', required: true, defaultValue: true, label: 'Ativo?' },
+  ],
+}
+
+const Homepage: GlobalConfig = {
+  slug: 'homepage',
+  label: 'Homepage',
+  fields: [
+    {
+      type: 'group',
+      name: 'hero',
+      label: 'Hero',
+      fields: [
+        { name: 'heroImage', type: 'upload', relationTo: 'media', label: 'Imagem de Fundo' },
+        { name: 'heroTitle', type: 'text', required: true, label: 'Título', localized: true },
+        { name: 'heroSubtitle', type: 'textarea', required: true, label: 'Subtítulo', localized: true },
+        { name: 'primaryButtonText', type: 'text', required: true, label: 'Texto (botão primário)', localized: true },
+        { name: 'primaryButtonLink', type: 'text', required: true, label: 'Link (botão primário)' },
+        { name: 'secondaryButtonText', type: 'text', label: 'Texto (botão secundário)', localized: true },
+        { name: 'secondaryButtonLink', type: 'text', label: 'Link (botão secundário)' },
+      ],
+    },
+    {
+      type: 'group',
+      name: 'realFlowers',
+      label: 'Flores Verdadeiras',
+      fields: [
+        { name: 'title', type: 'text', required: true, label: 'Título', localized: true },
+        { name: 'subtitle', type: 'textarea', label: 'Subtítulo', localized: true },
+      ],
+    },
+    {
+      type: 'group',
+      name: 'story',
+      label: 'História',
+      fields: [
+        { name: 'title', type: 'text', required: true, label: 'Título', localized: true },
+        { name: 'text', type: 'textarea', required: true, label: 'Texto', localized: true },
+        { name: 'image', type: 'upload', relationTo: 'media', label: 'Imagem' },
+      ],
+    },
+    {
+      type: 'group',
+      name: 'international',
+      label: 'Presença Internacional',
+      fields: [
+        { name: 'title', type: 'text', required: true, label: 'Título', localized: true },
+        { name: 'subtitle', type: 'textarea', label: 'Subtítulo', localized: true },
+      ],
+    },
+    {
+      type: 'group',
+      name: 'instagram',
+      label: 'Instagram',
+      fields: [
+        { name: 'title', type: 'text', required: true, label: 'Título', localized: true },
+        { name: 'handle', type: 'text', required: true, label: 'Handle' },
+        { name: 'text', type: 'textarea', label: 'Texto', localized: true },
+      ],
+    },
+    {
+      type: 'group',
+      name: 'cta',
+      label: 'CTA Final',
+      fields: [
+        { name: 'title', type: 'text', required: true, label: 'Título', localized: true },
+        { name: 'subtitle', type: 'textarea', label: 'Subtítulo', localized: true },
+        { name: 'buttonText', type: 'text', required: true, label: 'Texto do botão', localized: true },
+        { name: 'buttonLink', type: 'text', required: true, label: 'Link do botão' },
+      ],
+    },
+    {
+      type: 'group',
+      name: 'footer',
+      label: 'Footer',
+      fields: [
+        { name: 'brandDescription', type: 'textarea', label: 'Descrição da marca', localized: true },
+        { name: 'email', type: 'text', label: 'Email' },
+        { name: 'phone', type: 'text', label: 'Telefone' },
+        { name: 'instagramUrl', type: 'text', label: 'URL Instagram' },
+        { name: 'whatsappUrl', type: 'text', label: 'URL WhatsApp' },
+      ],
+    },
+  ],
+}
+
 export default buildConfig({
-  serverURL: process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000',
-  collections: [Flowers, Media, Coupons, Orders],
+  serverURL: process.env.NEXT_PUBLIC_SERVER_URL || '',
+  collections: [Flowers, Categories, Collections, Media, Coupons, Orders],
+  globals: [Homepage],
   db,
+  localization: {
+    locales: [
+      { code: 'pt', label: 'Português' },
+      { code: 'en', label: 'English' },
+      { code: 'es', label: 'Español' },
+      { code: 'it', label: 'Italiano' },
+      { code: 'de', label: 'Deutsch' },
+    ],
+    defaultLocale: 'pt',
+    fallback: true,
+  },
+  admin: {
+    importMap: {
+      baseDir: __dirname,
+    },
+  },
   secret: process.env.PAYLOAD_SECRET || 'dev-secret-local-mudar-em-prod',
   typescript: { outputFile: 'src/payload-types.ts' },
 })

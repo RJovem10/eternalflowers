@@ -1,0 +1,50 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "tables": {
+    "homepage_locales": {
+      "name": "homepage_locales",
+      "columns": {
+        "hero_hero_title": { "name": "hero_hero_title", "type": "text", "primaryKey": false, "notNull": true, "autoincrement": false },
+        "hero_hero_subtitle": { "name": "hero_hero_subtitle", "type": "text", "primaryKey": false, "notNull": true, "autoincrement": false },
+        "hero_primary_button_text": { "name": "hero_primary_button_text", "type": "text", "primaryKey": false, "notNull": true, "autoincrement": false },
+        "hero_secondary_button_text": { "name": "hero_secondary_button_text", "type": "text", "primaryKey": false, "notNull": false, "autoincrement": false },
+        "real_flowers_title": { "name": "real_flowers_title", "type": "text", "primaryKey": false, "notNull": true, "autoincrement": false },
+        "real_flowers_subtitle": { "name": "real_flowers_subtitle", "type": "text", "primaryKey": false, "notNull": false, "autoincrement": false },
+        "story_title": { "name": "story_title", "type": "text", "primaryKey": false, "notNull": true, "autoincrement": false },
+        "story_text": { "name": "story_text", "type": "text", "primaryKey": false, "notNull": true, "autoincrement": false },
+        "international_title": { "name": "international_title", "type": "text", "primaryKey": false, "notNull": true, "autoincrement": false },
+        "international_subtitle": { "name": "international_subtitle", "type": "text", "primaryKey": false, "notNull": false, "autoincrement": false },
+        "instagram_title": { "name": "instagram_title", "type": "text", "primaryKey": false, "notNull": true, "autoincrement": false },
+        "instagram_text": { "name": "instagram_text", "type": "text", "primaryKey": false, "notNull": false, "autoincrement": false },
+        "cta_title": { "name": "cta_title", "type": "text", "primaryKey": false, "notNull": true, "autoincrement": false },
+        "cta_subtitle": { "name": "cta_subtitle", "type": "text", "primaryKey": false, "notNull": false, "autoincrement": false },
+        "cta_button_text": { "name": "cta_button_text", "type": "text", "primaryKey": false, "notNull": true, "autoincrement": false },
+        "footer_brand_description": { "name": "footer_brand_description", "type": "text", "primaryKey": false, "notNull": false, "autoincrement": false },
+        "id": { "name": "id", "type": "integer", "primaryKey": true, "notNull": true, "autoincrement": false },
+        "_locale": { "name": "_locale", "type": "text", "primaryKey": false, "notNull": true, "autoincrement": false },
+        "_parent_id": { "name": "_parent_id", "type": "integer", "primaryKey": false, "notNull": true, "autoincrement": false }
+      },
+      "indexes": {
+        "homepage_locales_locale_parent_id_unique": {
+          "name": "homepage_locales_locale_parent_id_unique",
+          "columns": ["_locale", "_parent_id"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "homepage_locales_parent_id_fk": {
+          "name": "homepage_locales_parent_id_fk",
+          "tableFrom": "homepage_locales",
+          "tableTo": "homepage",
+          "columnsFrom": ["_parent_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    }
+  }
+}

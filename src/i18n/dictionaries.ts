@@ -44,9 +44,87 @@ type Dict = {
   invalidCoupon: string
   couponApplied: string
   firstOrderOnly: string
+  addedToCart: string
+  continueShopping: string
+  backToCart: string
   chooseLanguage: string
   required: string
   admin: string
+  scientificName: string
+  category: string
+  collection: string
+  productType: string
+  story: string
+  storyPlaceholder: string
+  emptyCatalog: string
+  storyHeading: string
+  realFlower: string
+  realFlowerDesc: string
+  handmadePortugal: string
+  handmadePortugalDesc: string
+  uniquePiece: string
+  uniquePieceDesc: string
+  premiumPackaging: string
+  premiumPackagingDesc: string
+  relatedProducts: string
+  productTypePermanente: string
+  productTypeSazonal: string
+  productTypeExclusivo: string
+  mobileNavLabel: string
+  openMenu: string
+  closeMenu: string
+  contact: string
+  followUs: string
+  scroll: string
+  rightsReserved: string
+  taglineDecor: string
+  heroTitleFallback: string
+  heroSubtitleFallback: string
+  heroCtaDiscover: string
+  heroCtaAbout: string
+  realFlowersTitle: string
+  storyTitleFallback: string
+  storyTextFallback: string
+  internationalTitle: string
+  instagramTitle: string
+  instagramText: string
+  ctaTitleFallback: string
+  ctaButtonText: string
+  categoriesTitle: string
+  categoriesSubtitle: string
+  collectionsTitle: string
+  collectionsSubtitle: string
+  collectionsCta: string
+  marinaPicksTitle: string
+  marinaPicksSubtitle: string
+  ctaLabel: string
+  thankYouTitle: string
+  thankYouMessage: string
+  backToHome: string
+  pageNotFoundTitle: string
+  pageNotFoundMessage: string
+  genericErrorTitle: string
+  genericErrorMessage: string
+  tryAgain: string
+  orderError: string
+  processing: string
+  qtyLabel: string
+  removeLabel: string
+  couponLabel: string
+  catalogDescription: string
+  expired: string
+  minOrder: string
+  soldOut: string
+  incompleteData: string
+  noCode: string
+  internationalPresence: CountryData[]
+}
+
+export type CountryData = {
+  code: 'PT' | 'ES' | 'IT'
+  country: string
+  cities: string
+  description: string
 }
 
 export const dictionaries: Record<Locale, Dict> = {
@@ -83,9 +161,85 @@ export const dictionaries: Record<Locale, Dict> = {
     invalidCoupon: 'Cupão inválido ou expirado.',
     couponApplied: 'Cupão aplicado!',
     firstOrderOnly: 'Apenas para primeira compra.',
+    addedToCart: 'Produto adicionado ao carrinho.',
+    continueShopping: 'Continuar a comprar',
+    backToCart: 'Voltar ao carrinho',
     chooseLanguage: 'Escolher idioma',
     required: 'Obrigatório.',
     admin: 'Painel',
+    scientificName: 'Nome Científico',
+    category: 'Categoria',
+    collection: 'Coleção',
+    productType: 'Tipo',
+    story: 'História',
+    storyPlaceholder: 'Cada peça tem a sua própria história. Em breve, poderá ler aqui o significado especial desta criação.',
+    emptyCatalog: 'Não existem peças disponíveis neste momento.',
+    storyHeading: 'A História',
+    realFlower: 'Flor Verdadeira',
+    realFlowerDesc: 'Cada peça é criada com flores verdadeiras, preservadas para durar.',
+    handmadePortugal: 'Feito à Mão em Portugal',
+    handmadePortugalDesc: 'Artesanato português, com dedicação e atenção a cada detalhe.',
+    uniquePiece: 'Peça Única',
+    uniquePieceDesc: 'Não existem duas iguais. Cada criação é uma edição limitada.',
+    premiumPackaging: 'Embalagem Premium',
+    premiumPackagingDesc: 'Embalagem especial, preparada para oferecer ou guardar.',
+    relatedProducts: 'Peças Relacionadas',
+    productTypePermanente: 'Permanente',
+    productTypeSazonal: 'Sazonal',
+    productTypeExclusivo: 'Exclusivo',
+    mobileNavLabel: 'Navegação mobile',
+    openMenu: 'Abrir menu',
+    closeMenu: 'Fechar menu',
+    contact: 'Contacto',
+    followUs: 'Segue-nos',
+    scroll: 'Scroll',
+    rightsReserved: 'Todos os direitos reservados.',
+    taglineDecor: '🌷 Uma flor ｜ 💎 Uma joia ｜ 💖 uma memória eternizada',
+  
+    heroTitleFallback: 'Joias Botânicas\nFeitas à Mão',
+    heroSubtitleFallback: 'Cada peça é uma história que o tempo não apaga. Flores verdadeiras, eternizadas em resina pela Marina, em Braga.',
+    heroCtaDiscover: 'Descobrir Coleções',
+    heroCtaAbout: 'Conhecer a Marina',
+    realFlowersTitle: 'Flores Verdadeiras',
+    storyTitleFallback: 'Do efémero ao eterno',
+    storyTextFallback: 'Cada peça é uma história. Das nossas mãos para as suas, transformamos flores verdadeiras em joias que duram para sempre.',
+    internationalTitle: 'Presença Internacional',
+    instagramTitle: 'Siga-nos no Instagram',
+    instagramText: 'Acompanhe o nosso dia-a-dia, bastidores e novidades em primeira mão.',
+    ctaTitleFallback: 'Pronta para eternizar uma memória?',
+    ctaButtonText: 'Fale connosco',
+    categoriesTitle: 'Categorias',
+    categoriesSubtitle: 'Descubra as nossas joias botânicas por tipo de peça',
+    collectionsTitle: 'Coleções',
+    collectionsSubtitle: 'Inspiradas em momentos especiais',
+    collectionsCta: 'Descobrir →',
+    marinaPicksTitle: 'Escolhas da Marina',
+    marinaPicksSubtitle: 'Peças selecionadas especialmente para si',
+    ctaLabel: 'Eternize uma Memória',
+    thankYouTitle: 'Obrigado!',
+    thankYouMessage: 'Recebemos o teu pedido. A Marina contactará em breve.',
+    backToHome: 'Voltar ao início',
+    pageNotFoundTitle: 'Página não encontrada',
+    pageNotFoundMessage: 'A página que procuras não existe.',
+    genericErrorTitle: 'Algo correu mal',
+    genericErrorMessage: 'Tenta novamente ou volta ao início.',
+    tryAgain: 'Tentar novamente',
+    orderError: 'Erro ao finalizar a encomenda.',
+    processing: 'A processar…',
+    qtyLabel: 'Quantidade',
+    removeLabel: 'Remover',
+    couponLabel: 'Código de desconto',
+    catalogDescription: 'Descubra as nossas joias botânicas artesanais. Peças únicas feitas com flores reais preservadas em resina.',
+    expired: 'Cupão expirado.',
+    minOrder: 'Valor mínimo não atingido.',
+    soldOut: 'Cupão esgotado.',
+    incompleteData: 'Dados incompletos.',
+    noCode: 'Sem código de cupão.',
+    internationalPresence: [
+      { code: 'PT', country: 'Portugal', cities: 'Braga · Lisboa', description: 'Atelier e loja física' },
+      { code: 'ES', country: 'Espanha', cities: 'Exposições', description: 'Feiras de orquídeas' },
+      { code: 'IT', country: 'Itália', cities: 'Trento · Mati', description: 'Exposições internacionais' },
+    ],
   },
   en: {
     brand: 'Flores Marina',
@@ -120,9 +274,85 @@ export const dictionaries: Record<Locale, Dict> = {
     invalidCoupon: 'Invalid or expired coupon.',
     couponApplied: 'Coupon applied!',
     firstOrderOnly: 'First order only.',
+    addedToCart: 'Product added to cart.',
+    continueShopping: 'Continue shopping',
+    backToCart: 'Back to cart',
     chooseLanguage: 'Choose language',
     required: 'Required.',
     admin: 'Admin',
+    scientificName: 'Scientific Name',
+    category: 'Category',
+    collection: 'Collection',
+    productType: 'Type',
+    story: 'Story',
+    storyPlaceholder: 'Every piece has its own story. Soon you will be able to read here the special meaning of this creation.',
+    emptyCatalog: 'No pieces are available at the moment.',
+    storyHeading: 'The Story',
+    realFlower: 'Real Flower',
+    realFlowerDesc: 'Each piece is crafted with real flowers, preserved to last.',
+    handmadePortugal: 'Handmade in Portugal',
+    handmadePortugalDesc: 'Portuguese craftsmanship, with dedication and attention to every detail.',
+    uniquePiece: 'Unique Piece',
+    uniquePieceDesc: 'No two are alike. Each creation is a limited edition.',
+    premiumPackaging: 'Premium Packaging',
+    premiumPackagingDesc: 'Special packaging, ready to gift or keep.',
+    relatedProducts: 'Related Pieces',
+    productTypePermanente: 'Permanent',
+    productTypeSazonal: 'Seasonal',
+    productTypeExclusivo: 'Exclusive',
+    mobileNavLabel: 'Mobile navigation',
+    openMenu: 'Open menu',
+    closeMenu: 'Close menu',
+    contact: 'Contact',
+    followUs: 'Follow us',
+    scroll: 'Scroll',
+    rightsReserved: 'All rights reserved.',
+    taglineDecor: '🌷 A flower ｜ 💎 A jewel ｜ 💖 a memory made eternal',
+  
+    heroTitleFallback: 'Botanical Jewellery\nHandmade',
+    heroSubtitleFallback: 'Each piece is a story that time cannot erase. Real flowers, preserved in resin by Marina, in Braga.',
+    heroCtaDiscover: 'Discover Collections',
+    heroCtaAbout: 'Meet Marina',
+    realFlowersTitle: 'Real Flowers',
+    storyTitleFallback: 'From ephemeral to eternal',
+    storyTextFallback: 'Each piece is a story. From our hands to yours, we transform real flowers into jewellery that lasts forever.',
+    internationalTitle: 'International Presence',
+    instagramTitle: 'Follow us on Instagram',
+    instagramText: 'Follow our daily life, behind-the-scenes and news first-hand.',
+    ctaTitleFallback: 'Ready to make a memory eternal?',
+    ctaButtonText: 'Contact us',
+    categoriesTitle: 'Categories',
+    categoriesSubtitle: 'Discover our botanical jewellery by type of piece',
+    collectionsTitle: 'Collections',
+    collectionsSubtitle: 'Inspired by special moments',
+    collectionsCta: 'Discover →',
+    marinaPicksTitle: "Marina's Picks",
+    marinaPicksSubtitle: 'Pieces specially selected for you',
+    ctaLabel: 'Make a Memory Eternal',
+    thankYouTitle: 'Thank you!',
+    thankYouMessage: 'We\'ve received your order. Marina will be in touch soon.',
+    backToHome: 'Back to home',
+    pageNotFoundTitle: 'Page not found',
+    pageNotFoundMessage: 'The page you are looking for does not exist.',
+    genericErrorTitle: 'Something went wrong',
+    genericErrorMessage: 'Please try again or return to the home page.',
+    tryAgain: 'Try again',
+    orderError: 'Error placing your order.',
+    processing: 'Processing…',
+    qtyLabel: 'Quantity',
+    removeLabel: 'Remove',
+    couponLabel: 'Discount code',
+    catalogDescription: 'Discover our handcrafted botanical jewellery. Unique pieces made with real flowers preserved in resin.',
+    expired: 'Coupon expired.',
+    minOrder: 'Minimum order not reached.',
+    soldOut: 'Coupon fully used.',
+    incompleteData: 'Incomplete data.',
+    noCode: 'No coupon code.',
+    internationalPresence: [
+      { code: 'PT', country: 'Portugal', cities: 'Braga · Lisbon', description: 'Workshop and physical store' },
+      { code: 'ES', country: 'Spain', cities: 'Exhibitions', description: 'Orchid fairs' },
+      { code: 'IT', country: 'Italy', cities: 'Trento · Mati', description: 'International exhibitions' },
+    ],
   },
   es: {
     brand: 'Flores Marina',
@@ -157,9 +387,85 @@ export const dictionaries: Record<Locale, Dict> = {
     invalidCoupon: 'Cupón inválido o caducado.',
     couponApplied: 'Cupón aplicado!',
     firstOrderOnly: 'Solo primera compra.',
+    addedToCart: 'Producto añadido al carrito.',
+    continueShopping: 'Seguir comprando',
+    backToCart: 'Volver al carrito',
     chooseLanguage: 'Elegir idioma',
     required: 'Obligatorio.',
     admin: 'Panel',
+    scientificName: 'Nombre Científico',
+    category: 'Categoría',
+    collection: 'Colección',
+    productType: 'Tipo',
+    story: 'Historia',
+    storyPlaceholder: 'Cada pieza tiene su propia historia. Pronto podrás leer aquí el significado especial de esta creación.',
+    emptyCatalog: 'No hay piezas disponibles en este momento.',
+    storyHeading: 'La Historia',
+    realFlower: 'Flor Verdadera',
+    realFlowerDesc: 'Cada pieza está hecha con flores verdaderas, preservadas para durar.',
+    handmadePortugal: 'Hecho a Mano en Portugal',
+    handmadePortugalDesc: 'Artesanía portuguesa, con dedicación y atención a cada detalle.',
+    uniquePiece: 'Pieza Única',
+    uniquePieceDesc: 'No hay dos iguales. Cada creación es una edición limitada.',
+    premiumPackaging: 'Embalaje Premium',
+    premiumPackagingDesc: 'Embalaje especial, listo para regalar o guardar.',
+    relatedProducts: 'Piezas Relacionadas',
+    productTypePermanente: 'Permanente',
+    productTypeSazonal: 'Estacional',
+    productTypeExclusivo: 'Exclusivo',
+    mobileNavLabel: 'Navegación móvil',
+    openMenu: 'Abrir menú',
+    closeMenu: 'Cerrar menú',
+    contact: 'Contacto',
+    followUs: 'Síguenos',
+    scroll: 'Desplázate',
+    rightsReserved: 'Todos los derechos reservados.',
+    taglineDecor: '🌷 Una flor ｜ 💎 Una joya ｜ 💖 un recuerdo eterno',
+  
+    heroTitleFallback: 'Joyas Botánicas\nHechas a Mano',
+    heroSubtitleFallback: 'Cada pieza es una historia que el tiempo no borra. Flores verdaderas, eternizadas en resina por Marina, en Braga.',
+    heroCtaDiscover: 'Descubrir Colecciones',
+    heroCtaAbout: 'Conocer a Marina',
+    realFlowersTitle: 'Flores Verdaderas',
+    storyTitleFallback: 'De lo efímero a lo eterno',
+    storyTextFallback: 'Cada pieza es una historia. De nuestras manos a las tuyas, transformamos flores verdaderas en joyas que duran para siempre.',
+    internationalTitle: 'Presencia Internacional',
+    instagramTitle: 'Síguenos en Instagram',
+    instagramText: 'Sigue nuestro día a día, detrás de escena y novedades de primera mano.',
+    ctaTitleFallback: '¿Lista para eternizar un recuerdo?',
+    ctaButtonText: 'Contáctanos',
+    categoriesTitle: 'Categorías',
+    categoriesSubtitle: 'Descubre nuestras joyas botánicas por tipo de pieza',
+    collectionsTitle: 'Colecciones',
+    collectionsSubtitle: 'Inspiradas en momentos especiales',
+    collectionsCta: 'Descubrir →',
+    marinaPicksTitle: 'Selecciones de Marina',
+    marinaPicksSubtitle: 'Piezas seleccionadas especialmente para ti',
+    ctaLabel: 'Eterniza un Recuerdo',
+    thankYouTitle: '¡Gracias!',
+    thankYouMessage: 'Hemos recibido tu pedido. Marina se pondrá en contacto pronto.',
+    backToHome: 'Volver al inicio',
+    pageNotFoundTitle: 'Página no encontrada',
+    pageNotFoundMessage: 'La página que buscas no existe.',
+    genericErrorTitle: 'Algo salió mal',
+    genericErrorMessage: 'Inténtalo de nuevo o vuelve al inicio.',
+    tryAgain: 'Intentar de nuevo',
+    orderError: 'Error al finalizar el pedido.',
+    processing: 'Procesando…',
+    qtyLabel: 'Cantidad',
+    removeLabel: 'Eliminar',
+    couponLabel: 'Código de descuento',
+    catalogDescription: 'Descubra nuestras joyas botánicas artesanales. Piezas únicas hechas con flores reales preservadas en resina.',
+    expired: 'Cupón caducado.',
+    minOrder: 'Importe mínimo no alcanzado.',
+    soldOut: 'Cupón agotado.',
+    incompleteData: 'Datos incompletos.',
+    noCode: 'Sin código de cupón.',
+    internationalPresence: [
+      { code: 'PT', country: 'Portugal', cities: 'Braga · Lisboa', description: 'Taller y tienda física' },
+      { code: 'ES', country: 'España', cities: 'Exposiciones', description: 'Ferias de orquídeas' },
+      { code: 'IT', country: 'Italia', cities: 'Trento · Mati', description: 'Exposiciones internacionales' },
+    ],
   },
   it: {
     brand: 'Flores Marina',
@@ -194,9 +500,85 @@ export const dictionaries: Record<Locale, Dict> = {
     invalidCoupon: 'Coupon non valido o scaduto.',
     couponApplied: 'Coupon applicato!',
     firstOrderOnly: 'Solo primo ordine.',
+    addedToCart: 'Prodotto aggiunto al carrello.',
+    continueShopping: 'Continua lo shopping',
+    backToCart: 'Torna al carrello',
     chooseLanguage: 'Scegli lingua',
     required: 'Obbligatorio.',
     admin: 'Pannello',
+    scientificName: 'Nome Scientifico',
+    category: 'Categoria',
+    collection: 'Collezione',
+    productType: 'Tipo',
+    story: 'Storia',
+    storyPlaceholder: 'Ogni pezzo ha la sua storia. Presto potrai leggere qui il significato speciale di questa creazione.',
+    emptyCatalog: 'Non ci sono pezzi disponibili al momento.',
+    storyHeading: 'La Storia',
+    realFlower: 'Fiore Vero',
+    realFlowerDesc: 'Ogni pezzo è realizzato con fiori veri, preservati per durare.',
+    handmadePortugal: 'Fatto a Mano in Portogallo',
+    handmadePortugalDesc: 'Artigianato portoghese, con dedizione e attenzione a ogni dettaglio.',
+    uniquePiece: 'Pezzo Unico',
+    uniquePieceDesc: 'Non esistono due pezzi uguali. Ogni creazione è un\'edizione limitata.',
+    premiumPackaging: 'Confezione Premium',
+    premiumPackagingDesc: 'Confezione speciale, pronta per regalare o conservare.',
+    relatedProducts: 'Pezzi Correlati',
+    productTypePermanente: 'Permanente',
+    productTypeSazonal: 'Stagionale',
+    productTypeExclusivo: 'Esclusivo',
+    mobileNavLabel: 'Navigazione mobile',
+    openMenu: 'Apri menu',
+    closeMenu: 'Chiudi menu',
+    contact: 'Contatti',
+    followUs: 'Seguici',
+    scroll: 'Scorri',
+    rightsReserved: 'Tutti i diritti riservati.',
+    taglineDecor: '🌷 Un fiore ｜ 💎 Un gioiello ｜ 💖 un ricordo eterno',
+  
+    heroTitleFallback: 'Gioielli Botanici\nFatti a Mano',
+    heroSubtitleFallback: 'Ogni pezzo è una storia che il tempo non cancella. Fiori veri, eternizzati nella resina da Marina, a Braga.',
+    heroCtaDiscover: 'Scopri le Collezioni',
+    heroCtaAbout: 'Conosci Marina',
+    realFlowersTitle: 'Fiori Veri',
+    storyTitleFallback: "Dall'effimero all'eterno",
+    storyTextFallback: 'Ogni pezzo è una storia. Dalle nostre mani alle vostre, trasformiamo fiori veri in gioielli che durano per sempre.',
+    internationalTitle: 'Presenza Internazionale',
+    instagramTitle: 'Seguici su Instagram',
+    instagramText: 'Segui il nostro quotidiano, dietro le quinte e novità in prima persona.',
+    ctaTitleFallback: 'Pronta a rendere eterno un ricordo?',
+    ctaButtonText: 'Contattaci',
+    categoriesTitle: 'Categorie',
+    categoriesSubtitle: 'Scopri i nostri gioielli botanici per tipo di pezzo',
+    collectionsTitle: 'Collezioni',
+    collectionsSubtitle: 'Ispirate a momenti speciali',
+    collectionsCta: 'Scopri →',
+    marinaPicksTitle: 'Scelte di Marina',
+    marinaPicksSubtitle: 'Pezzi selezionati apposta per te',
+    ctaLabel: 'Rendi Eterno un Ricordo',
+    thankYouTitle: 'Grazie!',
+    thankYouMessage: 'Abbiamo ricevuto il tuo ordine. Marina ti contatterà a breve.',
+    backToHome: 'Torna alla home',
+    pageNotFoundTitle: 'Pagina non trovata',
+    pageNotFoundMessage: 'La pagina che cerchi non esiste.',
+    genericErrorTitle: 'Qualcosa è andato storto',
+    genericErrorMessage: 'Riprova o torna alla home.',
+    tryAgain: 'Riprova',
+    orderError: 'Errore durante l\'elaborazione dell\'ordine.',
+    processing: 'Elaborazione…',
+    qtyLabel: 'Quantità',
+    removeLabel: 'Rimuovi',
+    couponLabel: 'Codice sconto',
+    catalogDescription: 'Scopri i nostri gioielli botanici artigianali. Pezzi unici realizzati con fiori veri preservati nella resina.',
+    expired: 'Coupon scaduto.',
+    minOrder: 'Importo minimo non raggiunto.',
+    soldOut: 'Coupon esaurito.',
+    incompleteData: 'Dati incompleti.',
+    noCode: 'Nessun codice coupon.',
+    internationalPresence: [
+      { code: 'PT', country: 'Portogallo', cities: 'Braga · Lisbona', description: 'Laboratorio e negozio fisico' },
+      { code: 'ES', country: 'Spagna', cities: 'Esposizioni', description: 'Fiere di orchidee' },
+      { code: 'IT', country: 'Italia', cities: 'Trento · Mati', description: 'Esposizioni internazionali' },
+    ],
   },
   de: {
     brand: 'Flores Marina',
@@ -231,10 +613,86 @@ export const dictionaries: Record<Locale, Dict> = {
     invalidCoupon: 'Ungültiger oder abgelaufener Gutschein.',
     couponApplied: 'Gutschein angewendet!',
     firstOrderOnly: 'Nur Erstbestellung.',
+    addedToCart: 'Produkt zum Warenkorb hinzugefügt.',
+    continueShopping: 'Weiter einkaufen',
+    backToCart: 'Zurück zum Warenkorb',
     chooseLanguage: 'Sprache wählen',
     required: 'Erforderlich.',
     admin: 'Panel',
-  },
+    scientificName: 'Wissenschaftlicher Name',
+    category: 'Kategorie',
+    collection: 'Kollektion',
+    productType: 'Typ',
+    story: 'Geschichte',
+    storyPlaceholder: 'Jedes Stück hat seine eigene Geschichte. Bald kannst du hier die besondere Bedeutung dieser Kreation lesen.',
+    emptyCatalog: 'Derzeit sind keine Stücke verfügbar.',
+    storyHeading: 'Die Geschichte',
+    realFlower: 'Echte Blume',
+    realFlowerDesc: 'Jedes Stück wird mit echten Blumen hergestellt, konserviert um zu halten.',
+    handmadePortugal: 'Handgefertigt in Portugal',
+    handmadePortugalDesc: 'Portugiesisches Handwerk mit Hingabe und Aufmerksamkeit für jedes Detail.',
+    uniquePiece: 'Einzigartiges Stück',
+    uniquePieceDesc: 'Keine zwei sind gleich. Jede Kreation ist eine limitierte Auflage.',
+    premiumPackaging: 'Premium-Verpackung',
+    premiumPackagingDesc: 'Spezielle Verpackung, bereit zum Verschenken oder Aufbewahren.',
+    relatedProducts: 'Ähnliche Stücke',
+    productTypePermanente: 'Dauerhaft',
+    productTypeSazonal: 'Saisonal',
+    productTypeExclusivo: 'Exklusiv',
+    mobileNavLabel: 'Mobile Navigation',
+    openMenu: 'Menü öffnen',
+    closeMenu: 'Menü schließen',
+    contact: 'Kontakt',
+    followUs: 'Folge uns',
+    scroll: 'Scrollen',
+    rightsReserved: 'Alle Rechte vorbehalten.',
+    taglineDecor: '🌷 Eine Blume ｜ 💎 Ein Schmuckstück ｜ 💖 eine ewige Erinnerung',
+  
+    heroTitleFallback: 'Botanischer Schmuck\nHandgefertigt',
+    heroSubtitleFallback: 'Jedes Stück erzählt eine Geschichte, die die Zeit nicht löscht. Echte Blumen, in Harz verewigt von Marina, in Braga.',
+    heroCtaDiscover: 'Kollektionen entdecken',
+    heroCtaAbout: 'Marina kennenlernen',
+    realFlowersTitle: 'Echte Blumen',
+    storyTitleFallback: 'Vom Vergänglichen zum Ewigen',
+    storyTextFallback: 'Jedes Stück erzählt eine Geschichte. Von unseren Händen zu deinen, verwandeln wir echte Blumen in Schmuck, der für immer hält.',
+    internationalTitle: 'Internationale Präsenz',
+    instagramTitle: 'Folge uns auf Instagram',
+    instagramText: 'Verfolge unseren Alltag, Hinter-den-Kulissen und Neuigkeiten aus erster Hand.',
+    ctaTitleFallback: 'Bereit, eine Erinnerung zu verewigen?',
+    ctaButtonText: 'Kontaktiere uns',
+    categoriesTitle: 'Kategorien',
+    categoriesSubtitle: 'Entdecke unseren botanischen Schmuck nach Stücktyp',
+    collectionsTitle: 'Kollektionen',
+    collectionsSubtitle: 'Inspiriert von besonderen Momenten',
+    collectionsCta: 'Entdecken →',
+    marinaPicksTitle: 'Marinas Auswahl',
+    marinaPicksSubtitle: 'Stücke speziell für dich ausgewählt',
+    ctaLabel: 'Verewige eine Erinnerung',
+    thankYouTitle: 'Vielen Dank!',
+    thankYouMessage: 'Wir haben deine Bestellung erhalten. Marina wird sich bald melden.',
+    backToHome: 'Zurück zum Start',
+    pageNotFoundTitle: 'Seite nicht gefunden',
+    pageNotFoundMessage: 'Die gesuchte Seite existiert nicht.',
+    genericErrorTitle: 'Etwas ist schiefgelaufen',
+    genericErrorMessage: 'Bitte versuche es erneut oder gehe zur Startseite.',
+    tryAgain: 'Erneut versuchen',
+    orderError: 'Fehler beim Abschließen der Bestellung.',
+    processing: 'Wird verarbeitet…',
+    qtyLabel: 'Menge',
+    removeLabel: 'Entfernen',
+    couponLabel: 'Rabattcode',
+    catalogDescription: 'Entdecke unseren handgefertigten botanischen Schmuck. Einzigartige Stücke aus echten Blumen, konserviert in Harz.',
+    expired: 'Gutschein abgelaufen.',
+    minOrder: 'Mindestbestellwert nicht erreicht.',
+    soldOut: 'Gutschein aufgebraucht.',
+    incompleteData: 'Unvollständige Daten.',
+    noCode: 'Kein Gutscheincode.',
+    internationalPresence: [
+      { code: 'PT', country: 'Portugal', cities: 'Braga · Lissabon', description: 'Atelier und Ladengeschäft' },
+      { code: 'ES', country: 'Spanien', cities: 'Ausstellungen', description: 'Orchideenmessen' },
+      { code: 'IT', country: 'Italien', cities: 'Trient · Mati', description: 'Internationale Ausstellungen' },
+    ],
+  }
 }
 
 export function getDictionary(locale: string): Dict {

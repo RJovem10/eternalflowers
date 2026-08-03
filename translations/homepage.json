@@ -1,0 +1,446 @@
+{
+  "version": 1,
+  "entity": "global",
+  "slug": "homepage",
+  "sourceLocale": "pt",
+  "targetLocales": [
+    "en",
+    "es",
+    "it",
+    "de"
+  ],
+  "fields": {
+    "hero.heroTitle": {
+      "required": true,
+      "source": "Eternizar um Momento,\nPreservar uma Memória",
+      "sourceHash": "sha256:2092ab898366",
+      "translations": {
+        "en": {
+          "value": "Make a Moment Eternal,\nKeep a Memory Forever",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "es": {
+          "value": "Eterniza un Momento,\nPreserva un Recuerdo",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "it": {
+          "value": "Rendi Eterno un Attimo,\nConserva un Ricordo",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "de": {
+          "value": "Einen Augenblick verewigen,\neine Erinnerung bewahren",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "hero.heroSubtitle": {
+      "required": true,
+      "source": "Joias artesanais com flores verdadeiras preservadas. Cada peça é uma história que o tempo não apaga. Feitas à mão em Portugal, com a delicadeza de quem sabe que a beleza merece durar para sempre.",
+      "sourceHash": "sha256:deb6a8d6a1a6",
+      "translations": {
+        "en": {
+          "value": "Handcrafted jewellery with real preserved flowers. Each piece tells a story that time cannot erase. Made by hand in Portugal, with the tenderness of those who know beauty deserves to last forever.",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "es": {
+          "value": "Joyas artesanales con flores verdaderas preservadas. Cada pieza es una historia que el tiempo no borra. Hechas a mano en Portugal, con la delicadeza de quien sabe que la belleza merece durar para siempre.",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "it": {
+          "value": "Gioielli artigianali con fiori veri conservati. Ogni pezzo è una storia che il tempo non cancella. Fatti a mano in Portogallo, con la delicatezza di chi sa che la bellezza merita di durare per sempre.",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "de": {
+          "value": "mit der Behutsamkeit jener, die wissen, dass Schönheit für immer währen darf.",
+          "status": "ai-reviewed",
+          "notes": "Fix Sol review: Zartheit→Behutsamkeit, derer→jener, halten→währen"
+        }
+      }
+    },
+    "hero.primaryButtonText": {
+      "required": true,
+      "source": "Descobrir Catálogo",
+      "sourceHash": "sha256:5a5d8265b170",
+      "translations": {
+        "en": {
+          "value": "Discover the Catalogue",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "es": {
+          "value": "Descubrir el Catálogo",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "it": {
+          "value": "Scopri il Catalogo",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "de": {
+          "value": "Katalog entdecken",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "hero.secondaryButtonText": {
+      "required": false,
+      "source": "Saber Mais",
+      "sourceHash": "sha256:72e723b18a86",
+      "translations": {
+        "en": {
+          "value": "Learn More",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "es": {
+          "value": "Saber Más",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "it": {
+          "value": "Scopri di Più",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "de": {
+          "value": "Mehr erfahren",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "realFlowers.title": {
+      "required": true,
+      "source": "Flores Verdadeiras, Eternas",
+      "sourceHash": "sha256:0e3d2413ce6e",
+      "translations": {
+        "en": {
+          "value": "Real Flowers, Made Eternal",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "es": {
+          "value": "Flores Verdaderas, Eternas",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "it": {
+          "value": "Fiori Veri, Eterni",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "de": {
+          "value": "Echte Blumen, verewigt",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "realFlowers.subtitle": {
+      "required": false,
+      "source": "Cada peça começa com uma flor verdadeira, selecionada no auge da sua beleza.",
+      "sourceHash": "sha256:b349a3ca7dc3",
+      "translations": {
+        "en": {
+          "value": "Every piece begins with a real flower, selected at the peak of its beauty.",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "es": {
+          "value": "Cada pieza comienza con una flor verdadera, seleccionada en el apogeo de su belleza.",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "it": {
+          "value": "Ogni pezzo inizia con un fiore vero, selezionato all'apice della sua bellezza.",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "de": {
+          "value": "Jedes Stück beginnt mit einer echten Blume, ausgewählt auf dem Höhepunkt ihrer Schönheit.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "story.title": {
+      "required": true,
+      "source": "Do Efêmero ao Eterno",
+      "sourceHash": "sha256:2a6e1d064cc5",
+      "translations": {
+        "en": {
+          "value": "From Ephemeral to Eternal",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "es": {
+          "value": "De lo Efímero a lo Eterno",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "it": {
+          "value": "Dall'Effimero all'Eterno",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "de": {
+          "value": "Vom Vergänglichen zum Ewigen",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "story.text": {
+      "required": true,
+      "source": "A Eternal Flowers nasceu de um desejo simples: capturar a beleza das flores e torná-la eterna.\n\nNum mundo onde tudo passa, acreditamos que há momentos que merecem durar. Cada peça que criamos começa com uma flor verdadeira — cultivada com carinho, colhida no seu auge e preservada artesanalmente.\n\nO nosso atelier fica em Braga, Portugal. Aqui, a Marina e a sua equipa transformam flores frescas em jóias que desafiam o tempo. Não usamos moldes nem produção em série — cada peça é única, como a memória que representa.\n\nAcreditamos que a natureza nos dá os materiais mais perfeitos. O nosso trabalho é apenas guiá-los, com respeito e delicadeza, para uma nova forma de existir.",
+      "sourceHash": "sha256:8ccd8d8322c8",
+      "translations": {
+        "en": {
+          "value": "Eternal Flowers was born from a simple desire: to capture the beauty of flowers and make it last forever.\n\nIn a world where everything fades, we believe there are moments that deserve to endure. Each piece we create starts with a real flower — lovingly cultivated, harvested at its peak, and preserved by hand.\n\nOur workshop is in Braga, Portugal. Here, Marina and her team transform fresh flowers into jewellery that defies time. We use no moulds or mass production — every piece is unique, like the memory it holds.\n\nWe believe nature gives us the most perfect materials. Our work is simply to guide them, with respect and tenderness, into a new way of being.",
+          "status": "ai-reviewed",
+          "notes": "Fix Sol review: wish→desire for intensity"
+        },
+        "es": {
+          "value": "Eternal Flowers nació de un deseo sencillo: capturar la belleza de las flores y hacerla eterna.\n\nEn un mundo donde todo pasa, creemos que hay momentos que merecen perdurar. Cada pieza que creamos comienza con una flor verdadera — cultivada con cariño, cosechada en su apogeo y preservada artesanalmente.\n\nNuestro taller está en Braga, Portugal. Aquí, Marina y su equipo transforman flores frescas en joyas que desafían al tiempo. No usamos moldes ni producción en serie — cada pieza es única, como el recuerdo que representa.\n\nCreemos que la naturaleza nos brinda los materiales más perfectos. Nuestro trabajo es solo guiarlos, con respeto y delicadeza, hacia una nueva forma de existir.",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "it": {
+          "value": "Eternal Flowers è nata da un desiderio semplice: catturare la bellezza dei fiori e renderla eterna.\n\nIn un mondo dove tutto passa, crediamo che ci siano momenti che meritano di durare. Ogni pezzo che creiamo inizia con un fiore vero — coltivato con cura, raccolto al suo apice e conservato artigianalmente.\n\nIl nostro laboratorio si trova a Braga, in Portogallo. Qui, Marina e il suo team trasformano fiori freschi in gioielli che sfidano il tempo. Non usiamo stampi né produzione in serie — ogni pezzo è unico, come il ricordo che rappresenta.\n\nCrediamo che la natura ci offra i materiali più perfetti. Il nostro lavoro è semplicemente guidarli, con rispetto e delicatezza, verso una nuova forma di esistere.",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "de": {
+          "value": "Eternal Flowers entstand aus einem einfachen Wunsch: die Schönheit der Blumen einzufangen und für immer zu bewahren.\n\nIn einer Welt, in der alles vergeht, glauben wir, dass es Momente gibt, die es verdienen, zu bleiben. Jedes Stück, das wir kreieren, beginnt mit einer echten Blume — liebevoll kultiviert, auf dem Höhepunkt ihrer Blüte geerntet und handwerklich konserviert.\n\nUnsere Werkstatt befindet sich in Braga, Portugal. Hier verwandeln Marina und ihr Team frische Blumen in Schmuck, der der Zeit trotzt. Wir verwenden keine Formen oder Massenproduktion — jedes Stück ist einzigartig, wie die Erinnerung, die es bewahrt.\n\nWir glauben, dass die Natur uns die vollkommensten Materialien schenkt. Unsere Aufgabe ist es, sie mit Respekt und Behutsamkeit in eine neue Form des Seins zu führen.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "international.title": {
+      "required": true,
+      "source": "Presença Internacional",
+      "sourceHash": "sha256:05b209fd28a0",
+      "translations": {
+        "en": {
+          "value": "International Presence",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "es": {
+          "value": "Presencia Internacional",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "it": {
+          "value": "Presenza Internazionale",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "de": {
+          "value": "Internationale Präsenz",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "international.subtitle": {
+      "required": false,
+      "source": "De Braga para o mundo. As nossas peças já viajaram para mais de 15 países.",
+      "sourceHash": "sha256:f8c96985901a",
+      "translations": {
+        "en": {
+          "value": "From Braga to the world. Our pieces have travelled to over 15 countries.",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "es": {
+          "value": "De Braga al mundo. Nuestras piezas ya han viajado a más de 15 países.",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "it": {
+          "value": "Da Braga al mondo. I nostri pezzi hanno già viaggiato in oltre 15 paesi.",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "de": {
+          "value": "Von Braga in die Welt. Unsere Stücke sind bereits in über 15 Länder gereist.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "instagram.title": {
+      "required": true,
+      "source": "Siga-nos no Instagram",
+      "sourceHash": "sha256:5ce94668afa2",
+      "translations": {
+        "en": {
+          "value": "Follow Us on Instagram",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "es": {
+          "value": "Síguenos en Instagram",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "it": {
+          "value": "Seguici su Instagram",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "de": {
+          "value": "Folge uns auf Instagram",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "instagram.text": {
+      "required": false,
+      "source": "Acompanhe o dia-a-dia do atelier, os bastidores da criação e o carinho que colocamos em cada peça.",
+      "sourceHash": "sha256:a70889cc2ede",
+      "translations": {
+        "en": {
+          "value": "Follow the daily life of our workshop, the behind-the-scenes of our craft, and the care we put into every piece.",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "es": {
+          "value": "Sigue el día a día del taller, los entresijos de la creación y el cariño que ponemos en cada pieza.",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "it": {
+          "value": "Segui la vita quotidiana del laboratorio, il dietro le quinte della creazione e la cura che mettiamo in ogni pezzo.",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "de": {
+          "value": "Verfolge den Alltag in der Werkstatt, die Entstehung unserer Kreationen und die Hingabe, die wir in jedes Stück stecken.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "cta.title": {
+      "required": true,
+      "source": "Pronta para Eternizar\numa Memória?",
+      "sourceHash": "sha256:d150e7c0cf23",
+      "translations": {
+        "en": {
+          "value": "Ready to Make\na Memory Eternal?",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "es": {
+          "value": "¿Lista para Eternizar\nun Recuerdo?",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "it": {
+          "value": "Pronta a Rendere Eterno\nun Ricordo?",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "de": {
+          "value": "Bereit, eine Erinnerung\nzu verewigen?",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "cta.subtitle": {
+      "required": false,
+      "source": "Cada peça é feita por encomenda. Se tem uma flor especial ou uma ideia em mente, vamos criar algo único para si.",
+      "sourceHash": "sha256:07ce955b85e0",
+      "translations": {
+        "en": {
+          "value": "Every piece is made to order. If you have a special flower or an idea in mind, we will create something unique just for you.",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "es": {
+          "value": "Cada pieza se hace por encargo. Si tienes una flor especial o una idea en mente, crearemos algo único para ti.",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "it": {
+          "value": "Ogni pezzo è realizzato su ordinazione. Se hai un fiore speciale o un'idea in mente, creeremo qualcosa di unico per te.",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "de": {
+          "value": "Jedes Stück wird auf Bestellung gefertigt. Wenn du eine besondere Blume oder eine Idee im Kopf hast, kreieren wir etwas Einzigartiges für dich.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "cta.buttonText": {
+      "required": true,
+      "source": "Fale Connosco",
+      "sourceHash": "sha256:6b4692af5712",
+      "translations": {
+        "en": {
+          "value": "Contact Us",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "es": {
+          "value": "Contáctanos",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "it": {
+          "value": "Contattaci",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "de": {
+          "value": "Kontaktiere uns",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "footer.brandDescription": {
+      "required": false,
+      "source": "Joias artesanais com flores verdadeiras preservadas. Feitas à mão em Portugal.",
+      "sourceHash": "sha256:59080b9d5554",
+      "translations": {
+        "en": {
+          "value": "Handcrafted jewellery with real preserved flowers. Made by hand in Portugal.",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "es": {
+          "value": "Joyas artesanales con flores verdaderas preservadas. Hechas a mano en Portugal.",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "it": {
+          "value": "Gioielli artigianali con fiori veri conservati. Fatti a mano in Portogallo.",
+          "status": "ai-reviewed",
+          "notes": ""
+        },
+        "de": {
+          "value": "Handgefertigter Schmuck mit echten konservierten Blumen. Handgefertigt in Portugal.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    }
+  }
+}

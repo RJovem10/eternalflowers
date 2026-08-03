@@ -1,0 +1,371 @@
+{
+  "version": 1,
+  "entity": "flowers",
+  "slug": "flowers",
+  "sourceLocale": "pt",
+  "targetLocales": [
+    "de"
+  ],
+  "fields": {
+    "flower-1.name": {
+      "required": true,
+      "source": "Lágrima de Orvalho",
+      "sourceHash": "sha256:8506c62d96b3",
+      "translations": {
+        "de": {
+          "value": "Morgentau",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-1.description": {
+      "required": false,
+      "source": "Um colar delicado como a primeira gota de orvalho da manhã.",
+      "sourceHash": "sha256:558ded84313c",
+      "translations": {
+        "de": {
+          "value": "Eine zarte Kette wie der erste Morgentau.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-1.story": {
+      "required": false,
+      "source": "Inspirado nas manhãs frescas do Minho, quando o orvalho se acumula nas pétalas das orquídeas selvagens. Cada colar é composto por uma flor verdadeira, selecionada no auge da sua beleza, e preservada artesanalmente num processo que dura várias semanas.\n\nA corrente é em aço banhado a ouro, com fecho de segurança. A peça central mede aproximadamente 3 cm de diâmetro.\n\nInclui certificado de autenticidade e embalagem premium.",
+      "sourceHash": "sha256:fe89d41b4e64",
+      "translations": {
+        "de": {
+          "value": "Inspiriert von den frischen Morgen im Minho, wenn der Tau noch auf den Orchideenblättern liegt, fängt diese Kette die Reinheit eines neuen Anfangs ein. Jedes Blütenblatt wurde sorgfältig ausgewählt, um die Transparenz des ersten Lichts des Tages zu bewahren.\n\nEin Stück für alle, die glauben, dass Schönheit in den kleinen, flüchtigen Momenten liegt — und dass manche Momente es verdienen, für immer zu währen.\n\nHandgefertigt in Braga, Portugal.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-2.name": {
+      "required": true,
+      "source": "Sorriso da Manhã",
+      "sourceHash": "sha256:eecb83381fbb",
+      "translations": {
+        "de": {
+          "value": "Morgenlächeln",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-2.description": {
+      "required": false,
+      "source": "Brincos que capturam a doçura do primeiro sorriso do dia.",
+      "sourceHash": "sha256:75320fa94896",
+      "translations": {
+        "de": {
+          "value": "Ohrringe, die die Süße des ersten Lächelns des Tages einfangen.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-2.story": {
+      "required": false,
+      "source": "Criados para celebrar os pequenos momentos de felicidade que iluminam o dia-a-dia. Cada par é único — as flores são selecionadas uma a uma pela Marina, garantindo que as cores e formas se complementam.\n\nHastes em prata esterlina 925 com banho de ouro. Fecho de borboleta para segurança e conforto.\n\nDiâmetro de cada brinco: aproximadamente 1,5 cm.",
+      "sourceHash": "sha256:df3fc771e764",
+      "translations": {
+        "de": {
+          "value": "Es gibt ein Lächeln, das nur der Morgen kennt. Es erscheint, wenn der erste Sonnenstrahl die Blumen berührt, als ob die Natur selbst voller Freude erwacht.\n\nDiese Ohrringe halten diesen Augenblick fest. Jede botanische Miniatur wurde für ihre Zartheit und Symbolik ausgewählt und schafft ein Stück, das die einfache und echte Freude eines neuen Tages feiert.\n\nHandgefertigt in Braga, Portugal.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-3.name": {
+      "required": true,
+      "source": "Abraço Eterno",
+      "sourceHash": "sha256:c3c84c2c732c",
+      "translations": {
+        "de": {
+          "value": "Ewige Umarmung",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-3.description": {
+      "required": false,
+      "source": "Uma pulseira que envolve o pulso como um abraço que o tempo não desfaz.",
+      "sourceHash": "sha256:f5b2ba3921e5",
+      "translations": {
+        "de": {
+          "value": "Ein Armband, das das Handgelenk umschließt wie eine Umarmung, die die Zeit nicht lösen kann.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-3.story": {
+      "required": false,
+      "source": "A Sobrália é carinhosamente chamada de \"orquídea abraço\" porque as suas pétalas se curvam para dentro, como braços que envolvem. Esta pulseira nasceu da vontade de traduzir esse gesto em joia.\n\nPulseira ajustável de 16 a 19 cm, em couro vegetal castanho, com flor encapsulada em resina UV. Fecho dourado com regulação.\n\nPeça ideal para oferecer a alguém especial.",
+      "sourceHash": "sha256:d5361d897dfb",
+      "translations": {
+        "de": {
+          "value": "Die Sobrália wird liebevoll die \"Umarmungsorchidee\" genannt — ihre Blütenblätter krümmen sich nach innen wie Arme, die umarmen. Dieses Armband entstand aus dem Wunsch, diese Geste in Schmuck zu übersetzen.\n\nEin Stück, das von dauerhafter Zuneigung spricht, von Banden, die die Zeit nicht bricht, sondern stärkt.\n\nHandgefertigt in Braga, Portugal.",
+          "status": "ai-reviewed",
+          "notes": "Fix E6D: replaced 'Damenorchidee' (invented) with PT's 'Umarmungsorchidee'"
+        }
+      }
+    },
+    "flower-4.name": {
+      "required": true,
+      "source": "Memória Doce",
+      "sourceHash": "sha256:51141f3dca08",
+      "translations": {
+        "de": {
+          "value": "Süße Erinnerung",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-4.description": {
+      "required": false,
+      "source": "Um porta-chaves que guarda uma memória tão doce quanto o aroma da Cambria.",
+      "sourceHash": "sha256:2f79d7cc7817",
+      "translations": {
+        "de": {
+          "value": "Ein Schlüsselanhänger, der eine Erinnerung bewahrt, so süß wie der Duft der Cambria.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-4.story": {
+      "required": false,
+      "source": "A Cambria é conhecida pelas suas cores vibrantes e padrões únicos — cada flor é como uma pequena pintura da natureza. Seleccionamos os exemplares mais bonitos para criar estes porta-chaves.\n\nCápsula em resina de alta transparência, com 3 cm de diâmetro. Argola em metal banhado a ouro, resistente ao uso diário.\n\nUm detalhe que transforma um objecto funcional numa pequena obra de arte.",
+      "sourceHash": "sha256:756a13075fd1",
+      "translations": {
+        "de": {
+          "value": "Die Cambria ist bekannt für ihre lebendigen Farben und einzigartigen Muster — jede Blume ist wie ein kleines Gemälde der Natur. Wir wählen die schönsten Exemplare aus, um diese Schlüsselanhänger zu schaffen.\n\nEine kleine tägliche Erinnerung daran, dass die süßesten Erinnerungen diejenigen sind, die wir bei uns tragen, immer in Reichweite.\n\nHandgefertigt in Braga, Portugal.",
+          "status": "ai-reviewed",
+          "notes": "Fix E6D: replaced invented 'intensiven Duft' with PT's 'einzigartigen Muster'"
+        }
+      }
+    },
+    "flower-5.name": {
+      "required": true,
+      "source": "Janela para o Jardim",
+      "sourceHash": "sha256:dc278ee22d01",
+      "translations": {
+        "de": {
+          "value": "Fenster zum Garten",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-5.description": {
+      "required": false,
+      "source": "Uma moldura que mantém vivo um pedaço de jardim.",
+      "sourceHash": "sha256:509129709686",
+      "translations": {
+        "de": {
+          "value": "Ein Bilderrahmen, der ein Stück Garten lebendig hält.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-5.story": {
+      "required": false,
+      "source": "Há quem diga que a Phalaenopsis se chama \"flor borboleta\" porque as suas pétalas lembram as asas de uma borboleta em voo. Esta moldura nasceu do desejo de capturar esse voo e torná-lo eterno.\n\nMoldura em madeira de carvalho certificada, com 15x15 cm. Abertura de 8x8 cm para a flor preservada. Suporte de mesa ou parede.\n\nInclui pequena placa gravada com o nome da flor e a data de criação.",
+      "sourceHash": "sha256:3f6cec4311b5",
+      "translations": {
+        "de": {
+          "value": "Manche sagen, die Phalaenopsis werde \"Schmetterlingsblume\" genannt, wegen der anmutigen Form ihrer Blütenblätter. Andere sagen, sie trage den Frieden eines geheimen Gartens in sich.\n\nDieser Bilderrahmen öffnet ein Fenster zu diesem Garten. Ein Stück, das jeden Raum in einen Rückzugsort voller Ruhe und natürlicher Schönheit verwandelt.\n\nHandgefertigt in Braga, Portugal.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-6.name": {
+      "required": true,
+      "source": "Beijo de Luz",
+      "sourceHash": "sha256:a113ad5849ef",
+      "translations": {
+        "de": {
+          "value": "Kuss des Lichts",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-6.description": {
+      "required": false,
+      "source": "Um colar que captura um beijo de luz. Edição limitada e numerada.",
+      "sourceHash": "sha256:d6b78a43481c",
+      "translations": {
+        "de": {
+          "value": "Eine Kette, die einen Kuss des Lichts einfängt. Limitierte und nummerierte Auflage.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-6.story": {
+      "required": false,
+      "source": "A Laelia purpurata é a flor-símbolo de Santa Catarina, Brasil — a terra-natal de Marina. Esta edição especial é uma homenagem às suas raízes e à luz tropical que inspirou a sua paixão pelas flores.\n\nPingente em vidro soprado artesanalmente, com a flor preservada no interior. Corrente em ouro 18k (banho), 45 cm. Número de série gravado.\n\nEdição limitada a 30 peças numeradas.",
+      "sourceHash": "sha256:1962a6ef76e4",
+      "translations": {
+        "de": {
+          "value": "Die Laelia purpurata ist die Symbolblume von Santa Catarina, Brasilien — Marinas Heimat. Diese Sonderausgabe ist eine Hommage an ihre Wurzeln und das tropische Licht, das ihre Leidenschaft für Blumen entfachte.\n\nAnhänger aus mundgeblasenem Glas, die konservierte Blume im Inneren. Kette in 18k Gold (vergoldet), 45 cm. Eingravierte Seriennummer. Ein Stück für alle, die das Seltene und Bedeutungsvolle suchen.\n\nLimitierte Auflage von 30 nummerierten Stücken. Handgefertigt in Braga, Portugal.",
+          "status": "ai-reviewed",
+          "notes": "Fix E6D: restored PT's mundgeblasenes Glas, 18k Gold, 45cm, Seriennummer, 30 Stücke"
+        }
+      }
+    },
+    "flower-7.name": {
+      "required": true,
+      "source": "Dança das Pétalas",
+      "sourceHash": "sha256:55576a8b4599",
+      "translations": {
+        "de": {
+          "value": "Tanz der Blütenblätter",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-7.description": {
+      "required": false,
+      "source": "Brincos que dançam com o movimento. Design leve e arejado.",
+      "sourceHash": "sha256:f95b46891220",
+      "translations": {
+        "de": {
+          "value": "Ohrringe, die mit der Bewegung tanzen. Leichtes und luftiges Design.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-7.story": {
+      "required": false,
+      "source": "A Vanda tricolor é uma das orquídeas mais elegantes — as suas pétalas parecem dançar quando a brisa passa. Estes brincos tentam recriar essa leveza.\n\nDisponíveis apenas na Primavera e Verão, quando as Vandas estão em floração máxima. Cada flor é colhida no momento ideal.\n\nHastes em aço cirúrgico banhado a ouro rosa. Brincos de argola com 2,5 cm de diâmetro.",
+      "sourceHash": "sha256:a241b2632fca",
+      "translations": {
+        "de": {
+          "value": "Die Vanda tricolor ist eine der elegantesten Orchideen. Ihre Blütenblätter tanzen in der leichtesten Brise und enthüllen Farbschichten, die wie von Hand gemalt wirken.\n\nDiese Ohrringe wurden von dieser Leichtigkeit inspiriert. Ein Design, das sich mit dir bewegt und die Anmut und Freiheit der Natur feiert.\n\nHandgefertigt in Braga, Portugal.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-8.name": {
+      "required": true,
+      "source": "Raiz do Amor",
+      "sourceHash": "sha256:5c97e1b27609",
+      "translations": {
+        "de": {
+          "value": "Wurzel der Liebe",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-8.description": {
+      "required": false,
+      "source": "Uma pulseira que fala de raízes profundas. Amor que se fortalece com o tempo.",
+      "sourceHash": "sha256:028d3c3d6f3c",
+      "translations": {
+        "de": {
+          "value": "Ein Armband, das von tiefen Wurzeln spricht. Liebe, die mit der Zeit stärker wird.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-8.story": {
+      "required": false,
+      "source": "O Paphiopedilum rothschildianum é uma das orquídeas mais raras do mundo — originária do Monte Kinabalu, no Bornéu. A sua forma única, que lembra um sapatinho, inspirou esta pulseira.\n\nPulseira em fio de couro entrançado, com fecho de prata. A flor encapsulada mede aproximadamente 2 cm. Peça certificada com documentação da origem botânica.\n\nEdição limitada — cada pulseira é acompanhada de uma ilustração botânica da espécie.",
+      "sourceHash": "sha256:821387c2cd2c",
+      "translations": {
+        "de": {
+          "value": "Der Paphiopedilum rothschildianum ist eine der seltensten und begehrtesten Orchideen der Welt. Seine exotische Form spricht von der Stärke und Widerstandsfähigkeit der Natur.\n\nDieses Armband wurde von den Wurzeln inspiriert, die selbst im schwierigsten Gelände festhalten. Ein Stück, das eine Liebe feiert, die mit jedem Tag stärker, tiefer und schöner wird.\n\nHandgefertigt in Braga, Portugal.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-9.name": {
+      "required": true,
+      "source": "Sussurro da Natureza",
+      "sourceHash": "sha256:af0a20245f21",
+      "translations": {
+        "de": {
+          "value": "Flüstern der Natur",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-9.description": {
+      "required": false,
+      "source": "Um porta-chaves que sussurra histórias da floresta.",
+      "sourceHash": "sha256:6ee52b7ea94a",
+      "translations": {
+        "de": {
+          "value": "Ein Schlüsselanhänger, der Geschichten des Waldes flüstert.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-9.story": {
+      "required": false,
+      "source": "Há qualquer coisa de mágico em encontrar uma flor silvestre durante uma caminhada. Este porta-chaves nasceu desses momentos — uma pausa no caminho, o cheiro a terra molhada, a descoberta de uma Sobrália escondida entre as folhas.\n\nCápsula em acrílico transparente, 2,5 cm. Argola dupla em metal prateado.\n\nPeça sazonal — disponível apenas durante a floração da Sobrália, entre Maio e Julho.",
+      "sourceHash": "sha256:ce826ed025bd",
+      "translations": {
+        "de": {
+          "value": "Es hat etwas Magisches, mitten im Wald eine Blume zu finden. Sie wächst still, ohne etwas zu verlangen, und schenkt ihre Schönheit dem, der sie zu sehen vermag.\n\nDieser Schlüsselanhänger bewahrt diesen Geist der Entdeckung. Ein Stück, das einlädt, innezuhalten, durchzuatmen und sich wieder mit der einfachen Schönheit der Natur zu verbinden.\n\nHandgefertigt in Braga, Portugal.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-10.name": {
+      "required": true,
+      "source": "Eternidade em Flor",
+      "sourceHash": "sha256:363c9cb9fbae",
+      "translations": {
+        "de": {
+          "value": "Ewigkeit in Blüte",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-10.description": {
+      "required": false,
+      "source": "Uma moldura que guarda a eternidade. Arco-íris de pétalas preservadas.",
+      "sourceHash": "sha256:ecb77509431f",
+      "translations": {
+        "de": {
+          "value": "Ein Bilderrahmen, der die Ewigkeit bewahrt. Ein Regenbogen aus konservierten Blütenblättern.",
+          "status": "ai-reviewed",
+          "notes": ""
+        }
+      }
+    },
+    "flower-10.story": {
+      "required": false,
+      "source": "Esta moldura é a peça mais ambiciosa do nosso atelier. Utilizamos pétalas de múltiplas variedades de Cambria para criar uma composição única — como um pequeno jardim eterno dentro de uma moldura.\n\nCada peça é composta por 5 a 7 flores diferentes, dispostas à mão pela Marina. O processo de preservação e montagem leva até 3 semanas.\n\nMoldura em carvalho maciço, 20x20 cm, com passe-partout duplo. Inclui suporte de mesa e sistema de suspensão na parede.\n\nPeça numerada e certificada — nunca mais de 10 unidades por série.",
+      "sourceHash": "sha256:9d9df0140d3b",
+      "translations": {
+        "de": {
+          "value": "Dieser Bilderrahmen ist das ambitionierteste Stück unserer Werkstatt. Wir verwenden Blütenblätter von mehreren Cambria-Sorten, um eine einzigartige Komposition zu schaffen — wie einen kleinen ewigen Garten in einem Rahmen.\n\nJedes Stück besteht aus 5 bis 7 verschiedenen Blumen, von Hand angeordnet. Der Konservierungs- und Montageprozess dauert bis zu 3 Wochen. Das Ergebnis ist ein einzigartiges Werk, das die Fülle eines Gartens in ewiger Blüte einfängt.\n\nRahmen aus massiver Eiche, 20x20 cm, mit doppeltem Passepartout. Inklusive Tischständer und Wandaufhängung. Nummeriertes und zertifiziertes Stück — nie mehr als 10 Einheiten pro Serie.\n\nHandgefertigt in Braga, Portugal.",
+          "status": "ai-reviewed",
+          "notes": "Fix E6D: restored PT specs (Eiche 20x20cm, 5-7 Blumen, 3 Wochen, 10/Serie)"
+        }
+      }
+    }
+  }
+}

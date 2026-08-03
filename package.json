@@ -7,27 +7,45 @@
     "build": "next build",
     "start": "next start",
     "payload": "payload",
-    "generate:types": "payload generate:types"
+    "generate:types": "payload generate:types",
+    "translations:validate": "npx tsx scripts/translations/import-translations.ts",
+    "translations:import": "PAYLOAD_SQLITE_PUSH=false npx tsx scripts/translations/import-translations.ts",
+    "postinstall": "node scripts/patch-load-env.js",
+    "staging:setup": "bash scripts/staging/setup.sh",
+    "staging:start": "bash scripts/staging/start.sh",
+    "staging:stop": "bash scripts/staging/stop.sh",
+    "staging:status": "bash scripts/staging/status.sh",
+    "staging:test": "bash scripts/staging/smoke-test.sh",
+    "staging:logs": "docker logs eternal-flowers-staging-db",
+    "staging:backup": "bash scripts/staging/backup.sh",
+    "staging:restore": "bash scripts/staging/restore.sh",
+    "staging:teardown": "bash scripts/staging/teardown.sh",
+    "staging:purge": "bash scripts/staging/teardown.sh --purge"
   },
   "dependencies": {
-    "next": "15.4.11",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "payload": "^3.0.0",
-    "@payloadcms/next": "^3.0.0",
     "@payloadcms/db-postgres": "^3.0.0",
     "@payloadcms/db-sqlite": "^3.0.0",
-    "better-sqlite3": "^11.0.0",
-    "stripe": "^16.0.0",
-    "tailwindcss": "^3.4.0",
+    "@payloadcms/next": "^3.0.0",
     "autoprefixer": "^10.4.0",
-    "postcss": "^8.4.0"
+    "better-sqlite3": "^11.0.0",
+    "next": "15.4.11",
+    "payload": "^3.0.0",
+    "postcss": "^8.4.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "sharp": "^0.35.3",
+    "stripe": "^16.0.0",
+    "tailwindcss": "^3.4.0"
   },
   "devDependencies": {
-    "typescript": "^5.5.0",
+    "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^20.14.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@types/better-sqlite3": "^7.6.0"
+    "typescript": "^5.5.0"
+  },
+  "allowScripts": {
+    "sharp@0.34.5": true,
+    "sharp@0.35.3": true
   }
 }
