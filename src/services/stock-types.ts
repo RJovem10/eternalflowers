@@ -41,10 +41,25 @@ export interface ExpireReservationInput {
 // estão na secção de errors.
 
 export type ReserveStockOutcome =
-  | { type: 'created'; reservationId: number; expiresAt: string }
-  | { type: 'existing_active'; reservationId: number; expiresAt: string }
-  | { type: 'existing_confirmed'; reservationId: number; expiresAt: string }
-  | { type: 'attempt_terminated' }
+  | {
+      kind: 'created'
+      reservationId: number
+      expiresAt: string
+    }
+  | {
+      kind: 'existing_active'
+      reservationId: number
+      expiresAt: string
+    }
+  | {
+      kind: 'existing_confirmed'
+      reservationId: number
+      expiresAt: string
+    }
+  | {
+      kind: 'attempt_terminated'
+      reservationId: number
+    }
 
 export type ConfirmReservationOutcome =
   | { type: 'confirmed' }
@@ -92,4 +107,8 @@ export class StockInvariantViolation extends Error {
 export class StockBusyRetryError extends Error {
   code = 'STOCK_BUSY_RETRY' as const
   constructor(msg = 'Base de dados ocupada. Tentar novamente.') { super(msg) }
+}
+export class InvalidProductError extends Error {
+  code = 'INVALID_PRODUCT' as const
+  constructor(msg = 'Produto inválido.') { super(msg) }
 }
