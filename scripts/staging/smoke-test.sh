@@ -97,16 +97,11 @@ FLOWER_IDS=$(docker exec eternal-flowers-staging-db psql -U "${POSTGRES_USER:-st
 if [ -n "$FLOWER_IDS" ]; then
     FID_COUNT=$(echo "$FLOWER_IDS" | wc -w)
     info "  → $FID_COUNT flor(es) na base"
-    # Testar todas as flores em PT e EN
-    for fid in $FLOWER_IDS; do
-        test_status "/pt/flower/$fid" "$BASE/pt/flower/$fid" 200
-        test_status "/en/flower/$fid" "$BASE/en/flower/$fid" 200
-    done
-    # Testar um subconjunto noutras locales
-    for fid in 1 5 10; do
-        test_status "/es/flower/$fid" "$BASE/es/flower/$fid" 200
-        test_status "/it/flower/$fid" "$BASE/it/flower/$fid" 200
-        test_status "/de/flower/$fid" "$BASE/de/flower/$fid" 200
+    # Testar todas as flores nos 5 locales
+    for locale in pt en es it de; do
+        for fid in $FLOWER_IDS; do
+            test_status "/$locale/flower/$fid" "$BASE/$locale/flower/$fid" 200
+        done
     done
     # ID inexistente
     test_status "/pt/flower/99999" "$BASE/pt/flower/99999" 404

@@ -82,11 +82,11 @@ export default async function FlowerDetail({ params }: FlowerPageParams) {
       ...payloadLocaleOptions(locale as Locale),
     })
   } catch (err: any) {
-    // Distinguir 404 legítimo (Not Found) de erros internos (BD, auth, etc.)
-    if (err?.message?.includes?.('Not Found') || err?.name === 'NotFoundError') {
+    // Distinguir 404 legítimo (NotFound com status 404) de erros internos
+    if (err?.name === 'NotFound' && err?.status === 404) {
       notFound()
     }
-    // Erro interno — relançar para gerar 500 em vez de 404 silencioso
+    // Erro interno (BD, auth, rede, etc.) — relançar para gerar 500
     throw err
   }
   if (!flower) notFound()
