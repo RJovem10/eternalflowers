@@ -49,7 +49,7 @@ test_content() {
     local desc="$1" url="$2" pattern="$3"
     local body
     body=$(curl -s --max-time 10 "$url" 2>/dev/null || echo "")
-    if [ -n "$body" ] && echo "$body" | grep -qF "$pattern"; then
+    if [ -n "$body" ] && grep -Fq -- "$pattern" <<<"$body"; then
         echo -e "  ${GREEN}✅${NC} $desc"
         PASS=$((PASS + 1))
     else
@@ -149,7 +149,7 @@ for pair in "PT|Eternizar" "EN|Make a Memory" "ES|Eterniza un" "IT|Rendi Eterno"
     pattern="${pair#*|}"
     locale_lc=$(echo "$locale" | tr '[:upper:]' '[:lower:]')
     body=$(curl -s --max-time 10 "$BASE_URL/$locale_lc" 2>/dev/null || echo "")
-    if [ -n "$body" ] && echo "${body}" | grep -qF "${pattern}"; then
+    if [ -n "$body" ] && grep -Fq -- "$pattern" <<<"$body"; then
         echo -e "  ${GREEN}✅${NC} ${locale}: heroTitle contém \"${pattern}\""
         PASS=$((PASS + 1))
     else

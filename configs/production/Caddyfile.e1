@@ -1,8 +1,4 @@
 http://127.0.0.1:8080 {
-    reverse_proxy app:3000
+    reverse_proxy e1-app-final:3000
     encode gzip
-    header {
-        X-Frame-Options "DENY"
-        X-Content-Type-Options "nosniff"
-    }
 }
