@@ -86,6 +86,7 @@ async function executeReserve(
     id: input.flowerId,
     req: ctx.req,
     depth: 0,
+    overrideAccess: true,
   }) as any
 
   // 3. Idempotência (antes das regras comerciais)
@@ -202,6 +203,7 @@ export async function getAvailableStock(
     collection: 'flowers',
     id: flowerId,
     depth: 0,
+    overrideAccess: true,
   }) as any
 
   // Produto inexistente → NotFound propaga
@@ -321,6 +323,7 @@ export async function confirmReservation(
       id: flowerId,
       req: ctx.req,
       depth: 0,
+      overrideAccess: true,
     }) as any
 
     if (!flower.productionMode || flower.productionMode === 'made_to_order') {
