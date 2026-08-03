@@ -249,6 +249,7 @@ const StockReservations: CollectionConfig = {
     update: () => false,
     delete: () => false,
   },
+  lockDocuments: false,
   fields: [
     { name: 'flower', type: 'relationship', relationTo: 'flowers', required: true, index: true, label: 'Produto' },
     { name: 'quantity', type: 'number', required: true, min: 1, defaultValue: 1, label: 'Quantidade' },
