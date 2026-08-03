@@ -15,7 +15,7 @@ fi
 # Construir DATABASE_URI em memória se não existir
 if [ -z "${DATABASE_URI:-}" ]; then
   PG_USER="${POSTGRES_USER:-staging}"
-  PG_PASS="${POSTGRES_PASSWORD:?POSTGRES_PASSWORD não definido — carregar .env.staging.local}"
+  PG_PASS="${POSTGRES_PASSWORD:?POSTGRES_PASSWORD nao definido — carregar .env.staging.local}"
   PG_HOST="${STAGING_PG_HOST:-127.0.0.1}"
   PG_PORT="${STAGING_PG_PORT:-55433}"
   PG_DB="${POSTGRES_DB:-eternal_flowers_staging}"
