@@ -133,7 +133,8 @@ fi
 if [ "$RESTORE_TYPE" = "media" ]; then
     echo ""
     echo "📁 Restore Media a partir de: $RESTORE_FILE"
-    local media_dest="${MEDIA_DEST:-./media}"
+    media_dest="${MEDIA_DEST:-./media}"
+    echo "  Destino: $media_dest"
 
     if [ ! -d "$media_dest" ]; then
         echo "  A criar diretório: $media_dest"
