@@ -2,7 +2,7 @@
 
 **Data:** 2026-08-03
 **Branch:** `test/issue-022-full-cutover-rehearsal`
-**HEAD:** `78838dc`
+**HEAD:** `2f4ab83`
 **Origem:** `release/issue-016-019` @ `78838dc`
 
 ---
@@ -99,9 +99,37 @@
 | Elemento | Tamanho | SHA-256 |
 |----------|---------|---------|
 | Dump PostgreSQL | 100 KB | Verificado |
-| Media (11 ficheiros) | — | Hashes preservados |
+| Media (11 ficheiros) | — | Hashes preservados (ver abaixo) |
+
+### Hashes dos 11 Media (antes = depois)
+
+| Ficheiro | SHA-256 (imutável) |
+|----------|-------------------|
+| brincos-danca.jpg | `46153b01ff582074f5b12930202ad29b19cb85d8fb90335940e249a4ea7e8810` |
+| brincos-sorriso.jpg | `7c005c2398f87e0bfedabfacb88b5e2ae740f88da3b0d75770109acf16fc3793` |
+| colar-beijo.jpg | `1fea8c4767368185f6fad7eeef2bcf0b9022d6fda65bbc5a50107ebb6ba64b88` |
+| colar-lagrima.jpg | `31c78e5eda3ca3583019fcdc43fec065f757db429a2f3fdd99962055f5915a93` |
+| hero.jpg | `2d436a408fc58694b9d6aa813bdbf0c0872481170510bab2beda1e0657333dc0` |
+| moldura-eternidade.jpg | `b02f1be5a0607498104c49d806dbfdc9d187cad6f913da8180e1c22fdd3b71fb` |
+| moldura-janela.jpg | `2761b53d87a8fd46d0f136715dc20ea1ff2ede2878fabc42d6b5f1820cb6e993` |
+| portachaves-memoria.jpg | `926a800bf361a862e90358452b31eab5348865b7356d4add540069e74de4a55b` |
+| portachaves-sussurro.jpg | `e8cd0260a4245fc6fda13b20f25139a35022d94ff8125869f4bf769ef8b9656e` |
+| pulseira-abraco.jpg | `0cecf93a7ce4fb0789328a3f1e8ce7b8cf6ad6159cf837df0bda0f8048496235` |
+| pulseira-raiz.jpg | `423fe58769c1903f1c708615425b5769fe9d7da091cd8e55843743dc0cd252b8` |
+
+**Verificação:** `sha256sum` executado no host e dentro do container `e1-m2-app` — resultados idênticos, confirmando que os ficheiros físicos não foram alterados durante o ensaio nem a correção M2.
 
 ### Restore em base nova
+
+**Procedimento do Admin após restore:**
+
+O restore PostgreSQL (`pg_restore --clean`) restaura a tabela `payload_users` que contém o admin migrado. Após o restore, o admin fica acessível em `/admin` com as mesmas credenciais que foram definidas durante a migração (populadas via `create-admin.ts`).
+
+Passos para verificar:
+1. Aceder `https://<dominio>/admin`
+2. Login com as credenciais do admin migrado (email + password definidos no cutover)
+3. Se o restore foi bem sucedido, o admin autentica e o painel Payload carrega com todos os dados (52 registos base, 5 locales, 272 traduções)
+4. Se o admin não autenticar, o cutover é bloqueado (cenário G) — fazer rollback
 
 | Entidade | Antes | Depois do restore | Igual |
 |----------|-------|-------------------|-------|
@@ -196,6 +224,7 @@
 | Preflight: modo cutover não executa com templates .example | 🟡 Médio | ✅ **Documentado** — esperado para ambiente sem VPS |
 | Proxy Caddy não ensaiado (apenas `next start`) | 🟡 Baixo | ✅ **Documentado** — limitação do ensaio local |
 | Smoke test de produção tem 29 checks, staging 76 | 🟡 Baixo | ✅ **Esclarecido** — ensaio usou staging smoke test |
+| Dockerfile sem `USER` não-root (Sol M2) | 🟡 Médio | ✅ **Corrigido** — `Dockerfile` cria `appuser`/`appgroup`, `chown -R appuser:appgroup /app`, `USER appuser`. Verificado: `docker inspect → appuser`, `docker exec id → uid=100(appuser) ≠ 0`. Smoke 25/25 através de Caddy com imagem corrigida. |
 
 ## Veredito
 
@@ -218,9 +247,22 @@
 - [x] Staging original intacto
 - [x] Release remota inalterada
 - [x] Main inalterada
+- [x] **Sol M2 corrigido** — Dockerfile com `USER appuser` não-root (UID 100 ≠ 0)
+- [x] **Production smoke via Caddy** — 25/25, 0 FAIL, 0 SKIP
+- [x] **bash -n scripts/production/*.sh** — todos sintaticamente válidos
+- [x] **git diff --check** — sem whitespace errors
 
-**Isto não significa GO para produção.** Apenas que a branch de release pode
-avançar para PR e revisão.
+### Revisão Sol final
+
+| Severidade | Em aberto |
+|-----------|-----------|
+| 🔴 Crítico | **0** |
+| 🟡 Médio | **0** — Sol M2 corrigido |
+| 🟢 Baixo | 2 (documentados — limitações do ensaio local) |
+
+**Zero críticos e zero médios em aberto.**
+
+**Isto não significa GO para produção.** Apenas que a branch de release pode avançar para PR e revisão.
 
 ## Decisões Pendentes para VPS
 

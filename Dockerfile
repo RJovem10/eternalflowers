@@ -1,5 +1,8 @@
 FROM node:22-alpine
 
+# Create non-root user and group for runtime security
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
@@ -9,9 +12,12 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-EXPOSE 3000
+# Ensure runtime directories have correct ownership
+RUN mkdir -p /app/media && chown -R appuser:appgroup /app
 
-# Security: run as non-root user (node user exists in node:22-alpine)
-USER node
+# Security: run as non-root user
+USER appuser
+
+EXPOSE 3000
 
 CMD ["npm", "run", "start"]
