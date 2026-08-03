@@ -198,15 +198,9 @@ title "6. Importação de Traduções"
 SNAPSHOT_DIR="/tmp/pg-import-$(date +%Y%m%d)"
 mkdir -p "$SNAPSHOT_DIR"
 
-npx tsx scripts/translations/import-translations.ts \
+DATABASE_URI="$DATABASE_URI" npx tsx scripts/translations/import-translations.ts \
   --apply-sql \
-  --target="$DATABASE_URI" \
-  --snapshot-dir="$SNAPSHOT_DIR" 2>&1 | tail -10 || {
-    warn "Modo --apply-sql falhou. A tentar modo --apply..."
-    npx tsx scripts/translations/import-translations.ts \
-      --apply --confirm=IMPORT_TRANSLATIONS \
-      --snapshot-dir="$SNAPSHOT_DIR" 2>&1 | tail -10
-  }
+  --snapshot-dir="$SNAPSHOT_DIR" 2>&1 | tail -10
 ok "Traduções importadas"
 
 # ═══════════════════════════════════════════════════
