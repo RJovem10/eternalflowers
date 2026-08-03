@@ -1,9 +1,5 @@
 /**
  * stock-types.ts — Contratos de domínio para stock e reservas
- *
- * Esta ISSUE implementa apenas a infraestrutura transacional (Fase 1).
- * As funções de domínio (reserveStock, confirmReservation, etc.)
- * serão implementadas na Fase 2.
  */
 
 // ─── Production mode ───────────────────────────────────────────
@@ -27,7 +23,6 @@ export interface ConfirmReservationInput {
 
 export interface ReleaseReservationInput {
   reservationId: number
-  reason?: 'expired' | 'cancelled'
   req?: any
 }
 
@@ -36,48 +31,29 @@ export interface ExpireReservationInput {
   req?: any
 }
 
-// ─── Outcomes (a callback transacional devolve um destes) ──────
-// NOTA: situações que precisam de COMMIT. Erros (que provocam ROLLBACK)
-// estão na secção de errors.
-
+// ─── Outcomes (situações que fazem COMMIT) ─────────────────────
 export type ReserveStockOutcome =
-  | {
-      kind: 'created'
-      reservationId: number
-      expiresAt: string
-    }
-  | {
-      kind: 'existing_active'
-      reservationId: number
-      expiresAt: string
-    }
-  | {
-      kind: 'existing_confirmed'
-      reservationId: number
-      expiresAt: string
-    }
-  | {
-      kind: 'attempt_terminated'
-      reservationId: number
-    }
+  | { kind: 'created'; reservationId: number; expiresAt: string }
+  | { kind: 'existing_active'; reservationId: number; expiresAt: string }
+  | { kind: 'existing_confirmed'; reservationId: number; expiresAt: string }
+  | { kind: 'attempt_terminated'; reservationId: number }
 
 export type ConfirmReservationOutcome =
-  | { type: 'confirmed' }
-  | { type: 'already_confirmed' }
-  | { type: 'expired_now' }
-  | { type: 'terminated' }
+  | { kind: 'confirmed'; reservationId: number }
+  | { kind: 'already_confirmed'; reservationId: number }
+  | { kind: 'expired_now'; reservationId: number }
+  | { kind: 'terminated'; reservationId: number; status: 'expired' | 'released' }
 
 export type ReleaseReservationOutcome =
-  | { type: 'released' }
-  | { type: 'already_released' }
+  | { kind: 'released'; reservationId: number }
+  | { kind: 'already_released'; reservationId: number }
+  | { kind: 'terminated'; reservationId: number; status: 'confirmed' | 'expired' }
 
 export type ExpireReservationOutcome =
-  | { type: 'transitioned' }
-  | { type: 'noop' }
-
-export type AvailableStockOutcome =
-  | { available: true }
-  | { available: false }
+  | { kind: 'expired'; reservationId: number }
+  | { kind: 'not_due'; reservationId: number }
+  | { kind: 'already_expired'; reservationId: number }
+  | { kind: 'terminated'; reservationId: number; status: 'confirmed' | 'released' }
 
 // ─── Erros de domínio (provocam ROLLBACK) ──────────────────────
 export class OutOfStockError extends Error {
@@ -111,4 +87,8 @@ export class StockBusyRetryError extends Error {
 export class InvalidProductError extends Error {
   code = 'INVALID_PRODUCT' as const
   constructor(msg = 'Produto inválido.') { super(msg) }
+}
+export class InvalidReservationError extends Error {
+  code = 'INVALID_RESERVATION' as const
+  constructor(msg = 'Reserva inválida.') { super(msg) }
 }

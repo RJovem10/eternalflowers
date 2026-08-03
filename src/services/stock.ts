@@ -18,8 +18,8 @@ import {
   runInTransactionWithRetry,
   type TransactionCtx,
 } from './transact'
-import { lockFlowerForUpdate, sumActiveReservedQuantity } from './db-adapter'
-import type { ReserveStockInput, ReserveStockOutcome } from './stock-types'
+import { lockFlowerForUpdate, sumActiveReservedQuantity, updateFlowerStock } from './db-adapter'
+import type { ReserveStockInput, ReserveStockOutcome, ConfirmReservationInput, ConfirmReservationOutcome, ReleaseReservationInput, ReleaseReservationOutcome, ExpireReservationInput, ExpireReservationOutcome } from './stock-types'
 import {
   InvalidQuantityError,
   InvalidCheckoutAttemptError,
@@ -28,6 +28,7 @@ import {
   IdempotencyConflictError,
   StockInvariantViolation,
   InvalidProductError,
+  InvalidReservationError,
 } from './stock-types'
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -248,4 +249,266 @@ export async function getAvailableStock(
   }
 
   return { available: (physical - reservedQty) > 0 }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// confirmReservation
+// ═══════════════════════════════════════════════════════════════
+
+export async function confirmReservation(
+  payload: Payload,
+  input: ConfirmReservationInput,
+): Promise<ConfirmReservationOutcome> {
+  if (!Number.isInteger(input.reservationId) || input.reservationId < 1) {
+    throw new InvalidReservationError('reservationId deve ser um inteiro positivo.')
+  }
+
+  return runInTransactionWithRetry(payload, input.req, async (ctx) => {
+    const now = new Date()
+
+    // 1. Lookup inicial — obter flowerId
+    const initial = await payload.findByID({
+      collection: 'stock-reservations' as any,
+      id: input.reservationId,
+      depth: 0,
+      overrideAccess: true,
+    }) as any
+
+    if (!initial) throw new InvalidReservationError('Reserva não encontrada.')
+
+    const flowerId = typeof initial.flower === 'object' ? initial.flower.id : initial.flower
+
+    // 2. Lock da flower
+    await lockFlowerForUpdate(ctx, flowerId)
+
+    // 3. Reler reserva dentro da transação
+    const reservation = await payload.findByID({
+      collection: 'stock-reservations' as any,
+      id: input.reservationId,
+      req: ctx.req,
+      depth: 0,
+      overrideAccess: true,
+    }) as any
+
+    if (!reservation) throw new InvalidReservationError('Reserva desapareceu entre leituras.')
+
+    // 4. Avaliar estado
+    if (reservation.status === 'confirmed') {
+      return { kind: 'already_confirmed', reservationId: reservation.id }
+    }
+    if (reservation.status === 'expired') {
+      return { kind: 'terminated', reservationId: reservation.id, status: 'expired' }
+    }
+    if (reservation.status === 'released') {
+      return { kind: 'terminated', reservationId: reservation.id, status: 'released' }
+    }
+
+    // 5. Active com expiresAt <= now → marcar expired, COMMIT
+    if (new Date(reservation.expiresAt) <= now) {
+      await payload.update({
+        collection: 'stock-reservations' as any,
+        id: input.reservationId,
+        data: { status: 'expired', expiredAt: now.toISOString() },
+        req: ctx.req,
+        overrideAccess: true,
+      })
+      return { kind: 'expired_now', reservationId: reservation.id }
+    }
+
+    // 6. Active válida — reler flower e validar invariantes
+    const flower = await payload.findByID({
+      collection: 'flowers',
+      id: flowerId,
+      req: ctx.req,
+      depth: 0,
+    }) as any
+
+    if (!flower.productionMode || flower.productionMode === 'made_to_order') {
+      throw new StockInvariantViolation('Produto não suporta confirmação de reserva.')
+    }
+
+    // Unique
+    if (flower.productionMode === 'unique') {
+      if (flower.stockQuantity !== 1) throw new StockInvariantViolation('Unique sem stock para confirmar.')
+      await updateFlowerStock(ctx, flowerId, { stockQuantity: 0, availability: 'sold' })
+    }
+
+    // Reproducible
+    if (flower.productionMode === 'reproducible') {
+      if ((flower.stockQuantity ?? 0) < (reservation.quantity ?? 1)) {
+        throw new StockInvariantViolation('Stock insuficiente para confirmar reserva.')
+      }
+      await updateFlowerStock(ctx, flowerId, { stockQuantity: (flower.stockQuantity ?? 0) - (reservation.quantity ?? 1) })
+    }
+
+    // 7. Marcar reserva como confirmada
+    await payload.update({
+      collection: 'stock-reservations' as any,
+      id: input.reservationId,
+      data: { status: 'confirmed', confirmedAt: now.toISOString() },
+      req: ctx.req,
+      overrideAccess: true,
+    })
+
+    return { kind: 'confirmed', reservationId: reservation.id }
+  })
+}
+
+// ═══════════════════════════════════════════════════════════════
+// releaseReservation
+// ═══════════════════════════════════════════════════════════════
+
+export async function releaseReservation(
+  payload: Payload,
+  input: ReleaseReservationInput,
+): Promise<ReleaseReservationOutcome> {
+  if (!Number.isInteger(input.reservationId) || input.reservationId < 1) {
+    throw new InvalidReservationError('reservationId deve ser um inteiro positivo.')
+  }
+
+  return runInTransactionWithRetry(payload, input.req, async (ctx) => {
+    const now = new Date()
+
+    const initial = await payload.findByID({
+      collection: 'stock-reservations' as any,
+      id: input.reservationId,
+      depth: 0,
+      overrideAccess: true,
+    }) as any
+
+    if (!initial) throw new InvalidReservationError('Reserva não encontrada.')
+
+    const flowerIdRel = typeof initial.flower === 'object' ? initial.flower.id : initial.flower
+    await lockFlowerForUpdate(ctx, flowerIdRel)
+
+    const reservation = await payload.findByID({
+      collection: 'stock-reservations' as any,
+      id: input.reservationId,
+      req: ctx.req,
+      depth: 0,
+      overrideAccess: true,
+    }) as any
+
+    if (!reservation) throw new InvalidReservationError('Reserva desapareceu entre leituras.')
+
+    if (reservation.status === 'released') {
+      return { kind: 'already_released', reservationId: reservation.id }
+    }
+    if (reservation.status === 'confirmed') {
+      return { kind: 'terminated', reservationId: reservation.id, status: 'confirmed' }
+    }
+    if (reservation.status === 'expired') {
+      return { kind: 'terminated', reservationId: reservation.id, status: 'expired' }
+    }
+
+    // Active → released
+    await payload.update({
+      collection: 'stock-reservations' as any,
+      id: input.reservationId,
+      data: { status: 'released', releasedAt: now.toISOString() },
+      req: ctx.req,
+      overrideAccess: true,
+    })
+
+    return { kind: 'released', reservationId: reservation.id }
+  })
+}
+
+// ═══════════════════════════════════════════════════════════════
+// expireReservation
+// ═══════════════════════════════════════════════════════════════
+
+export async function expireReservation(
+  payload: Payload,
+  input: ExpireReservationInput,
+): Promise<ExpireReservationOutcome> {
+  if (!Number.isInteger(input.reservationId) || input.reservationId < 1) {
+    throw new InvalidReservationError('reservationId deve ser um inteiro positivo.')
+  }
+
+  return runInTransactionWithRetry(payload, input.req, async (ctx) => {
+    const now = new Date()
+
+    const initial = await payload.findByID({
+      collection: 'stock-reservations' as any,
+      id: input.reservationId,
+      depth: 0,
+      overrideAccess: true,
+    }) as any
+
+    if (!initial) throw new InvalidReservationError('Reserva não encontrada.')
+
+    const flowerIdExp = typeof initial.flower === 'object' ? initial.flower.id : initial.flower
+    await lockFlowerForUpdate(ctx, flowerIdExp)
+
+    const reservation = await payload.findByID({
+      collection: 'stock-reservations' as any,
+      id: input.reservationId,
+      req: ctx.req,
+      depth: 0,
+      overrideAccess: true,
+    }) as any
+
+    if (!reservation) throw new InvalidReservationError('Reserva desapareceu entre leituras.')
+
+    if (reservation.status === 'expired') {
+      return { kind: 'already_expired', reservationId: reservation.id }
+    }
+    if (reservation.status === 'confirmed') {
+      return { kind: 'terminated', reservationId: reservation.id, status: 'confirmed' }
+    }
+    if (reservation.status === 'released') {
+      return { kind: 'terminated', reservationId: reservation.id, status: 'released' }
+    }
+
+    // Active: verificar expiresAt
+    if (new Date(reservation.expiresAt) > now) {
+      return { kind: 'not_due', reservationId: reservation.id }
+    }
+
+    // Active + vencida → expired
+    await payload.update({
+      collection: 'stock-reservations' as any,
+      id: input.reservationId,
+      data: { status: 'expired', expiredAt: now.toISOString() },
+      req: ctx.req,
+      overrideAccess: true,
+    })
+
+    return { kind: 'expired', reservationId: reservation.id }
+  })
+}
+
+// ═══════════════════════════════════════════════════════════════
+// expireReservations (lote)
+// ═══════════════════════════════════════════════════════════════
+
+export async function expireReservations(payload: Payload): Promise<number> {
+  let total = 0
+  const limit = 100
+
+  while (true) {
+    const batch = await payload.find({
+      collection: 'stock-reservations' as any,
+      where: {
+        status: { equals: 'active' },
+        expiresAt: { less_than: new Date().toISOString() },
+      },
+      page: 1,
+      limit,
+      depth: 0,
+      sort: 'expiresAt',
+      overrideAccess: true,
+    })
+
+    if (batch.docs.length === 0) break
+
+    for (const res of batch.docs) {
+      const outcome = await expireReservation(payload, { reservationId: res.id })
+      if (outcome.kind === 'expired') total++
+    }
+  }
+
+  console.log(`[STOCK] ${total} reserva(s) expirada(s)`)
+  return total
 }

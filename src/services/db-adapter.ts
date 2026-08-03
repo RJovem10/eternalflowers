@@ -129,3 +129,42 @@ export function isSQLiteBusyError(err: unknown): boolean {
   const msg = (err as any)?.message || ''
   return msg.includes('SQLITE_BUSY') || msg.includes('database is locked')
 }
+
+/**
+ * Atualiza o stock e disponibilidade de uma flower dentro da transação.
+ * PostgreSQL: UPDATE via SQL directo na sessão (contorna bug de Payload em localized collections).
+ * SQLite: usa payload.update (funciona).
+ */
+export async function updateFlowerStock(
+  ctx: TransactionCtx,
+  flowerId: number,
+  data: { stockQuantity?: number; availability?: string },
+): Promise<void> {
+  const adapter = getAdapterName(ctx)
+  const payload = ctx.req.payload
+
+  if (adapter === 'postgres') {
+    const sessionDb = getTransactionalSession(ctx)
+    if (data.stockQuantity !== undefined && data.availability) {
+      await sessionDb.execute(sql`
+        UPDATE flowers SET stock_quantity = ${data.stockQuantity}, availability = ${data.availability} WHERE id = ${flowerId}
+      `)
+    } else if (data.stockQuantity !== undefined) {
+      await sessionDb.execute(sql`
+        UPDATE flowers SET stock_quantity = ${data.stockQuantity} WHERE id = ${flowerId}
+      `)
+    } else if (data.availability) {
+      await sessionDb.execute(sql`
+        UPDATE flowers SET availability = ${data.availability} WHERE id = ${flowerId}
+      `)
+    }
+  } else {
+    await payload.update({
+      collection: 'flowers',
+      id: flowerId,
+      data,
+      req: ctx.req,
+      overrideAccess: true,
+    })
+  }
+}
