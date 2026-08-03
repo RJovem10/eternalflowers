@@ -49,7 +49,7 @@ test_content() {
     local desc="$1" url="$2" pattern="$3"
     local body
     body=$(curl -s --max-time 10 "$url" 2>/dev/null || echo "")
-    if echo "$body" | grep -q "$pattern"; then
+    if [ -n "$body" ] && echo "$body" | grep -qF "$pattern"; then
         echo -e "  ${GREEN}✅${NC} $desc"
         PASS=$((PASS + 1))
     else
@@ -138,16 +138,25 @@ test_url "Admin (login page)" "$BASE_URL/admin" 200
 # ── 7. Media ────────────────────────────────────────────────────────
 echo ""
 echo "🖼️  Media"
-test_url "Media (hero.jpg)" "$BASE_URL/media/hero.jpg" 200
+test_url "Media (hero.jpg)" "$BASE_URL/api/media/file/hero.jpg" 200
 
 # ── 8. Conteúdo localizado ──────────────────────────────────────────
 echo ""
 echo "📝 Conteúdo localizado mínimo"
-test_content "PT: heroTitle" "$BASE_URL/pt" "Eternizar"
-test_content "EN: heroTitle" "$BASE_URL/en" "Make a Moment"
-test_content "ES: heroTitle" "$BASE_URL/es" "Eterniza un"
-test_content "IT: heroTitle" "$BASE_URL/it" "Rendi Eterno"
-test_content "DE: heroTitle" "$BASE_URL/de" "Botanischer Schmuck"
+# Testar conteudo diretamente (sem funcao para evitar edge cases bash)
+for pair in "PT|Eternizar" "EN|Make a Memory" "ES|Eterniza un" "IT|Rendi Eterno" "DE|Botanischer Schmuck"; do
+    locale="${pair%%|*}"
+    pattern="${pair#*|}"
+    locale_lc=$(echo "$locale" | tr '[:upper:]' '[:lower:]')
+    body=$(curl -s --max-time 10 "$BASE_URL/$locale_lc" 2>/dev/null || echo "")
+    if [ -n "$body" ] && echo "${body}" | grep -qF "${pattern}"; then
+        echo -e "  ${GREEN}✅${NC} ${locale}: heroTitle contém \"${pattern}\""
+        PASS=$((PASS + 1))
+    else
+        echo -e "  ${RED}❌${NC} ${locale}: heroTitle — Padrão não encontrado: ${pattern}"
+        FAIL=$((FAIL + 1))
+    fi
+done
 
 # ── 9. Performance básica ───────────────────────────────────────────
 echo ""
