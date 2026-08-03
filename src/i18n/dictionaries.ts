@@ -117,6 +117,7 @@ type Dict = {
   soldOut: string
   incompleteData: string
   noCode: string
+  leadTimeLabel: string
   internationalPresence: CountryData[]
 }
 
@@ -234,8 +235,9 @@ export const dictionaries: Record<Locale, Dict> = {
     minOrder: 'Valor mínimo não atingido.',
     soldOut: 'Cupão esgotado.',
     incompleteData: 'Dados incompletos.',
-    noCode: 'Sem código de cupão.',
-    internationalPresence: [
+        noCode: 'Sem código de cupão.',
+        leadTimeLabel: 'Produzido em {days} dias úteis',
+        internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lisboa', description: 'Atelier e loja física' },
       { code: 'ES', country: 'Espanha', cities: 'Exposições', description: 'Feiras de orquídeas' },
       { code: 'IT', country: 'Itália', cities: 'Trento · Mati', description: 'Exposições internacionais' },
@@ -348,6 +350,7 @@ export const dictionaries: Record<Locale, Dict> = {
     soldOut: 'Coupon fully used.',
     incompleteData: 'Incomplete data.',
     noCode: 'No coupon code.',
+    leadTimeLabel: 'Made in {days} business days',
     internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lisbon', description: 'Workshop and physical store' },
       { code: 'ES', country: 'Spain', cities: 'Exhibitions', description: 'Orchid fairs' },
@@ -461,6 +464,7 @@ export const dictionaries: Record<Locale, Dict> = {
     soldOut: 'Cupón agotado.',
     incompleteData: 'Datos incompletos.',
     noCode: 'Sin código de cupón.',
+    leadTimeLabel: 'Producido en {days} días laborales',
     internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lisboa', description: 'Taller y tienda física' },
       { code: 'ES', country: 'España', cities: 'Exposiciones', description: 'Ferias de orquídeas' },
@@ -574,6 +578,7 @@ export const dictionaries: Record<Locale, Dict> = {
     soldOut: 'Coupon esaurito.',
     incompleteData: 'Dati incompleti.',
     noCode: 'Nessun codice coupon.',
+    leadTimeLabel: 'Prodotto in {days} giorni lavorativi',
     internationalPresence: [
       { code: 'PT', country: 'Portogallo', cities: 'Braga · Lisbona', description: 'Laboratorio e negozio fisico' },
       { code: 'ES', country: 'Spagna', cities: 'Esposizioni', description: 'Fiere di orchidee' },
@@ -687,6 +692,7 @@ export const dictionaries: Record<Locale, Dict> = {
     soldOut: 'Gutschein aufgebraucht.',
     incompleteData: 'Unvollständige Daten.',
     noCode: 'Kein Gutscheincode.',
+    leadTimeLabel: 'Hergestellt in {days} Werktagen',
     internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lissabon', description: 'Atelier und Ladengeschäft' },
       { code: 'ES', country: 'Spanien', cities: 'Ausstellungen', description: 'Orchideenmessen' },

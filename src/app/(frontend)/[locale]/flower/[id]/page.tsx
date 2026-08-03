@@ -165,6 +165,9 @@ export default async function FlowerDetail({ params }: FlowerPageParams) {
           flowerId={id}
           flowerName={name}
           flowerImage={image?.url ?? null}
+          productionMode={flower.productionMode ?? null}
+          stockQuantity={flower.stockQuantity ?? null}
+          productionLeadTime={flower.productionLeadTime ?? null}
         />
       </div>
 
