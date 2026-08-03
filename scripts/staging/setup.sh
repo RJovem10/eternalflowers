@@ -210,7 +210,7 @@ title "7. Admin"
 
 ADMIN_EMAIL="${SEED_ADMIN_EMAIL:-staging@eternalflowers.pt}"
 ADMIN_PASSWORD="${SEED_ADMIN_PASSWORD:-$(openssl rand -hex 16)}"
-echo "DEBUG: A criar admin com $DATABASE_URI"
+echo "  A criar admin..."
 
 # Criar admin via Payload run
 cat <<'ADMIN_SCRIPT' > /tmp/create-admin.ts
