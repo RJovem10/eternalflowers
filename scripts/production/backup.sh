@@ -5,6 +5,8 @@
 # Uso:  ./scripts/production/backup.sh
 #       ./scripts/production/backup.sh --pg-only
 #       ./scripts/production/backup.sh --media-only
+#
+# Usa docker compose exec para pg_dump — sem dependência de ferramentas no host.
 # =============================================================================
 set -euo pipefail
 
@@ -13,26 +15,22 @@ TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 MANIFEST="$BACKUP_DIR/manifest-$TIMESTAMP.txt"
 PG_ONLY=false
 MEDIA_ONLY=false
+COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.production.yml}"
 
-# Parse args
 for arg in "$@"; do
     case "$arg" in
         --pg-only) PG_ONLY=true ;;
         --media-only) MEDIA_ONLY=true ;;
-        *) echo "Opção desconhecida: $arg"; exit 1 ;;
+        *) echo "Opcao desconhecida: $arg"; exit 1 ;;
     esac
 done
 
-# Garantir que PG_ONLY e MEDIA_ONLY não estão ambas ativas
 if $PG_ONLY && $MEDIA_ONLY; then
-    echo "ERRO: --pg-only e --media-only são mutuamente exclusivos."
+    echo "ERRO: --pg-only e --media-only sao mutuamente exclusivos."
     exit 1
 fi
 
-# Cores
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-NC='\033[0m'
+RED='\033[0;31m'; GREEN='\033[0;32m'; NC='\033[0m'
 
 echo "═══════════════════════════════════════════════"
 echo "  Eternal Flowers — Backup"
@@ -45,48 +43,34 @@ mkdir -p "$BACKUP_DIR"
 pg_backup() {
     local dump_file="$BACKUP_DIR/pg-$TIMESTAMP.dump"
     echo ""
-    echo "📦 PostgreSQL → $dump_file"
+    echo "  PostgreSQL: $dump_file"
 
-    # Password via PGPASSWORD — extrair da DATABASE_URI se disponivel
-    if [ -z "${PGPASSWORD:-}" ]; then
-        DB_URI="${DATABASE_URI:-}"
-        if echo "$DB_URI" | grep -qE '^postgresql://[^:]+:([^@]+)@'; then
-            export PGPASSWORD=$(echo "$DB_URI" | sed -E 's|^postgresql://[^:]+:([^@]+)@.*|\1|')
-            PGUSER=$(echo "$DB_URI" | sed -E 's|^postgresql://([^:]+):.*|\1|')
-            PGHOST=$(echo "$DB_URI" | sed -E 's|^postgresql://[^:]+:[^@]+@([^:]+).*|\1|')
-            PGPORT=$(echo "$DB_URI" | sed -E 's|^postgresql://[^:]+:[^@]+@[^:]+:([^/]+)/.*|\1|')
-            PGDATABASE=$(echo "$DB_URI" | sed -E 's|^postgresql://[^:]+:[^@]+@[^:]+:[^/]+/(.+)|\1|')
-        else
-            PGUSER="${PGUSER:-loja}"
-            PGPORT="${PGPORT:-5432}"
-            PGDATABASE="${PGDATABASE:-loja_flores}"
-            echo "  ⚠️  DATABASE_URI não parseável. Usar env vars individuais."
-        fi
-    fi
-
-    # Usar docker compose exec para pg_dump (sem depender do host)
-    local compose_file="${COMPOSE_FILE:-docker-compose.production.yml}"
-    if docker compose -f "$compose_file" exec -T postgres pg_dump \
+    # Usar docker compose exec — o container tem pg_dump e a password
+    # e definida via env_file / environment no docker-compose.production.yml
+    local svc="${COMPOSE_SERVICE:-postgres}"
+    if docker compose -f "$COMPOSE_FILE" exec -T "$svc" pg_dump \
         -U "${PGUSER:-loja}" \
         --no-owner --no-acl \
         --format=custom \
         --file=/tmp/pg-dump.dump \
         "${PGDATABASE:-loja_flores}" 2>&1; then
-        docker compose -f "$compose_file" cp "postgres:/tmp/pg-dump.dump" "$dump_file" >/dev/null 2>&1 || \
-            docker cp "eternal-flowers-postgres:/tmp/pg-dump.dump" "$dump_file" >/dev/null 2>&1
-        docker compose -f "$compose_file" exec -T postgres rm /tmp/pg-dump.dump 2>/dev/null || true
-        echo -e "  ${GREEN}✅${NC} PostgreSQL dump concluído"
+        docker compose -f "$COMPOSE_FILE" cp "$svc:/tmp/pg-dump.dump" "$dump_file" >/dev/null 2>&1 || {
+            # Fallback: docker cp diretamente (container standalone)
+            local cid=$(docker compose -f "$COMPOSE_FILE" ps -q "$svc" 2>/dev/null)
+            [ -n "$cid" ] && docker cp "$cid:/tmp/pg-dump.dump" "$dump_file" >/dev/null 2>&1
+        }
+        docker compose -f "$COMPOSE_FILE" exec -T "$svc" rm /tmp/pg-dump.dump 2>/dev/null || true
+        echo -e "  ${GREEN}OK${NC} PostgreSQL dump concluido"
     else
-        echo -e "  ${RED}❌${NC} pg_dump falhou"
+        echo -e "  ${RED}ERRO${NC} pg_dump falhou"
         return 1
     fi
 
-    # Validar dump
     if [ -f "$dump_file" ] && [ -s "$dump_file" ]; then
         echo "  Tamanho: $(du -h "$dump_file" | cut -f1)"
         sha256sum "$dump_file" >> "$MANIFEST"
     else
-        echo -e "  ${RED}❌${NC} Ficheiro de dump vazio ou não encontrado"
+        echo -e "  ${RED}ERRO${NC} Ficheiro de dump vazio"
         return 1
     fi
 }
@@ -96,19 +80,19 @@ media_backup() {
     local media_archive="$BACKUP_DIR/media-$TIMESTAMP.tar.gz"
     local media_src="${MEDIA_SRC:-./media}"
     echo ""
-    echo "📁 Media → $media_archive"
+    echo "  Media: $media_archive"
 
     if [ ! -d "$media_src" ]; then
-        echo -e "  ${RED}❌${NC} Diretório media não encontrado: $media_src"
+        echo -e "  ${RED}ERRO${NC} Diretorio media nao encontrado: $media_src"
         return 1
     fi
 
     tar czf "$media_archive" -C "$(dirname "$media_src")" "$(basename "$media_src")" 2>&1 && {
-        echo -e "  ${GREEN}✅${NC} Media archive concluído"
+        echo -e "  ${GREEN}OK${NC} Media archive concluido"
         echo "  Tamanho: $(du -h "$media_archive" | cut -f1)"
         sha256sum "$media_archive" >> "$MANIFEST"
     } || {
-        echo -e "  ${RED}❌${NC} Media archive falhou"
+        echo -e "  ${RED}ERRO${NC} Media archive falhou"
         return 1
     }
 }
@@ -123,18 +107,10 @@ else
     media_backup
 fi
 
-# Manifesto
 echo ""
-echo "📋 Manifesto: $MANIFEST"
-echo "Backup concluído em: $(date)" >> "$MANIFEST"
+echo "Manifesto: $MANIFEST"
+echo "Backup concluido em: $(date)" >> "$MANIFEST"
 cat "$MANIFEST" | grep -v '^Backup' | grep -v '^$'
 
-# Retenção (opcional — descomentar para ativar)
-# echo ""
-# echo "🗑️  Retenção: a apagar backups com mais de 30 dias..."
-# find "$BACKUP_DIR" -name 'pg-*' -mtime +30 -delete 2>/dev/null
-# find "$BACKUP_DIR" -name 'media-*' -mtime +30 -delete 2>/dev/null
-# find "$BACKUP_DIR" -name 'manifest-*' -mtime +30 -delete 2>/dev/null
-
 echo ""
-echo -e "${GREEN}✅ Backup concluído com sucesso.${NC}"
+echo -e "${GREEN}Backup concluido.${NC}"

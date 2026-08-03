@@ -278,14 +278,18 @@ npx tsx scripts/translations/import-translations.ts \
 
 Esperado: 272 PLANNED_WRITE, 0 SKIP, 0 CONFLICT.
 
-### F.3 Apply
+### F.3 Apply (modo oficial — SQL direto)
 
 ```bash
+# Modo --apply-sql: gera INSERT ON CONFLICT para _locales tables.
+# Transação própria, sem exigir --confirm.
 npx tsx scripts/translations/import-translations.ts \
-  --apply \
-  --confirm=IMPORT_TRANSLATIONS \
+  --apply-sql \
   --snapshot-dir=/tmp/pg-import-$(date +%Y%m%d)
 ```
+
+> ⚠️ O modo `--apply` (Payload Local API) foi rejeitado após E2–E4
+> por produzir o erro `invalid field: id`. Usar exclusivamente `--apply-sql`.
 
 Esperado: 272/272 verified, 98 ops, committed.
 

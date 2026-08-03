@@ -260,8 +260,11 @@ if (mode === 'apply-sql') {
   // Collections locales — INSERT ON CONFLICT
   for (const slug of Object.keys(colls)) {
     for (const loc of LOCALES) {
-      const name = "'" + String(manifests.collections.fields[`${slug}.name`].translations[loc].value).replace(/'/g, "''") + "'"
-      const desc = "'" + String(manifests.collections.fields[`${slug}.description`].translations[loc].value).replace(/'/g, "''") + "'"
+      const nameRaw = manifests.collections.fields[`${slug}.name`].translations[loc].value
+      const descRaw = manifests.collections.fields[`${slug}.description`].translations[loc].value
+      if (nameRaw === null || nameRaw === undefined || descRaw === null || descRaw === undefined) abort(`[collections] ${slug}/${loc} is null/undefined`)
+      const name = "'" + String(nameRaw).replace(/'/g, "''") + "'"
+      const desc = "'" + String(descRaw).replace(/'/g, "''") + "'"
       sqlLines.push(`INSERT INTO "collections_locales" ("name", "description", "_locale", "_parent_id") VALUES (${name}, ${desc}, '${loc}', ${colls[slug].id}) ON CONFLICT ("_locale", "_parent_id") DO UPDATE SET "name" = ${name}, "description" = ${desc};`)
     }
   }
@@ -269,7 +272,9 @@ if (mode === 'apply-sql') {
   // Flowers locales (story) — INSERT ON CONFLICT
   for (const idStr of Object.keys(fls)) {
     for (const loc of LOCALES) {
-      const story = "'" + String(manifests.flowers.fields[`flower-${idStr}.story`].translations[loc].value).replace(/'/g, "''") + "'"
+      const storyRaw = manifests.flowers.fields[`flower-${idStr}.story`].translations[loc].value
+      if (storyRaw === null || storyRaw === undefined) abort(`[flowers] ${idStr}/${loc} story is null/undefined`)
+      const story = "'" + String(storyRaw).replace(/'/g, "''") + "'"
       sqlLines.push(`INSERT INTO "flowers_locales" ("story", "_locale", "_parent_id") VALUES (${story}, '${loc}', ${idStr}) ON CONFLICT ("_locale", "_parent_id") DO UPDATE SET "story" = ${story};`)
     }
   }
@@ -281,10 +286,11 @@ if (mode === 'apply-sql') {
     for (const loc of LOCALES) {
       const nf = `name_${loc}`
       const df = `description_${loc}`
-      const name = manifests.flowers.fields[`flower-${id}.name`].translations[loc].value
-      const desc = manifests.flowers.fields[`flower-${id}.description`].translations[loc].value
-      updates.push(`"${nf}" = '${String(name).replace(/'/g, "''")}'`)
-      updates.push(`"${df}" = '${String(desc).replace(/'/g, "''")}'`)
+      const nameRaw = manifests.flowers.fields[`flower-${id}.name`].translations[loc].value
+      const descRaw = manifests.flowers.fields[`flower-${id}.description`].translations[loc].value
+      if (nameRaw === null || nameRaw === undefined || descRaw === null || descRaw === undefined) abort(`[flowers] ${id}/${loc} name/desc is null/undefined`)
+      updates.push(`"${nf}" = '${String(nameRaw).replace(/'/g, "''")}'`)
+      updates.push(`"${df}" = '${String(descRaw).replace(/'/g, "''")}'`)
     }
     sqlLines.push(`UPDATE "flowers" SET ${updates.join(', ')} WHERE "id" = ${id};`)
   }
