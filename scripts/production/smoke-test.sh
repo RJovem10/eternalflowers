@@ -153,7 +153,6 @@ test_content "DE: 'Eternal'" "$BASE_URL/de" "Eternal"
 echo ""
 echo "⏱️  Tempos de resposta"
 for locale in pt en; do
-    local start_time end_time elapsed
     start_time=$(date +%s%N)
     curl -s -o /dev/null --max-time 10 "$BASE_URL/$locale" 2>/dev/null || true
     end_time=$(date +%s%N)

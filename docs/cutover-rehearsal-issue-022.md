@@ -187,6 +187,16 @@
 |-------|-------------------------------|
 | Nenhuma | ✅ Sem alterações |
 
+## Achados da Revisão Sol
+
+| Achado | Severidade | Estado |
+|--------|-----------|--------|
+| `scripts/production/smoke-test.sh` — `local` fora de função (linha 156) | 🔴 Crítico | ✅ **Corrigido** — `local` removido |
+| Documentação do ensaio: 340/340 deve ser 240 | 🟡 Médio | ✅ **Esclarecido** — nota na tabela |
+| Preflight: modo cutover não executa com templates .example | 🟡 Médio | ✅ **Documentado** — esperado para ambiente sem VPS |
+| Proxy Caddy não ensaiado (apenas `next start`) | 🟡 Baixo | ✅ **Documentado** — limitação do ensaio local |
+| Smoke test de produção tem 29 checks, staging 76 | 🟡 Baixo | ✅ **Esclarecido** — ensaio usou staging smoke test |
+
 ## Veredito
 
 **GO PARA PR** — Todos os critérios cumprem:
