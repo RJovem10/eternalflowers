@@ -44,6 +44,8 @@ echo "📋 1. Variáveis de ambiente"
 # NODE_ENV
 if [ "${NODE_ENV:-}" = "production" ]; then
     check "NODE_ENV=production" "pass"
+elif [ "$MODE" = "preparation" ]; then
+    check "NODE_ENV=production (definir no cutover)" "warn"
 else
     check "NODE_ENV=production" "fail" "Definir NODE_ENV=production (atual: ${NODE_ENV:-vazio})"
 fi
@@ -51,7 +53,11 @@ fi
 # DATABASE_URI
 DB_URI="${DATABASE_URI:-}"
 if [ -z "$DB_URI" ]; then
-    check "DATABASE_URI definida" "fail" "Variável DATABASE_URI não definida"
+    if [ "$MODE" = "preparation" ]; then
+        check "DATABASE_URI definida (definir no cutover)" "warn"
+    else
+        check "DATABASE_URI definida" "fail" "Variável DATABASE_URI não definida"
+    fi
 elif echo "$DB_URI" | grep -qiE '<DEFINIR|<GERAR|placeholder|change_me|muda_isto|dev-secret'; then
     check "DATABASE_URI sem placeholder" "fail" "DATABASE_URI contém placeholder"
 elif echo "$DB_URI" | grep -q "^postgresql://"; then
@@ -63,7 +69,11 @@ fi
 # PAYLOAD_SECRET
 PS="${PAYLOAD_SECRET:-}"
 if [ -z "$PS" ]; then
-    check "PAYLOAD_SECRET definido" "fail" "PAYLOAD_SECRET não definido"
+    if [ "$MODE" = "preparation" ]; then
+        check "PAYLOAD_SECRET definido (definir no cutover)" "warn"
+    else
+        check "PAYLOAD_SECRET definido" "fail" "PAYLOAD_SECRET não definido"
+    fi
 elif [ "${#PS}" -lt 20 ]; then
     check "PAYLOAD_SECRET comprimento mínimo" "warn" "Apenas ${#PS} caracteres (recomendado >= 32)"
 elif echo "$PS" | grep -qiE '<DEFINIR|<GERAR|placeholder|change_me|muda_isto|dev-secret'; then
@@ -75,7 +85,11 @@ fi
 # Domínio
 SITE_URL="${NEXT_PUBLIC_SITE_URL:-}"
 if [ -z "$SITE_URL" ]; then
-    check "NEXT_PUBLIC_SITE_URL definido" "fail" "NEXT_PUBLIC_SITE_URL não definido"
+    if [ "$MODE" = "preparation" ]; then
+        check "NEXT_PUBLIC_SITE_URL definido (definir no cutover)" "warn"
+    else
+        check "NEXT_PUBLIC_SITE_URL definido" "fail" "NEXT_PUBLIC_SITE_URL não definido"
+    fi
 elif echo "$SITE_URL" | grep -qiE '<DEFINIR|<DOMINIO|localhost'; then
     check "NEXT_PUBLIC_SITE_URL com domínio real" "fail" "Usa placeholder ou localhost: $SITE_URL"
 else
@@ -165,7 +179,7 @@ fi
 # Verificar se há passwords default em ficheiros versionados
 PW_FILES=$(grep -rE 'muda_isto|change_me|staging_password|Admin123' \
     --include='*.yml' --include='*.yaml' --include='*.sh' --include='*.ts' --include='*.example' \
-    -l . 2>/dev/null | grep -v node_modules | grep -v '.git/' || true)
+    -l . 2>/dev/null | grep -v node_modules | grep -v '.git/' | grep -v 'scripts/production/preflight.sh' || true)
 if [ -n "$PW_FILES" ]; then
     if [ "$MODE" = "cutover" ]; then
         check "Sem passwords default em ficheiros versionados" "fail" "Ainda existem placeholders em: $(echo "$PW_FILES" | tr '\n' ' ')"

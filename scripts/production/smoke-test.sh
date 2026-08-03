@@ -143,11 +143,11 @@ test_url "Media (hero.jpg)" "$BASE_URL/media/hero.jpg" 200
 # ── 8. Conteúdo localizado ──────────────────────────────────────────
 echo ""
 echo "📝 Conteúdo localizado mínimo"
-test_content "PT: título 'Eternal'" "$BASE_URL/pt" "Eternal"
-test_content "EN: 'Eternal'" "$BASE_URL/en" "Eternal"
-test_content "ES: 'Eternal'" "$BASE_URL/es" "Eternal"
-test_content "IT: 'Eternal'" "$BASE_URL/it" "Eternal"
-test_content "DE: 'Eternal'" "$BASE_URL/de" "Eternal"
+test_content "PT: heroTitle" "$BASE_URL/pt" "Eternizar"
+test_content "EN: heroTitle" "$BASE_URL/en" "Make a Moment"
+test_content "ES: heroTitle" "$BASE_URL/es" "Eterniza un"
+test_content "IT: heroTitle" "$BASE_URL/it" "Rendi Eterno"
+test_content "DE: heroTitle" "$BASE_URL/de" "Einen Augenblick"
 
 # ── 9. Performance básica ───────────────────────────────────────────
 echo ""
