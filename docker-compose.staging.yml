@@ -51,7 +51,7 @@ services:
       - .env.staging.local
     environment:
       DATABASE_URI: postgresql://staging:***@eternal-flowers-staging-db:5432/eternal_flowers_staging
-      PAYLOAD_SECRET: ${PAYLOAD_SECRET}
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:?PAYLOAD_SECRET obrigatorio}
       PAYLOAD_PG_PUSH: "false"
       NODE_ENV: production
       NEXT_PUBLIC_SERVER_URL: http://localhost:3003
