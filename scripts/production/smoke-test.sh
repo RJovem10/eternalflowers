@@ -147,7 +147,7 @@ test_content "PT: heroTitle" "$BASE_URL/pt" "Eternizar"
 test_content "EN: heroTitle" "$BASE_URL/en" "Make a Moment"
 test_content "ES: heroTitle" "$BASE_URL/es" "Eterniza un"
 test_content "IT: heroTitle" "$BASE_URL/it" "Rendi Eterno"
-test_content "DE: heroTitle" "$BASE_URL/de" "Einen Augenblick"
+test_content "DE: heroTitle" "$BASE_URL/de" "Botanischer Schmuck"
 
 # ── 9. Performance básica ───────────────────────────────────────────
 echo ""
