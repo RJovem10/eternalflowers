@@ -161,7 +161,10 @@ export default function ProductInfo({
         )}
         {showLeadTime && (
           <p className="mt-2 text-sm leading-relaxed text-brand-charcoal/50">
-            {dict.leadTimeLabel?.replace('{days}', String(productionLeadTime))}
+            {(productionLeadTime === 1
+              ? dict.leadTimeSingular
+              : dict.leadTimePlural
+            )?.replace('{days}', String(productionLeadTime))}
           </p>
         )}
       </div>

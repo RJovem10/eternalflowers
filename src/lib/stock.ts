@@ -3,7 +3,7 @@
  *
  * NOTA: Os 10 produtos demo existentes podem ter productionMode=null.
  * A validação só é aplicada quando productionMode está preenchido.
- * Na criação, productionMode é obrigatório (excepto para produtos demo existentes).
+ * Na criação, productionMode é obrigatório.
  */
 
 export type ProductionMode = 'unique' | 'reproducible' | 'made_to_order'
@@ -35,37 +35,37 @@ export function deriveStockStatus(
   stockQuantity: number,
   availability: string,
 ): StockStatus {
-  // availability tem precedência sobre stockQuantity
   if (availability === 'reserved') return 'reserved'
   if (availability === 'preparing') return 'preparing'
   if (availability === 'sold') return 'sold'
-
-  // productionMode não preenchido (ex: produtos demo) — unknown
   if (!productionMode) return 'unknown'
 
   if (productionMode === 'unique') {
     return stockQuantity === 0 ? 'sold' : 'in_stock'
   }
-
   if (productionMode === 'made_to_order') return 'made_to_order'
-
   if (productionMode === 'reproducible') {
     if (stockQuantity === 0) return 'out_of_stock'
     if (stockQuantity <= LOW_STOCK_THRESHOLD) return 'low_stock'
     return 'in_stock'
   }
-
   return 'unknown'
 }
 
 /**
  * Valida os campos productionMode, productionLeadTime e stockQuantity.
  *
- * Regras:
- * - Criação: productionMode é obrigatório
- * - Actualização de produto demo (productionMode=null): permitir sem productionMode
- * - Quando productionMode está preenchido, todas as validações do modelo aplicam-se
- * - stockQuantity e productionLeadTime devem ser inteiros
+ * Regras de create/update:
+ *   A. Criação: productionMode é obrigatório
+ *   B. Update de demo (productionMode=null): permitir sem classificação
+ *   C. Update de classificado: NÃO pode limpar productionMode (null, '' ou undefined explícito)
+ *   D. Campo não enviado no PATCH: preservar originalDoc.productionMode
+ *
+ * Regras de valores:
+ *   - stockQuantity e productionLeadTime devem ser inteiros (Number.isInteger)
+ *   - unique: stock 0 ou 1, leadTime null
+ *   - made_to_order: stock 0, leadTime 1-255
+ *   - reproducible: stock >= 0
  */
 export function validateProductModel(
   data: Record<string, unknown>,
@@ -73,31 +73,49 @@ export function validateProductModel(
   originalDoc?: Record<string, unknown> | null,
 ): string[] {
   const errors: string[] = []
-  const mode = data.productionMode as ProductionMode | undefined | null
-  const existingMode = originalDoc?.productionMode as ProductionMode | undefined | null
 
-  // Regra 1: Criação — productionMode é obrigatório
-  if (operation === 'create' && (mode == null || mode === '' as any)) {
+  const rawMode: unknown = data.productionMode
+  const modeWasSent = rawMode !== undefined
+  const mode = rawMode as ProductionMode | null | undefined
+  const existingMode = (originalDoc?.productionMode ?? null) as ProductionMode | null | undefined
+
+  const modeIsEmpty = mode == null || (mode as unknown) === ''
+
+  // ─── Regras de create/update sobre productionMode ────────────────
+
+  // A. Criação — productionMode é obrigatório
+  if (operation === 'create' && (!modeWasSent || modeIsEmpty)) {
     errors.push(
       'Modo de Produção (productionMode) é obrigatório para novos produtos. ' +
       'Selecione Peça Única, Reproduzível ou Produzido por Encomenda.',
     )
-    return errors // sem productionMode, o resto não faz sentido
+    return errors
   }
 
-  // Regra 2: Actualização de produto demo existente — permitir sem productionMode
-  const isDemoProduct = existingMode == null
+  const isDemo = existingMode == null
 
-  if (operation === 'update' && isDemoProduct && (mode == null || mode === '' as any)) {
-    return errors // demo product mantém-se sem classificação — sem validações
+  // B. Update de demo — permitir sem productionMode (null ou não enviado)
+  if (operation === 'update' && isDemo && (!modeWasSent || modeIsEmpty)) {
+    return errors
   }
 
-  // Regra 3: Se ainda não há productionMode após as regras acima, sair
-  if (!mode) return errors
+  // C. Update de classificado — NÃO pode limpar productionMode
+  if (operation === 'update' && !isDemo && modeWasSent && modeIsEmpty) {
+    errors.push(
+      'Modo de Produção (productionMode) não pode ser removido de um produto já classificado. ' +
+      'Para alterar, escolha um valor válido: Peça Única, Reproduzível ou Produzido por Encomenda.',
+    )
+    return errors
+  }
+
+  // D. Campo não enviado (PATCH parcial) — preservar valor existente
+  const effectiveMode = modeWasSent ? mode : existingMode
+
+  // Se não há productionMode, sair (apenas produtos demo sem classificação)
+  if (!effectiveMode) return errors
 
   // ─── Validações de inteiros ────────────────────────────────────
 
-  // stockQuantity deve ser inteiro
   const qty = data.stockQuantity as number | undefined
   if (qty != null) {
     if (!Number.isInteger(qty)) {
@@ -107,7 +125,6 @@ export function validateProductModel(
     }
   }
 
-  // productionLeadTime deve ser inteiro quando preenchido
   const leadTime = data.productionLeadTime as number | null | undefined
   if (leadTime != null) {
     if (!Number.isInteger(leadTime)) {
@@ -118,7 +135,7 @@ export function validateProductModel(
   // ─── Validações por productionMode ──────────────────────────────
 
   // unique
-  if (mode === 'unique') {
+  if (effectiveMode === 'unique') {
     if (qty !== 0 && qty !== 1) {
       errors.push('Peça única (unique) deve ter stockQuantity 0 (vendido) ou 1 (disponível).')
     }
@@ -135,7 +152,7 @@ export function validateProductModel(
   }
 
   // made_to_order
-  if (mode === 'made_to_order') {
+  if (effectiveMode === 'made_to_order') {
     if (qty !== 0) {
       errors.push('Produzido por encomenda (made_to_order) deve ter stockQuantity=0.')
     }
@@ -145,7 +162,7 @@ export function validateProductModel(
   }
 
   // reproducible
-  if (mode === 'reproducible') {
+  if (effectiveMode === 'reproducible') {
     if (qty == null || !Number.isInteger(qty) || qty < 0) {
       errors.push('Reproduzível (reproducible) precisa de stockQuantity inteiro >= 0.')
     }
