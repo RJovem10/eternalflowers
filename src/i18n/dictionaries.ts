@@ -117,6 +117,8 @@ type Dict = {
   soldOut: string
   incompleteData: string
   noCode: string
+  leadTimeSingular: string
+  leadTimePlural: string
   internationalPresence: CountryData[]
 }
 
@@ -234,8 +236,10 @@ export const dictionaries: Record<Locale, Dict> = {
     minOrder: 'Valor mínimo não atingido.',
     soldOut: 'Cupão esgotado.',
     incompleteData: 'Dados incompletos.',
-    noCode: 'Sem código de cupão.',
-    internationalPresence: [
+        noCode: 'Sem código de cupão.',
+        leadTimeSingular: 'Produzido em 1 dia útil',
+        leadTimePlural: 'Produzido em {days} dias úteis',
+        internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lisboa', description: 'Atelier e loja física' },
       { code: 'ES', country: 'Espanha', cities: 'Exposições', description: 'Feiras de orquídeas' },
       { code: 'IT', country: 'Itália', cities: 'Trento · Mati', description: 'Exposições internacionais' },
@@ -348,6 +352,8 @@ export const dictionaries: Record<Locale, Dict> = {
     soldOut: 'Coupon fully used.',
     incompleteData: 'Incomplete data.',
     noCode: 'No coupon code.',
+    leadTimeSingular: 'Produced in 1 business day',
+    leadTimePlural: 'Produced in {days} business days',
     internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lisbon', description: 'Workshop and physical store' },
       { code: 'ES', country: 'Spain', cities: 'Exhibitions', description: 'Orchid fairs' },
@@ -461,6 +467,8 @@ export const dictionaries: Record<Locale, Dict> = {
     soldOut: 'Cupón agotado.',
     incompleteData: 'Datos incompletos.',
     noCode: 'Sin código de cupón.',
+    leadTimeSingular: 'Producido en 1 día laborable',
+    leadTimePlural: 'Producido en {days} días laborables',
     internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lisboa', description: 'Taller y tienda física' },
       { code: 'ES', country: 'España', cities: 'Exposiciones', description: 'Ferias de orquídeas' },
@@ -574,6 +582,8 @@ export const dictionaries: Record<Locale, Dict> = {
     soldOut: 'Coupon esaurito.',
     incompleteData: 'Dati incompleti.',
     noCode: 'Nessun codice coupon.',
+    leadTimeSingular: 'Prodotto in 1 giorno lavorativo',
+    leadTimePlural: 'Prodotto in {days} giorni lavorativi',
     internationalPresence: [
       { code: 'PT', country: 'Portogallo', cities: 'Braga · Lisbona', description: 'Laboratorio e negozio fisico' },
       { code: 'ES', country: 'Spagna', cities: 'Esposizioni', description: 'Fiere di orchidee' },
@@ -687,6 +697,8 @@ export const dictionaries: Record<Locale, Dict> = {
     soldOut: 'Gutschein aufgebraucht.',
     incompleteData: 'Unvollständige Daten.',
     noCode: 'Kein Gutscheincode.',
+    leadTimeSingular: 'Hergestellt in 1 Werktag',
+    leadTimePlural: 'Hergestellt in {days} Werktagen',
     internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lissabon', description: 'Atelier und Ladengeschäft' },
       { code: 'ES', country: 'Spanien', cities: 'Ausstellungen', description: 'Orchideenmessen' },

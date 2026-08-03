@@ -67,6 +67,46 @@ const Flowers: CollectionConfig = {
         },
       ],
     },
+    {
+      name: 'productionMode',
+      type: 'select',
+      label: 'Modo de Produção',
+      options: [
+        { label: 'Peça Única', value: 'unique' },
+        { label: 'Reproduzível', value: 'reproducible' },
+        { label: 'Produzido por Encomenda', value: 'made_to_order' },
+      ],
+      admin: {
+        position: 'sidebar',
+        description: 'Como este produto é produzido. Os produtos demo podem ficar por preencher.',
+      },
+    },
+    {
+      name: 'productionLeadTime',
+      type: 'number',
+      label: 'Prazo de Produção (dias úteis)',
+      min: 1,
+      max: 255,
+      admin: {
+        position: 'sidebar',
+        condition: (_data: any, siblingData: any) => siblingData?.productionMode === 'made_to_order',
+        description: 'Obrigatório para made_to_order. Null para unique e reproducible.',
+      },
+    },
+    {
+      name: 'stockQuantity',
+      type: 'number',
+      required: true,
+      defaultValue: 0,
+      min: 0,
+      label: 'Quantidade em Stock',
+      admin: {
+        position: 'sidebar',
+        condition: (_data: any, siblingData: any) =>
+          siblingData?.productionMode === 'unique' || siblingData?.productionMode === 'reproducible',
+        description: 'Unique: 1 (disponível) ou 0 (vendido). Reproduzível: stock físico real.',
+      },
+    },
     { name: 'story', type: 'textarea', label: 'História da Peça', localized: true },
     {
       name: 'category',
@@ -83,6 +123,19 @@ const Flowers: CollectionConfig = {
       hasMany: true,
     },
   ],
+  hooks: {
+    beforeValidate: [
+      ({ data, operation, originalDoc }) => {
+        if (!data) return
+        const { validateProductModel } = require('@/lib/stock') as typeof import('@/lib/stock')
+        const op = operation as 'create' | 'update'
+        const errors = validateProductModel(data, op, originalDoc as Record<string, unknown> | null | undefined)
+        if (errors.length > 0) {
+          throw new Error(errors.join(' '))
+        }
+      },
+    ],
+  },
 }
 
 const Media: CollectionConfig = {

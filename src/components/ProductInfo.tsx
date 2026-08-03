@@ -24,6 +24,9 @@ interface ProductInfoProps {
   flowerId: string
   flowerName: string
   flowerImage?: string | null
+  productionMode?: string | null
+  stockQuantity?: number | null
+  productionLeadTime?: number | null
 }
 
 const availabilityStyles: Record<string, string> = {
@@ -60,6 +63,9 @@ export default function ProductInfo({
   flowerId,
   flowerName,
   flowerImage,
+  productionMode,
+  stockQuantity,
+  productionLeadTime,
 }: ProductInfoProps) {
   const catName =
     category && typeof category !== 'number' ? category.name : null
@@ -68,7 +74,23 @@ export default function ProductInfo({
       ?.filter((c): c is CollectionRef => typeof c !== 'number')
       .map((c) => c.name) ?? []
 
-  const soldOut = availability === 'sold'
+  // Determinar se o produto é comprável
+  const isSold = availability === 'sold'
+  const isReserved = availability === 'reserved'
+  const isOutOfStock = productionMode === 'reproducible' && (stockQuantity ?? 0) === 0
+
+  let canAddToCart: boolean
+
+  // Produto demo (productionMode=null): preserva comportamento anterior — só sold/reserved bloqueiam
+  if (!productionMode) {
+    canAddToCart = !isSold && !isReserved
+  } else {
+    // made_to_order + preparing é comprável; outros modes + preparing não
+    canAddToCart = !isSold && !isReserved && !isOutOfStock && !(availability === 'preparing' && productionMode !== 'made_to_order')
+  }
+
+  // Prazo de produção (só made_to_order)
+  const showLeadTime = productionMode === 'made_to_order' && productionLeadTime != null && productionLeadTime > 0
   const availStyle = availabilityStyles[availability] || ''
   const availLabel = dict[availabilityLabels[availability]] || availability
 
@@ -130,11 +152,19 @@ export default function ProductInfo({
             image: flowerImage,
             qty: 1,
           }}
-          disabled={soldOut}
+          disabled={!canAddToCart}
         />
-        {soldOut && (
+        {!canAddToCart && (
           <p className="mt-3 text-sm leading-relaxed text-brand-charcoal/60">
             {availLabel}
+          </p>
+        )}
+        {showLeadTime && (
+          <p className="mt-2 text-sm leading-relaxed text-brand-charcoal/50">
+            {(productionLeadTime === 1
+              ? dict.leadTimeSingular
+              : dict.leadTimePlural
+            )?.replace('{days}', String(productionLeadTime))}
           </p>
         )}
       </div>
