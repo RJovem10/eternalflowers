@@ -142,7 +142,7 @@ test_content "/pt hero"      "$BASE/pt"      "Eternizar um Momento"
 test_content "/en hero"      "$BASE/en"      "Botanical"
 test_content "/es hero"      "$BASE/es"      "Joyas Botánicas"
 test_content "/it hero"      "$BASE/it"      "Gioielli Botanici"
-test_content "/de hero"      "$BASE/de"      "Einen Augenblick verewigen"
+test_content "/de hero"      "$BASE/de"      "Botanischer Schmuck"
 
 # ─── Resumo ────────────────────────────────────
 echo ""

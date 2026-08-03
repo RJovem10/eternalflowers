@@ -47,9 +47,11 @@ services:
       - "3000"
     ports:
       - "127.0.0.1:3003:3000"
+    env_file:
+      - .env.staging.local
     environment:
-      DATABASE_URI: postgresql://staging:${POSTGRES_PASSWORD}@eternal-flowers-staging-db:5432/eternal_flowers_staging
-      PAYLOAD_SECRET: staging-payload-secret-change-me-staging-payload-secret
+      DATABASE_URI: postgresql://staging:***@eternal-flowers-staging-db:5432/eternal_flowers_staging
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET}
       PAYLOAD_PG_PUSH: "false"
       NODE_ENV: production
       NEXT_PUBLIC_SERVER_URL: http://localhost:3003
