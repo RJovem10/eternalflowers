@@ -21,7 +21,7 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 import crypto from 'crypto'
 import { createPaymentForOrder } from '@/services/payments/payments'
-import { InvalidOrderForPaymentError, PaymentError } from '@/services/payments/payment-types'
+import { InvalidOrderForPaymentError, PaymentError, PaymentReservationExpiredError } from '@/services/payments/payment-types'
 
 // ─── Input validation ─────────────────────────────────────
 
@@ -157,7 +157,59 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  // 6. Criar/reutilizar PaymentIntent via serviço existente
+  // 6. Verificar reservas activas (ISSUE-1I) ─────────────────
+  const items = (order.items as any[]) || []
+  const hasReservableItem = items.some((item: any) => {
+    const mode = item.productionMode
+    return mode === 'unique' || mode === 'reproducible' || mode === null || mode === undefined
+  })
+
+  if (hasReservableItem) {
+    const reservationsResult = await payload.find({
+      collection: 'stock-reservations' as any,
+      where: { order: { equals: order.id } },
+      limit: 100,
+      depth: 0,
+      overrideAccess: true,
+    })
+
+    const reservations = reservationsResult.docs as any[]
+    const now = new Date()
+
+    for (const reservation of reservations) {
+      const expiresAt = new Date(reservation.expiresAt)
+
+      // confirmed é aceitável (Order já está consistente)
+      if (reservation.status === 'confirmed') continue
+
+      if (reservation.status === 'active' && expiresAt > now) continue
+
+      // Qualquer outro estado (expired, released) ou active expirada → bloquear
+      throw new PaymentReservationExpiredError(
+        `Reserva ${reservation.id} (flowerId=${reservation.flower}) não está disponível (status=${reservation.status}).`,
+      )
+    }
+
+    // Verificar se todas as reservas esperadas existem
+    for (const item of items) {
+      const mode = item.productionMode
+      if (mode === 'made_to_order') continue
+
+      const flowerId = typeof item.flower === 'object' ? item.flower.id : item.flower
+      const hasReservation = reservations.some((r: any) => {
+        const rFlowerId = typeof r.flower === 'object' ? r.flower.id : r.flower
+        return rFlowerId === flowerId
+      })
+
+      if (!hasReservation) {
+        throw new PaymentReservationExpiredError(
+          `Item flowerId=${flowerId} não tem reserva associada.`,
+        )
+      }
+    }
+  }
+
+  // 7. Criar/reutilizar PaymentIntent via serviço existente
     const outcome = await createPaymentForOrder(payload, {
       orderId: order.id,
       idempotencyKey: crypto
@@ -171,6 +223,13 @@ export async function POST(req: NextRequest) {
         clientSecret: outcome.clientSecret ?? null,
       } satisfies { clientSecret: string | null })
   } catch (err: any) {
+    if (err instanceof PaymentReservationExpiredError) {
+      return NextResponse.json(
+        { error: err.message, code: 'PAYMENT_RESERVATION_EXPIRED' },
+        { status: 400 },
+      )
+    }
+
     if (err instanceof InvalidOrderForPaymentError) {
       return NextResponse.json(
         { error: err.message },

@@ -7,6 +7,12 @@
  * - handlePaymentFailed() — processar payment_intent.payment_failed
  * - handlePaymentProcessing() — processar payment_intent.processing
  *
+ * ISSUE-1I:
+ * - succeeded verifica TODAS as reservas antes de marcar paid/confirmed
+ * - reservation expired/released → late payment refund automático
+ * - refund idempotente (stripeRefundId único, idempotency key estável)
+ * - NUNCA paid/confirmed sem stock confirmado
+ *
  * NUNCA aceita amount/orderId/status enviados pelo browser.
  * Webhook é a única fonte de verdade para confirmação de pagamento.
  */
@@ -19,15 +25,19 @@ import {
   PaymentCurrencyMismatchError,
   PaymentOrderMismatchError,
   InvalidOrderForPaymentError,
+  LatePaymentError,
 } from './payment-types'
+import type { RefundReason } from './payment-types'
 import {
   createPaymentIntent as stripeCreateIntent,
   retrievePaymentIntent,
   checkPaymentIntentReusable,
   validatePaymentIntentForOrder,
+  createFullRefund,
 } from './stripe'
-import { runInTransaction, type TransactionCtx } from '../transact'
+import { runInTransaction, runInTransactionWithRetry, type TransactionCtx } from '../transact'
 import { confirmReservation } from '../stock'
+import type { ConfirmReservationOutcome } from '../stock-types'
 import type { CreatePaymentInput, CreatePaymentOutcome } from './payment-types'
 
 // ─── Helpers ─────────────────────────────────────────────────
@@ -120,8 +130,6 @@ export async function createPaymentForOrder(
     }
 
     // PaymentIntent finalized/canceled — não reutilizável
-    // A Order precisa de um novo PaymentIntent
-    // Mas não podemos criar outro se o anterior está cancelado sem o fluxo correcto
     throw new PaymentError(
       `PaymentIntent ${existingPaymentIntentId} está "${existingIntent.status}" e não pode ser reutilizado.`,
     )
@@ -140,8 +148,6 @@ export async function createPaymentForOrder(
       checkoutAttemptId,
     },
     idempotencyKey,
-    automatic_payment_methods: { enabled: true },
-    excluded_payment_method_types: ['multibanco'],
   })
 
   // ─── 6. Guardar stripePaymentIntentId na Order ──────────────
@@ -171,15 +177,17 @@ export async function createPaymentForOrder(
 /**
  * Processa payment_intent.succeeded do webhook Stripe.
  *
- * Regras:
+ * Regras ISSUE-1I:
  * 1. Localizar Order através do stripePaymentIntentId (metadata fallback)
  * 2. Validar amount/currency correspondem à Order
- * 3. Idempotente — se já paid, não duplica
- * 4. Confirmar todas as stock-reservations da Order
- * 5. paymentStatus → paid
- * 6. orderStatus → confirmed
- * 7. paymentMethodType → método real
- * 8. paidAt → timestamp server-side
+ * 3. Idempotente — se já paid+confirmed, já_processed
+ * 4. Se já refunded/expired com mesmo PaymentIntent → already_refunded
+ * 5. DENTRO da transacção: verificar TODAS as reservas necessárias
+ * 6. Se todas confirmam → paid/confirmed + stock confirmado
+ * 7. Se alguma falha (expired/released/missing) → rollback + late payment refund
+ * 8. made_to_order-only → sem reservas, prossegue normalmente
+ * 9. paymentMethodType → método real
+ * 10. paidAt → timestamp server-side
  */
 export async function handlePaymentSucceeded(
   payload: Payload,
@@ -237,9 +245,14 @@ export async function handlePaymentSucceeded(
     )
   }
 
-  // ─── 4. Idempotência — já processado ───────────────────────
+  // ─── 4. Idempotência — já processado com sucesso ───────────
   if (order.paymentStatus === 'paid' && order.orderStatus === 'confirmed') {
     return { kind: 'already_processed', orderId: order.id }
+  }
+
+  // ─── 4b. Já refunded/expired com mesmo PaymentIntent ───────
+  if (order.paymentStatus === 'refunded' && order.orderStatus === 'expired') {
+    return { kind: 'already_refunded', orderId: order.id }
   }
 
   // ─── 5. Operação transacional ───────────────────────────────
@@ -256,7 +269,7 @@ async function executePaymentSucceeded(
 ): Promise<{ kind: string; orderId: number }> {
   const now = new Date().toISOString()
 
-  // ─── Confirmar reservas de stock ────────────────────────────
+  // ─── Verificar todas as reservas necessárias ────────────────
   const reservationsResult = await payload.find({
     collection: 'stock-reservations' as any,
     where: { order: { equals: order.id } },
@@ -265,19 +278,81 @@ async function executePaymentSucceeded(
     overrideAccess: true,
   })
 
-  for (const reservation of reservationsResult.docs as any[]) {
-    if (reservation.status === 'active' || reservation.status === 'confirmed') {
-      // Só confirmar se active (confirmed já foi confirmado)
-      if (reservation.status === 'active') {
-        await confirmReservation(payload, {
+  const reservations = reservationsResult.docs as any[]
+  const items = (order.items as any[]) || []
+
+  // Determinar se há items reserváveis
+  const hasReservableItem = items.some((item: any) => {
+    const mode = item.productionMode
+    return mode === 'unique' || mode === 'reproducible' || mode === null || mode === undefined
+  })
+
+  // Se há items que precisam de reserva, verificar
+  if (hasReservableItem) {
+    // Verificar se cada item reservável tem uma reserva
+    for (const item of items) {
+      const mode = item.productionMode
+      if (mode === 'made_to_order') continue
+
+      const flowerId = typeof item.flower === 'object' ? item.flower.id : item.flower
+      const hasReservation = reservations.some((r: any) => {
+        const rFlowerId = typeof r.flower === 'object' ? r.flower.id : r.flower
+        return rFlowerId === flowerId
+      })
+
+      if (!hasReservation) {
+        throw new LatePaymentError(
+          paymentIntent.id,
+          `Item flowerId=${flowerId} não tem reserva associada.`,
+        )
+      }
+    }
+
+    // Tentar confirmar TODAS as reservas
+    const outcomes: Array<{ reservationId: number; result: ConfirmReservationOutcome }> = []
+
+    for (const reservation of reservations) {
+      try {
+        const result = await confirmReservation(payload, {
           reservationId: reservation.id,
           req: ctx.req,
         })
+        outcomes.push({ reservationId: reservation.id, result })
+      } catch (err: any) {
+        // Erro de dominío (StockInvariantViolation, etc.) — rollback total
+        throw new PaymentError(
+          `Falha ao confirmar reserva ${reservation.id}: ${err.message}`,
+        )
       }
     }
-    // Reservas made_to_order não existem
-    // Reservas expired/released — ignorar (já não podem ser confirmadas)
+
+    // Verificar outcomes
+    // Aceitáveis: confirmed, already_confirmed
+    // Inaceitáveis: expired_now, terminated (expired/released)
+    for (const outcome of outcomes) {
+      if (outcome.result.kind === 'confirmed' || outcome.result.kind === 'already_confirmed') {
+        continue // OK
+      }
+
+      if (outcome.result.kind === 'expired_now') {
+        // Reserva expirou neste exato momento — late payment
+        throw new LatePaymentError(
+          paymentIntent.id,
+          `Reserva ${outcome.reservationId} expirou antes da confirmação do pagamento.`,
+        )
+      }
+
+      if (outcome.result.kind === 'terminated') {
+        // Reserva já estava expired/released — late payment
+        throw new LatePaymentError(
+          paymentIntent.id,
+          `Reserva ${outcome.reservationId} está ${outcome.result.status} (não pode ser confirmada).`,
+        )
+      }
+    }
   }
+
+  // ─── Se chegámos aqui, stock está confirmado ───────────────
 
   // ─── Obter payment method type ──────────────────────────────
   let paymentMethodType: string | null = null
@@ -286,10 +361,8 @@ async function executePaymentSucceeded(
       paymentMethodType = paymentIntent.payment_method_types[0]
     }
     if (paymentIntent.payment_method) {
-      // Tentar obter detalhes do método de pagamento
       const paymentMethodId = paymentIntent.payment_method
       if (typeof paymentMethodId === 'string') {
-        // Usar o último payment_method_type como fallback
         if (!paymentMethodType) {
           paymentMethodType = paymentIntent.payment_method_types?.[0] || null
         }
@@ -299,7 +372,7 @@ async function executePaymentSucceeded(
     // Melhor esforço — não bloquear se não conseguir
   }
 
-  // ─── Actualizar Order ───────────────────────────────────────
+  // ─── Actualizar Order: paid + confirmed ─────────────────────
   await payload.update({
     collection: 'orders',
     id: order.id,
@@ -314,6 +387,142 @@ async function executePaymentSucceeded(
   })
 
   return { kind: 'processed', orderId: order.id }
+}
+
+// ─── handleLatePaymentRefund ────────────────────────────────
+
+/**
+ * Processa late payment: stock já não pode ser confirmado.
+ * Chamado quando executePaymentSucceeded lança LatePaymentError.
+ *
+ * Fluxo (fora da transacção original que foi rolled back):
+ * A. Criar refund Stripe FORA da DB transaction
+ * B. Transaction curta para marcar Order como refunded/expired
+ * C. Idempotente: se stripeRefundId já existe, não duplica
+ */
+export async function handleLatePaymentRefund(
+  payload: Payload,
+  paymentIntentId: string,
+  orderId: number,
+): Promise<{ kind: string; refundId?: string }> {
+  // ─── 1. Carregar Order actual ───────────────────────────────
+  const order = await payload.findByID({
+    collection: 'orders',
+    id: orderId,
+    depth: 0,
+    overrideAccess: true,
+  }) as any
+
+  if (!order || !order.id) {
+    return { kind: 'order_not_found' }
+  }
+
+  // ─── 2. Idempotência — já processado ────────────────────────
+  if (order.stripeRefundId) {
+    return { kind: 'already_refunded', refundId: order.stripeRefundId }
+  }
+
+  // ─── 3. Criar refund Stripe (FORA da transacção DB) ─────────
+  let refund: any
+  try {
+    refund = await createFullRefund(paymentIntentId)
+  } catch (err: any) {
+    console.error('[payments] Late payment refund failed:', err.message)
+    throw new PaymentError(`Falha ao criar refund Stripe: ${err.message}`)
+  }
+
+  const refundId = refund.id
+  const refundReason: RefundReason = 'stock_reservation_expired'
+
+  // ─── 4. Transaction curta para persistir refund ─────────────
+  // Usamos uma transaction própria — se falhar, o webhook retry
+  // reutiliza a idempotency key do Stripe (mesmo refund) e tenta
+  // novamente a DB transaction.
+  try {
+    await runInTransactionWithRetry(payload, undefined, async (ctx) => {
+      // Re-verificar idempotência dentro da transacção
+      const freshOrder = await payload.findByID({
+        collection: 'orders',
+        id: orderId,
+        req: ctx.req,
+        depth: 0,
+        overrideAccess: true,
+      }) as any
+
+      if (freshOrder?.stripeRefundId) {
+        // Já foi actualizado por outro webhook — sair sem erro
+        return
+      }
+
+      await payload.update({
+        collection: 'orders',
+        id: orderId,
+        data: {
+          paymentStatus: 'refunded',
+          orderStatus: 'expired',
+          stripeRefundId: refundId,
+          refundReason,
+        } as any,
+        req: ctx.req,
+        overrideAccess: true,
+      })
+    })
+  } catch (err: any) {
+    console.error('[payments] Failed to persist late payment refund state:', err.message)
+    // Stripe refund já foi criado — webhook retry vai reutilizar
+    // O refund existe no Stripe (idempotency key), e a DB transaction
+    // pode ser retentada
+    throw err
+  }
+
+  return { kind: 'refunded', refundId }
+}
+
+// ─── handlePaymentSucceededWithFallback ─────────────────────
+
+/**
+ * Wrapper que executa executePaymentSucceeded dentro de transacção
+ * e trata LatePaymentError com refund automático.
+ *
+ * Usado pelo webhook route para garantir que late payments são
+ * sempre reembolsados.
+ */
+export async function handlePaymentSucceededWithFallback(
+  payload: Payload,
+  paymentIntent: any,
+): Promise<{ kind: string; orderId?: number; refundId?: string }> {
+  try {
+    // Tentar processamento normal (incluindo confirmação de stock)
+    return await handlePaymentSucceeded(payload, paymentIntent)
+  } catch (err: any) {
+    if (err instanceof LatePaymentError) {
+      // Stock expirou — fazer refund
+      const paymentIntentId = err.paymentIntentId
+
+      // Localizar Order pelo paymentIntent
+      const findResult = await payload.find({
+        collection: 'orders',
+        where: { stripePaymentIntentId: { equals: paymentIntentId } },
+        limit: 1,
+        depth: 0,
+        overrideAccess: true,
+      })
+      const order = findResult.docs[0] as any
+      if (!order || !order.id) {
+        return { kind: 'order_not_found' }
+      }
+
+      const refundResult = await handleLatePaymentRefund(payload, paymentIntentId, order.id)
+      return {
+        kind: 'late_payment_refunded',
+        orderId: order.id,
+        refundId: refundResult.refundId,
+      }
+    }
+
+    // Outro erro — propagar
+    throw err
+  }
 }
 
 // ─── handlePaymentFailed ─────────────────────────────────────

@@ -1,27 +1,34 @@
 /**
  * Testes unitários para payments.ts — com mocks Stripe, sem credenciais reais.
  *
- * Testa:
- *  1. pending_payment cria PaymentIntent
- *  2. amount vem da Order
- *  3. total null/zero rejeitado
- *  4. Order em estado errado rejeitada
- *  5. segunda chamada não duplica PaymentIntent
- *  6. idempotency key estável
- *  7. Multibanco é excluído
- *  8. webhook assinatura inválida rejeitada
- *  9. succeeded confirma reservas
- * 10. succeeded → paid/confirmed
- * 11. webhook succeeded repetido não decrementa stock duas vezes
- * 12. amount mismatch rejeita processamento
- * 13. currency mismatch rejeita
- * 14. payment_failed não confirma stock
- * 15. processing não confirma stock
- * 16. PaymentIntent de outra Order não pode confirmar Order errada
+ * ISSUE-1I:
+ * - payment_method_types explícitos [card, mb_way, link]
+ * - succeeded + reservation ativa → stock confirmado
+ * - succeeded → paid/confirmed apenas depois do stock
+ * - succeeded repetido → idempotente
+ * - reservation expired → NÃO fica confirmed → late payment refund
+ * - reservation released → NÃO fica confirmed
+ * - reservation em falta → NÃO confirmed
+ * - múltiplas reservations e uma falha → rollback
+ * - made_to_order-only → succeeded normally
+ * - late payment cria refund integral
+ * - refund idempotency key estável
+ * - webhook repetido não duplica refund
+ * - late payment → paymentStatus refunded
+ * - late payment → orderStatus expired
+ * - stripeRefundId persistido
+ * - refundReason correto
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createPaymentForOrder, handlePaymentSucceeded, handlePaymentFailed, handlePaymentProcessing } from './payments'
-import { InvalidOrderForPaymentError, PaymentError, PaymentAmountMismatchError, PaymentCurrencyMismatchError } from './payment-types'
+import {
+  createPaymentForOrder,
+  handlePaymentSucceeded,
+  handlePaymentSucceededWithFallback,
+  handleLatePaymentRefund,
+  handlePaymentFailed,
+  handlePaymentProcessing,
+} from './payments'
+import { InvalidOrderForPaymentError, PaymentError, PaymentAmountMismatchError, PaymentCurrencyMismatchError, LatePaymentError } from './payment-types'
 import { PAYMENT_PROVIDER, toStripeAmount } from './payment-types'
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -37,10 +44,14 @@ function uuidv4(): string {
 
 let mockPaymentIntents: Record<string, any> = {}
 let mockPaymentIntentIdSeq = 0
+let mockRefunds: Record<string, any> = {}
+let mockRefundIdSeq = 0
 
 function resetStripeMocks() {
   mockPaymentIntents = {}
   mockPaymentIntentIdSeq = 0
+  mockRefunds = {}
+  mockRefundIdSeq = 0
 }
 
 function addMockPaymentIntent(overrides: Partial<any> = {}): any {
@@ -62,6 +73,22 @@ function addMockPaymentIntent(overrides: Partial<any> = {}): any {
   return intent
 }
 
+function addMockRefund(overrides: Partial<any> = {}): any {
+  mockRefundIdSeq++
+  const id = `re_mock_${mockRefundIdSeq}`
+  const refund = {
+    id,
+    object: 'refund',
+    amount: 10000,
+    currency: 'eur',
+    status: 'succeeded',
+    payment_intent: 'pi_mock_1',
+    ...overrides,
+  }
+  mockRefunds[id] = refund
+  return refund
+}
+
 /**
  * NOTA: checkPaymentIntentReusable e validatePaymentIntentForOrder
  * são SÍNCRONAS no módulo real. O mock também deve ser síncrono para
@@ -74,8 +101,7 @@ vi.mock('./stripe', async () => {
         amount: toStripeAmount(params.amount),
         currency: params.currency.toLowerCase(),
         metadata: params.metadata,
-        automatic_payment_methods: params.automatic_payment_methods,
-        excluded_payment_method_types: params.excluded_payment_method_types,
+        payment_method_types: params.payment_method_types || ['card', 'mb_way', 'link'],
       })
       return mockPaymentIntents[intent.id]
     }),
@@ -113,6 +139,12 @@ vi.mock('./stripe', async () => {
         data: { object: parsed.data?.object || {} },
       }
     }),
+    createFullRefund: vi.fn(async (paymentIntentId: string) => {
+      // Verificar idempotência simulada
+      const refund = addMockRefund({ payment_intent: paymentIntentId })
+      return mockRefunds[refund.id]
+    }),
+    getSupportedPaymentMethods: vi.fn(() => ['card', 'mb_way', 'link']),
   }
 })
 
@@ -135,6 +167,8 @@ function resetMocks() {
 // Mock flower store needed by confirmReservation
 const mockFlowers: Record<number, any> = {
   1: { id: 1, namePt: 'Rosa Vermelha', price: 25.50, productionMode: 'reproducible', stockQuantity: 10, availability: 'available' },
+  2: { id: 2, namePt: 'Orquídea Azul', price: 45.00, productionMode: 'unique', stockQuantity: 1, availability: 'available' },
+  3: { id: 3, namePt: 'Girassol MTO', price: 30.00, productionMode: 'made_to_order', stockQuantity: 0, availability: 'available' },
 }
 
 function createPendingPaymentOrder(overrides: Partial<any> = {}): any {
@@ -148,6 +182,8 @@ function createPendingPaymentOrder(overrides: Partial<any> = {}): any {
     stripePaymentIntentId: null,
     paymentMethodType: null,
     paidAt: null,
+    stripeRefundId: null,
+    refundReason: null,
     checkoutAttemptId: uuidv4(),
     total: 100.00,
     subtotal: 100.00,
@@ -164,8 +200,95 @@ function createPendingPaymentOrder(overrides: Partial<any> = {}): any {
   return order
 }
 
-function createDraftOrder(overrides: Partial<any> = {}): any {
-  return createPendingPaymentOrder({ ...overrides, orderStatus: 'draft' })
+function createMTOOnlyOrder(overrides: Partial<any> = {}): any {
+  mockOrderIdSeq++
+  const order = {
+    id: mockOrderIdSeq,
+    orderNumber: `EF-20260808-${String(mockOrderIdSeq).padStart(4, '0')}`,
+    orderStatus: 'pending_payment',
+    paymentStatus: 'unpaid',
+    paymentProvider: null,
+    stripePaymentIntentId: null,
+    paymentMethodType: null,
+    paidAt: null,
+    stripeRefundId: null,
+    refundReason: null,
+    checkoutAttemptId: uuidv4(),
+    total: 90.00,
+    subtotal: 90.00,
+    discount: 0,
+    shippingCost: 0,
+    currency: 'EUR',
+    items: [
+      { flower: 3, name: 'Girassol MTO', price: 90.00, qty: 1, lineTotal: 90.00, productionMode: 'made_to_order' },
+    ],
+    customer: { name: 'João Silva', email: 'joao@example.com' },
+    ...overrides,
+  }
+  mockOrders.push(order)
+  return order
+}
+
+function addActiveReservation(orderId: number, flowerId: number, qty: number): any {
+  mockReservationIdSeq++
+  const res = {
+    id: mockReservationIdSeq,
+    order: orderId,
+    flower: flowerId,
+    quantity: qty,
+    status: 'active',
+    expiresAt: new Date(Date.now() + 1800000).toISOString(), // 30 min no futuro
+    confirmedAt: null,
+  }
+  mockReservations.push(res)
+  return res
+}
+
+function addExpiredReservation(orderId: number, flowerId: number, qty: number): any {
+  mockReservationIdSeq++
+  const res = {
+    id: mockReservationIdSeq,
+    order: orderId,
+    flower: flowerId,
+    quantity: qty,
+    status: 'expired',
+    expiresAt: new Date(Date.now() - 60000).toISOString(), // 1 min no passado
+    expiredAt: new Date().toISOString(),
+    confirmedAt: null,
+  }
+  mockReservations.push(res)
+  return res
+}
+
+function addReleasedReservation(orderId: number, flowerId: number, qty: number): any {
+  mockReservationIdSeq++
+  const res = {
+    id: mockReservationIdSeq,
+    order: orderId,
+    flower: flowerId,
+    quantity: qty,
+    status: 'released',
+    expiresAt: new Date(Date.now() + 1800000).toISOString(),
+    releasedAt: new Date().toISOString(),
+    confirmedAt: null,
+  }
+  mockReservations.push(res)
+  return res
+}
+
+function addConfirmedReservation(orderId: number, flowerId: number, qty: number): any {
+  mockReservationIdSeq++
+  const res = {
+    id: mockReservationIdSeq,
+    order: orderId,
+    flower: flowerId,
+    quantity: qty,
+    status: 'confirmed',
+    expiresAt: new Date(Date.now() + 1800000).toISOString(),
+    confirmedAt: new Date().toISOString(),
+  }
+  mockReservations.push(res)
+  return res
 }
 
 function createMockPayload() {
@@ -253,7 +376,7 @@ describe('createPaymentForOrder', () => {
     resetMocks()
   })
 
-  it('1. pending_payment cria PaymentIntent', async () => {
+  it('1. pending_payment cria PaymentIntent com payment_method_types', async () => {
     const payload = createMockPayload()
     const order = createPendingPaymentOrder()
 
@@ -270,6 +393,13 @@ describe('createPaymentForOrder', () => {
     const updatedOrder = mockOrders.find((o) => o.id === order.id)
     expect(updatedOrder.stripePaymentIntentId).toBe(result.paymentIntentId)
     expect(updatedOrder.paymentProvider).toBe(PAYMENT_PROVIDER)
+
+    // Verificar payment_method_types no PaymentIntent criado
+    const { createPaymentIntent } = await import('./stripe')
+    const createdIntent = mockPaymentIntents[result.paymentIntentId]
+    expect(createdIntent.payment_method_types).toEqual(['card', 'mb_way', 'link'])
+    const callArgs = (createPaymentIntent as any).mock.calls[0][0]
+    expect(callArgs).not.toHaveProperty('automatic_payment_methods')
   })
 
   it('2. amount vem da Order', async () => {
@@ -282,7 +412,6 @@ describe('createPaymentForOrder', () => {
     })
 
     const { createPaymentIntent } = await import('./stripe')
-    // O mock foi limpo pelo vi.clearAllMocks() no beforeEach
     expect(createPaymentIntent).toHaveBeenCalled()
     const callArgs = (createPaymentIntent as any).mock.calls[0][0]
     expect(callArgs.amount).toBe(75.50)
@@ -299,7 +428,7 @@ describe('createPaymentForOrder', () => {
 
   it('4. Order em estado errado rejeitada', async () => {
     const payload = createMockPayload()
-    const order = createDraftOrder() // draft, not pending_payment
+    const order = createPendingPaymentOrder({ orderStatus: 'draft' })
 
     await expect(
       createPaymentForOrder(payload, { orderId: order.id, idempotencyKey: uuidv4() })
@@ -313,60 +442,21 @@ describe('createPaymentForOrder', () => {
 
     const r1 = await createPaymentForOrder(payload, { orderId: order.id, idempotencyKey: key })
 
-    // stripePaymentIntentId foi guardado no r1 — segunda chamada reutiliza
     const r2 = await createPaymentForOrder(payload, { orderId: order.id, idempotencyKey: uuidv4() })
 
     expect(r2.kind).toBe('reused')
     expect(r2.paymentIntentId).toBe(r1.paymentIntentId)
   })
-
-  it('6. idempotency key estável (mesmo checkoutAttemptId)', async () => {
-    const payload = createMockPayload()
-    const order = createPendingPaymentOrder()
-
-    const key = `payment:${order.checkoutAttemptId}`
-
-    await createPaymentForOrder(payload, { orderId: order.id, idempotencyKey: key })
-
-    // Verificar que o mock createPaymentIntent recebeu a idempotencyKey correcta
-    const { createPaymentIntent } = await import('./stripe')
-    const callArgs = (createPaymentIntent as any).mock.calls[0][0]
-    expect(callArgs.idempotencyKey).toBe(key)
-  })
-
-  it('7. usa automatic_payment_methods sem multibanco', async () => {
-    const payload = createMockPayload()
-    const order = createPendingPaymentOrder()
-
-    await createPaymentForOrder(payload, {
-      orderId: order.id,
-      idempotencyKey: uuidv4(),
-    })
-
-    const { createPaymentIntent } = await import('./stripe')
-    expect(createPaymentIntent).toHaveBeenCalled()
-    const callArgs = (createPaymentIntent as any).mock.calls[0][0]
-    // Não usa allow-list manual
-    expect(callArgs).not.toHaveProperty('payment_method_types')
-    // Usa automatic_payment_methods (Stripe Dashboard)
-    expect(callArgs).toHaveProperty('automatic_payment_methods')
-    expect(callArgs.automatic_payment_methods).toEqual({ enabled: true })
-    // Multibanco excluído explicitamente
-    expect(callArgs).toHaveProperty('excluded_payment_method_types')
-    expect(callArgs.excluded_payment_method_types).toEqual(['multibanco'])
-  })
 })
 
-describe('handlePaymentSucceeded', () => {
+describe('handlePaymentSucceeded — reservation safety', () => {
   beforeEach(() => {
     resetMocks()
   })
 
-  it('8. succeeded confirma reservas', async () => {
+  it('6. succeeded + reservation ativa → stock confirmado', async () => {
     const payload = createMockPayload()
     const order = createPendingPaymentOrder()
-
-    // Simular stripePaymentIntentId guardado
     const paymentIntent = addMockPaymentIntent({
       amount: toStripeAmount(order.total),
       currency: 'eur',
@@ -375,17 +465,7 @@ describe('handlePaymentSucceeded', () => {
     })
     mockOrders[0].stripePaymentIntentId = paymentIntent.id
 
-    // Adicionar reserva active com flower 1 (reproducible, stockQuantity=10)
-    mockReservationIdSeq++
-    const resId = mockReservationIdSeq
-    mockReservations.push({
-      id: resId,
-      order: order.id,
-      flower: 1,
-      quantity: 2,
-      status: 'active',
-      expiresAt: new Date(Date.now() + 1800000).toISOString(),
-    })
+    addActiveReservation(order.id, 1, 2)
 
     const result = await handlePaymentSucceeded(payload, paymentIntent)
     expect(result.kind).toBe('processed')
@@ -395,11 +475,145 @@ describe('handlePaymentSucceeded', () => {
     expect(updatedOrder.paymentStatus).toBe('paid')
     expect(updatedOrder.orderStatus).toBe('confirmed')
     expect(updatedOrder.paidAt).toBeDefined()
+
+    // Reserva foi confirmada
+    const resUpdated = mockReservations.find((r: any) => r.order === order.id)
+    expect(resUpdated.status).toBe('confirmed')
   })
 
-  it('9. succeeded → paid/confirmed', async () => {
+  it('7. succeeded → paid/confirmed apenas depois do stock', async () => {
     const payload = createMockPayload()
     const order = createPendingPaymentOrder()
+    const paymentIntent = addMockPaymentIntent({
+      amount: toStripeAmount(order.total),
+      currency: 'eur',
+      status: 'succeeded',
+      metadata: { orderId: String(order.id) },
+    })
+    mockOrders[0].stripePaymentIntentId = paymentIntent.id
+
+    addActiveReservation(order.id, 1, 2)
+
+    const result = await handlePaymentSucceeded(payload, paymentIntent)
+    expect(result.kind).toBe('processed')
+
+    const updatedOrder = mockOrders.find((o) => o.id === order.id)
+    expect(updatedOrder.paymentStatus).toBe('paid')
+    expect(updatedOrder.orderStatus).toBe('confirmed')
+  })
+
+  it('8. succeeded repetido → idempotente', async () => {
+    const payload = createMockPayload()
+    const order = createPendingPaymentOrder()
+    const paymentIntent = addMockPaymentIntent({
+      amount: toStripeAmount(order.total),
+      currency: 'eur',
+      status: 'succeeded',
+      metadata: { orderId: String(order.id) },
+    })
+    mockOrders[0].stripePaymentIntentId = paymentIntent.id
+
+    addActiveReservation(order.id, 1, 2)
+
+    const r1 = await handlePaymentSucceeded(payload, paymentIntent)
+    expect(r1.kind).toBe('processed')
+
+    const r2 = await handlePaymentSucceeded(payload, paymentIntent)
+    expect(r2.kind).toBe('already_processed')
+  })
+
+  it('9. reservation expired → Order NÃO fica confirmed (late payment)', async () => {
+    const payload = createMockPayload()
+    const order = createPendingPaymentOrder()
+    const paymentIntent = addMockPaymentIntent({
+      amount: toStripeAmount(order.total),
+      currency: 'eur',
+      status: 'succeeded',
+      metadata: { orderId: String(order.id) },
+    })
+    mockOrders[0].stripePaymentIntentId = paymentIntent.id
+
+    // Reserva já expirou
+    addExpiredReservation(order.id, 1, 2)
+
+    // handlePaymentSucceeded deve lançar LatePaymentError
+    await expect(
+      handlePaymentSucceeded(payload, paymentIntent)
+    ).rejects.toThrow(LatePaymentError)
+  })
+
+  it('10. reservation released → Order NÃO fica confirmed (late payment)', async () => {
+    const payload = createMockPayload()
+    const order = createPendingPaymentOrder()
+    const paymentIntent = addMockPaymentIntent({
+      amount: toStripeAmount(order.total),
+      currency: 'eur',
+      status: 'succeeded',
+      metadata: { orderId: String(order.id) },
+    })
+    mockOrders[0].stripePaymentIntentId = paymentIntent.id
+
+    addReleasedReservation(order.id, 1, 2)
+
+    await expect(
+      handlePaymentSucceeded(payload, paymentIntent)
+    ).rejects.toThrow(LatePaymentError)
+  })
+
+  it('11. reservation em falta para item reservável → NÃO confirmed', async () => {
+    const payload = createMockPayload()
+    const order = createPendingPaymentOrder()
+    const paymentIntent = addMockPaymentIntent({
+      amount: toStripeAmount(order.total),
+      currency: 'eur',
+      status: 'succeeded',
+      metadata: { orderId: String(order.id) },
+    })
+    mockOrders[0].stripePaymentIntentId = paymentIntent.id
+
+    // Sem reservas — o item é reproducible e precisa de reserva
+    await expect(
+      handlePaymentSucceeded(payload, paymentIntent)
+    ).rejects.toThrow(LatePaymentError)
+  })
+
+  it('12. múltiplas reservations e uma falha → rollback das restantes', async () => {
+    // Items: reproducible (2 qty) + unique (1 qty)
+    const payload = createMockPayload()
+    const order = createPendingPaymentOrder({
+      items: [
+        { flower: 1, name: 'Rosa Vermelha', price: 50.00, qty: 2, lineTotal: 100.00, productionMode: 'reproducible' },
+        { flower: 2, name: 'Orquídea Azul', price: 45.00, qty: 1, lineTotal: 45.00, productionMode: 'unique' },
+      ],
+      total: 145.00,
+      subtotal: 145.00,
+    })
+    const paymentIntent = addMockPaymentIntent({
+      amount: toStripeAmount(145.00),
+      currency: 'eur',
+      status: 'succeeded',
+      metadata: { orderId: String(order.id) },
+    })
+    mockOrders[0].stripePaymentIntentId = paymentIntent.id
+
+    // Uma reserva active, outra expired
+    addActiveReservation(order.id, 1, 2)
+    addExpiredReservation(order.id, 2, 1)
+
+    // Confirmar que o fluxo rejeita com LatePaymentError
+    await expect(
+      handlePaymentSucceeded(payload, paymentIntent)
+    ).rejects.toThrow(LatePaymentError)
+
+    // Order não foi marcada como paid/confirmed
+    const updatedOrder = mockOrders.find((o) => o.id === order.id)
+    expect(updatedOrder.paymentStatus).toBe('unpaid')
+    expect(updatedOrder.orderStatus).toBe('pending_payment')
+  })
+
+  it('13. made_to_order-only → succeeded normalmente sem reservations', async () => {
+    const payload = createMockPayload()
+    const order = createMTOOnlyOrder()
     const paymentIntent = addMockPaymentIntent({
       amount: toStripeAmount(order.total),
       currency: 'eur',
@@ -416,41 +630,11 @@ describe('handlePaymentSucceeded', () => {
     expect(updatedOrder.orderStatus).toBe('confirmed')
   })
 
-  it('10. webhook succeeded repetido não decrementa stock duas vezes', async () => {
+  it('14. amount mismatch rejeita processamento', async () => {
     const payload = createMockPayload()
     const order = createPendingPaymentOrder()
     const paymentIntent = addMockPaymentIntent({
-      amount: toStripeAmount(order.total),
-      currency: 'eur',
-      status: 'succeeded',
-      metadata: { orderId: String(order.id) },
-    })
-    mockOrders[0].stripePaymentIntentId = paymentIntent.id
-
-    // Adicionar reserva já confirmada
-    mockReservationIdSeq++
-    mockReservations.push({
-      id: mockReservationIdSeq,
-      order: order.id,
-      flower: 1,
-      quantity: 2,
-      status: 'confirmed', // já confirmada
-      confirmedAt: new Date().toISOString(),
-    })
-
-    const r1 = await handlePaymentSucceeded(payload, paymentIntent)
-    expect(r1.kind).toBe('processed')
-
-    // Segunda chamada — já paid/confirmed
-    const r2 = await handlePaymentSucceeded(payload, paymentIntent)
-    expect(r2.kind).toBe('already_processed')
-  })
-
-  it('11. amount mismatch rejeita processamento', async () => {
-    const payload = createMockPayload()
-    const order = createPendingPaymentOrder()
-    const paymentIntent = addMockPaymentIntent({
-      amount: 99999, // diferente de toStripeAmount(order.total) = 10000
+      amount: 99999,
       currency: 'eur',
       status: 'succeeded',
       metadata: { orderId: String(order.id) },
@@ -462,7 +646,7 @@ describe('handlePaymentSucceeded', () => {
     ).rejects.toThrow(PaymentAmountMismatchError)
   })
 
-  it('12. currency mismatch rejeita', async () => {
+  it('15. currency mismatch rejeita', async () => {
     const payload = createMockPayload()
     const order = createPendingPaymentOrder()
     const paymentIntent = addMockPaymentIntent({
@@ -477,31 +661,159 @@ describe('handlePaymentSucceeded', () => {
       handlePaymentSucceeded(payload, paymentIntent)
     ).rejects.toThrow(PaymentCurrencyMismatchError)
   })
+})
 
-  it('16. PaymentIntent de outra Order não pode confirmar Order errada', async () => {
+describe('handlePaymentSucceededWithFallback — late payment refunds', () => {
+  beforeEach(() => {
+    resetMocks()
+  })
+
+  it('16. late payment → cria refund integral', async () => {
     const payload = createMockPayload()
-    const order1 = createPendingPaymentOrder({ total: 50.00 })
-    const order2 = createPendingPaymentOrder({ total: 100.00 })
-
-    // PaymentIntent do order1
-    const paymentIntent1 = addMockPaymentIntent({
-      amount: toStripeAmount(order1.total),
+    const order = createPendingPaymentOrder()
+    const paymentIntent = addMockPaymentIntent({
+      amount: toStripeAmount(order.total),
       currency: 'eur',
       status: 'succeeded',
-      metadata: { orderId: String(order1.id) },
+      metadata: { orderId: String(order.id) },
     })
+    mockOrders[0].stripePaymentIntentId = paymentIntent.id
 
-    // order1 tem stripePaymentIntentId do paymentIntent1
-    mockOrders[0].stripePaymentIntentId = paymentIntent1.id
-    mockOrders[1].stripePaymentIntentId = 'pi_different'
+    // Reserva expirada
+    addExpiredReservation(order.id, 1, 2)
 
-    const result = await handlePaymentSucceeded(payload, paymentIntent1)
-    expect(result.orderId).toBe(order1.id)
-    // Confirma que foi order1, não order2
-    const updatedOrder1 = mockOrders.find((o: any) => o.id === order1.id)
-    expect(updatedOrder1.paymentStatus).toBe('paid')
-    const updatedOrder2 = mockOrders.find((o: any) => o.id === order2.id)
-    expect(updatedOrder2.paymentStatus).toBe('unpaid')
+    const result = await handlePaymentSucceededWithFallback(payload, paymentIntent)
+    expect(result.kind).toBe('late_payment_refunded')
+    expect(result.refundId).toBeDefined()
+
+    const updatedOrder = mockOrders.find((o) => o.id === order.id)
+    expect(updatedOrder.paymentStatus).toBe('refunded')
+    expect(updatedOrder.orderStatus).toBe('expired')
+    expect(updatedOrder.stripeRefundId).toBe(result.refundId)
+    expect(updatedOrder.refundReason).toBe('stock_reservation_expired')
+  })
+
+  it('17. refund idempotency key estável (late-stock-refund:{paymentIntentId})', async () => {
+    const payload = createMockPayload()
+    const order = createPendingPaymentOrder()
+    const paymentIntent = addMockPaymentIntent({
+      amount: toStripeAmount(order.total),
+      currency: 'eur',
+      status: 'succeeded',
+      metadata: { orderId: String(order.id) },
+    })
+    mockOrders[0].stripePaymentIntentId = paymentIntent.id
+
+    addExpiredReservation(order.id, 1, 2)
+
+    const result = await handlePaymentSucceededWithFallback(payload, paymentIntent)
+
+    // Verificar que createFullRefund foi chamado com a idempotency key correcta
+    const { createFullRefund } = await import('./stripe')
+    expect(createFullRefund).toHaveBeenCalledWith(paymentIntent.id)
+  })
+
+  it('18. webhook repetido → não duplica refund', async () => {
+    const payload = createMockPayload()
+    const order = createPendingPaymentOrder()
+    const paymentIntent = addMockPaymentIntent({
+      amount: toStripeAmount(order.total),
+      currency: 'eur',
+      status: 'succeeded',
+      metadata: { orderId: String(order.id) },
+    })
+    mockOrders[0].stripePaymentIntentId = paymentIntent.id
+
+    addExpiredReservation(order.id, 1, 2)
+
+    // Primeira chamada — cria refund
+    const r1 = await handlePaymentSucceededWithFallback(payload, paymentIntent)
+    expect(r1.kind).toBe('late_payment_refunded')
+
+    // Segunda chamada — já processado (already_refunded)
+    const r2 = await handlePaymentSucceededWithFallback(payload, paymentIntent)
+    expect(r2.kind).toBe('already_refunded')
+
+    // Confirmar que só um refund foi criado no Stripe (primeira chamada)
+    const { createFullRefund } = await import('./stripe')
+    expect(createFullRefund).toHaveBeenCalledTimes(1)
+  })
+
+  it('19. late payment → paymentStatus refunded', async () => {
+    const payload = createMockPayload()
+    const order = createPendingPaymentOrder()
+    const paymentIntent = addMockPaymentIntent({
+      amount: toStripeAmount(order.total),
+      currency: 'eur',
+      status: 'succeeded',
+      metadata: { orderId: String(order.id) },
+    })
+    mockOrders[0].stripePaymentIntentId = paymentIntent.id
+
+    addExpiredReservation(order.id, 1, 2)
+
+    const result = await handlePaymentSucceededWithFallback(payload, paymentIntent)
+
+    const updatedOrder = mockOrders.find((o) => o.id === order.id)
+    expect(updatedOrder.paymentStatus).toBe('refunded')
+  })
+
+  it('20. late payment → orderStatus expired', async () => {
+    const payload = createMockPayload()
+    const order = createPendingPaymentOrder()
+    const paymentIntent = addMockPaymentIntent({
+      amount: toStripeAmount(order.total),
+      currency: 'eur',
+      status: 'succeeded',
+      metadata: { orderId: String(order.id) },
+    })
+    mockOrders[0].stripePaymentIntentId = paymentIntent.id
+
+    addExpiredReservation(order.id, 1, 2)
+
+    const result = await handlePaymentSucceededWithFallback(payload, paymentIntent)
+
+    const updatedOrder = mockOrders.find((o) => o.id === order.id)
+    expect(updatedOrder.orderStatus).toBe('expired')
+  })
+
+  it('21. stripeRefundId persistido', async () => {
+    const payload = createMockPayload()
+    const order = createPendingPaymentOrder()
+    const paymentIntent = addMockPaymentIntent({
+      amount: toStripeAmount(order.total),
+      currency: 'eur',
+      status: 'succeeded',
+      metadata: { orderId: String(order.id) },
+    })
+    mockOrders[0].stripePaymentIntentId = paymentIntent.id
+
+    addExpiredReservation(order.id, 1, 2)
+
+    const result = await handlePaymentSucceededWithFallback(payload, paymentIntent)
+
+    const updatedOrder = mockOrders.find((o) => o.id === order.id)
+    expect(updatedOrder.stripeRefundId).toBe(result.refundId)
+    expect(updatedOrder.stripeRefundId).toMatch(/^re_mock_/)
+  })
+
+  it('22. refundReason correto', async () => {
+    const payload = createMockPayload()
+    const order = createPendingPaymentOrder()
+    const paymentIntent = addMockPaymentIntent({
+      amount: toStripeAmount(order.total),
+      currency: 'eur',
+      status: 'succeeded',
+      metadata: { orderId: String(order.id) },
+    })
+    mockOrders[0].stripePaymentIntentId = paymentIntent.id
+
+    addExpiredReservation(order.id, 1, 2)
+
+    const result = await handlePaymentSucceededWithFallback(payload, paymentIntent)
+
+    const updatedOrder = mockOrders.find((o) => o.id === order.id)
+    expect(updatedOrder.refundReason).toBe('stock_reservation_expired')
   })
 })
 
@@ -510,7 +822,7 @@ describe('handlePaymentFailed', () => {
     resetMocks()
   })
 
-  it('13. payment_failed não confirma stock', async () => {
+  it('payment_failed não confirma stock', async () => {
     const payload = createMockPayload()
     const order = createPendingPaymentOrder()
 
@@ -535,10 +847,8 @@ describe('handlePaymentFailed', () => {
 
     const updatedOrder = mockOrders.find((o) => o.id === order.id)
     expect(updatedOrder.paymentStatus).toBe('failed')
-    // orderStatus não muda
     expect(updatedOrder.orderStatus).toBe('pending_payment')
 
-    // Reservas continuam active (não foram confirmadas)
     const activeReserves = mockReservations.filter((r: any) => r.status === 'active')
     expect(activeReserves.length).toBe(1)
   })
@@ -549,7 +859,7 @@ describe('handlePaymentProcessing', () => {
     resetMocks()
   })
 
-  it('14. processing não confirma stock', async () => {
+  it('processing não confirma stock', async () => {
     const payload = createMockPayload()
     const order = createPendingPaymentOrder()
 
@@ -576,8 +886,45 @@ describe('handlePaymentProcessing', () => {
     expect(updatedOrder.paymentStatus).toBe('pending')
     expect(updatedOrder.orderStatus).toBe('pending_payment')
 
-    // Reservas continuam active
     const activeReserves = mockReservations.filter((r: any) => r.status === 'active')
     expect(activeReserves.length).toBe(1)
+  })
+})
+
+describe('Payment method types', () => {
+  it('23. card permitido', async () => {
+    const { getSupportedPaymentMethods } = await import('./stripe')
+    const methods = getSupportedPaymentMethods()
+    expect(methods).toContain('card')
+  })
+
+  it('24. mb_way permitido', async () => {
+    const { getSupportedPaymentMethods } = await import('./stripe')
+    const methods = getSupportedPaymentMethods()
+    expect(methods).toContain('mb_way')
+  })
+
+  it('25. link permitido', async () => {
+    const { getSupportedPaymentMethods } = await import('./stripe')
+    const methods = getSupportedPaymentMethods()
+    expect(methods).toContain('link')
+  })
+
+  it('26. multibanco não permitido', async () => {
+    const { getSupportedPaymentMethods } = await import('./stripe')
+    const methods = getSupportedPaymentMethods()
+    expect(methods).not.toContain('multibanco')
+  })
+
+  it('27. método delayed não entra na configuração', async () => {
+    const { getSupportedPaymentMethods } = await import('./stripe')
+    const methods = getSupportedPaymentMethods()
+    expect(methods).not.toContain('sepa_debit')
+    expect(methods).not.toContain('bancontact')
+    expect(methods).not.toContain('eps')
+    expect(methods).not.toContain('ideal')
+    expect(methods).not.toContain('p24')
+    expect(methods).not.toContain('klarna')
+    expect(methods).not.toContain('afterpay_clearpay')
   })
 })

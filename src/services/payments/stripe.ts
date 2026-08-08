@@ -5,9 +5,13 @@
  * - Criar/reutilizar PaymentIntents via Stripe SDK
  * - Verificar assinatura de webhooks
  * - Validar amount/currency do PaymentIntent contra a Order
+ * - Criar refunds para late payments
  *
  * NUNCA expõe client_secret para armazenamento na BD.
  * NUNCA aceita amount/cliente_secret do browser.
+ *
+ * ISSUE-1I: Stripe API 2025-10-29.clover (stripe-node 19.2.0)
+ * MB WAY suportado oficialmente como payment_method_type.
  */
 import Stripe from 'stripe'
 import { toStripeAmount } from './payment-types'
@@ -22,46 +26,52 @@ function getStripe(): Stripe {
     throw new Error('STRIPE_SECRET_KEY não configurada.')
   }
   return new Stripe(key, {
-    apiVersion: '2025-08-27.basil',
+    apiVersion: '2025-10-29.clover',
     typescript: true,
   })
 }
 
-// ─── Configurar automatic payment methods ───────────────────
+// ─── Payment method types V1 ────────────────────────────────
+//
+// Política de stock: reservas curtas (30 min).
+// Apenas métodos com confirmação imediata.
+// Multibanco (confirmação diferida) será adicionado em ISSUE própria.
+//
+// Apple Pay / Google Pay continuam disponíveis através do suporte
+// wallet/card quando Stripe/browser os considerar elegíveis.
+
+const SUPPORTED_PAYMENT_METHODS = ['card', 'mb_way', 'link'] as const
+
+type SupportedPaymentMethod = (typeof SUPPORTED_PAYMENT_METHODS)[number]
+
+// ─── Create PaymentIntent ───────────────────────────────────
 
 interface CreatePaymentIntentParams {
   amount: number       // total em EUR (float)
   currency: string     // 'EUR'
   metadata: Record<string, string>
   idempotencyKey: string
-  automatic_payment_methods?: { enabled: boolean }
-  excluded_payment_method_types?: string[]
 }
 
 /**
  * Cria um PaymentIntent no Stripe.
  *
  * - amount é convertido para centimos automaticamente
- * - Usa automatic_payment_methods (recomendação Stripe 2025)
- * - Exclui Multibanco explicitamente
- * - Só inclui MB WAY se a conta Stripe o suportar
+ * - payment_method_types explícitos: card, mb_way, link
+ * - NÃO usa automatic_payment_methods (risco de delayed methods)
+ * - Multibanco NÃO incluído nesta versão
  */
 export async function createPaymentIntent(
   params: CreatePaymentIntentParams,
 ): Promise<StripePaymentIntent> {
   const stripe = getStripe()
 
-  // MB WAY será adicionado dinamicamente quando a conta Stripe o suportar
-
   const intent = await stripe.paymentIntents.create(
     {
       amount: toStripeAmount(params.amount),
       currency: params.currency.toLowerCase(),
       metadata: params.metadata,
-      // Dynamic payment methods via Stripe Dashboard.
-      // Multibanco excluído explicitamente — será adicionado em ISSUE própria.
-      automatic_payment_methods: params.automatic_payment_methods ?? { enabled: true },
-      excluded_payment_method_types: ['multibanco'],
+      payment_method_types: [...SUPPORTED_PAYMENT_METHODS],
     },
     {
       idempotencyKey: params.idempotencyKey,
@@ -144,6 +154,31 @@ export function validatePaymentIntentForOrder(
   return { valid: errors.length === 0, errors }
 }
 
+// ─── Refund (late payment) ──────────────────────────────────
+
+/**
+ * Cria um refund integral do PaymentIntent Stripe.
+ *
+ * Usa idempotency key estável derivada do paymentIntentId para
+ * que webhooks repetidos não criem refunds duplicados.
+ */
+export async function createFullRefund(
+  paymentIntentId: string,
+): Promise<Stripe.Refund> {
+  const stripe = getStripe()
+
+  const idempotencyKey = `late-stock-refund:${paymentIntentId}`
+
+  return stripe.refunds.create(
+    {
+      payment_intent: paymentIntentId,
+    },
+    {
+      idempotencyKey,
+    },
+  )
+}
+
 // ─── Webhook signature verification ─────────────────────────
 
 export function constructWebhookEvent(
@@ -158,4 +193,10 @@ export function constructWebhookEvent(
   }
 
   return stripe.webhooks.constructEvent(rawBody, signature, webhookSecret)
+}
+
+// ─── Supported payment methods (export for tests) ───────────
+
+export function getSupportedPaymentMethods(): readonly string[] {
+  return SUPPORTED_PAYMENT_METHODS
 }

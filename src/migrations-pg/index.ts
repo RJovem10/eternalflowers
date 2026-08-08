@@ -8,6 +8,7 @@ import * as migration_20260803_181000_stock_reservations_pg from './20260803_181
 import * as migration_20260808_000000_orders_model_pg from './20260808_000000_orders_model';
 import * as migration_20260808_000001_checkout_fields_pg from './20260808_000001_checkout_fields';
 import * as migration_20260808_000002_payment_fields_pg from './20260808_000002_payment_fields';
+import * as migration_20260808_000003_refund_fields_pg from './20260808_000003_refund_fields';
 
 export const migrations = [
   { up: migration_20260731_000000_baseline.up, down: migration_20260731_000000_baseline.down, name: '20260731_000000_baseline' },
@@ -21,4 +22,5 @@ export const migrations = [
   { up: migration_20260808_000000_orders_model_pg.up, down: migration_20260808_000000_orders_model_pg.down, name: '20260808_000000_orders_model' },
   { up: migration_20260808_000001_checkout_fields_pg.up, down: migration_20260808_000001_checkout_fields_pg.down, name: '20260808_000001_checkout_fields' },
   { up: migration_20260808_000002_payment_fields_pg.up, down: migration_20260808_000002_payment_fields_pg.down, name: '20260808_000002_payment_fields' },
+  { up: migration_20260808_000003_refund_fields_pg.up, down: migration_20260808_000003_refund_fields_pg.down, name: '20260808_000003_refund_fields' },
 ];

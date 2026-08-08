@@ -7,6 +7,7 @@ import * as migration_20260803_181000_stock_reservations from './20260803_181000
 import * as migration_20260808_000000_orders_model from './20260808_000000_orders_model';
 import * as migration_20260808_000001_checkout_fields from './20260808_000001_checkout_fields';
 import * as migration_20260808_000002_payment_fields from './20260808_000002_payment_fields';
+import * as migration_20260808_000003_refund_fields from './20260808_000003_refund_fields';
 
 export const migrations = [
   {
@@ -53,5 +54,10 @@ export const migrations = [
     up: migration_20260808_000002_payment_fields.up,
     down: migration_20260808_000002_payment_fields.down,
     name: '20260808_000002_payment_fields'
+  },
+  {
+    up: migration_20260808_000003_refund_fields.up,
+    down: migration_20260808_000003_refund_fields.down,
+    name: '20260808_000003_refund_fields'
   },
 ];
