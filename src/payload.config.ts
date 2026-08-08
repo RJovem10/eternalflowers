@@ -296,6 +296,16 @@ const Orders: CollectionConfig = {
     // --- Checkout hash (hidden, unique when present) ---
     { name: 'checkoutRequestHash', type: 'text', unique: true, label: 'Hash do checkout', admin: { hidden: true } },
 
+    // --- Checkout attempt id (UUID, server-generated, hidden) ---
+    { name: 'checkoutAttemptId', type: 'text', unique: true, label: 'Checkout Attempt ID', admin: { hidden: true } },
+
+    // --- Shipping snapshot (populated on finalization) ---
+    { name: 'shippingProvider', type: 'text', label: 'Transportadora', admin: { hidden: true } },
+    { name: 'shippingServiceCode', type: 'text', label: 'Cód. Serviço Envio', admin: { hidden: true } },
+    { name: 'shippingServiceName', type: 'text', label: 'Serviço Envio', admin: { hidden: true } },
+    { name: 'shippingEstimatedMinDays', type: 'number', label: 'Estimativa Min (dias)', admin: { hidden: true } },
+    { name: 'shippingEstimatedMaxDays', type: 'number', label: 'Estimativa Max (dias)', admin: { hidden: true } },
+
     // --- Legacy fields (preserved for backward compatibility, hidden in admin) ---
     { name: 'email', type: 'email', label: 'Email (legado)', admin: { hidden: true } },
     {
