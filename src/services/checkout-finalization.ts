@@ -1,5 +1,5 @@
 /**
- * checkout-finalization.ts — Finalização de checkout (Issue 1F)
+ * checkout-finalization.ts — Finalização de checkout (Issue 1F / 1J)
  *
  * Responsabilidades:
  * - Cotação de shipping server-side (nunca confia no cliente)
@@ -18,13 +18,20 @@
  *   H. orderStatus → pending_payment
  *   I. paymentStatus continua unpaid
  *   J. Commit
+ *
+ * Segurança:
+ * - provider, parcel e origin são recebidos server-side (nunca do browser)
+ * - parcel é validado antes de qualquer chamada ao provider
+ * - sem parcel válido → Order continua draft, 0 reservas
+ * - sem provider configurado → Order continua draft, 0 reservas
+ * - shippingCost vem exclusivamente da quote do provider
  */
 
 import type { Payload } from 'payload'
 import crypto from 'crypto'
-import { getShippingQuotes, type ShippingProvider } from './shipping/shipping'
-import { type ShippingQuote, type ShippingQuoteInput } from './shipping/shipping-types'
+import { getShippingQuotes } from './shipping/shipping'
 import { ShippingProviderNotConfiguredError } from './shipping/shipping-types'
+import { type ShippingQuote, type ShippingQuoteInput, type ShippingParcel } from './shipping/shipping-types'
 import { reserveStock } from './stock'
 import { runInTransaction, type TransactionCtx } from './transact'
 import type {
@@ -36,26 +43,9 @@ import {
   InvalidOrderStateError,
   IncompatibleQuoteError,
   NegativeTotalError,
+  ShippingParcelNotConfiguredError,
+  InvalidShippingParcelError,
 } from './checkout-finalization-types'
-
-// ─── Registos de providers de shipping ──────────────────────
-// Nesta ISSUE apenas FakeShippingProvider. CTT adicionado futuramente.
-
-import { fakeProvider, fakeProviderId } from './shipping/providers/fake'
-
-const providerRegistry: Record<string, ShippingProvider> = {
-  [fakeProviderId]: fakeProvider,
-}
-
-function resolveProvider(providerId: string): ShippingProvider {
-  const provider = providerRegistry[providerId]
-  if (!provider) {
-    throw new ShippingProviderNotConfiguredError(
-      `Transportadora "${providerId}" não está configurada. Providers disponíveis: ${Object.keys(providerRegistry).join(', ')}`,
-    )
-  }
-  return provider
-}
 
 // ─── UUID v4 generator ─────────────────────────────────────
 
@@ -63,21 +53,76 @@ function generateCheckoutAttemptId(): string {
   return crypto.randomUUID()
 }
 
-// ─── Construir ShippingQuoteInput a partir da Order ─────────
+// ─── Validação do parcel server-side ────────────────────────
 
-function buildShippingQuoteInput(order: any, subtotal: number): ShippingQuoteInput {
-  const address = order.shippingAddress || {}
-  const items = (order.items as any[]) || []
-
-  // Origin: loja (Eternal Flowers)
-  const origin = {
-    recipientName: 'Eternal Flowers',
-    line1: 'Rua das Flores, 123',
-    city: 'Lisboa',
-    country: 'PT',
+function validateParcel(parcel: unknown): asserts parcel is ShippingParcel {
+  if (parcel === null || parcel === undefined) {
+    throw new ShippingParcelNotConfiguredError(
+      'Parcel de envio não foi fornecido. É necessário fornecer um parcel com peso real.',
+    )
   }
 
-  // Destination: shipping address da Order
+  if (typeof parcel !== 'object') {
+    throw new InvalidShippingParcelError(
+      'Parcel de envio inválido.',
+      'parcel deve ser um objecto.',
+    )
+  }
+
+  const p = parcel as Record<string, unknown>
+
+  if (typeof p.weight !== 'number' || p.weight <= 0) {
+    throw new InvalidShippingParcelError(
+      'Parcel de envio inválido.',
+      'parcel.weight deve ser um número positivo.',
+    )
+  }
+
+  if (p.length !== undefined && (typeof p.length !== 'number' || p.length <= 0)) {
+    throw new InvalidShippingParcelError(
+      'Parcel de envio inválido.',
+      'parcel.length deve ser um número positivo ou omitido.',
+    )
+  }
+
+  if (p.width !== undefined && (typeof p.width !== 'number' || p.width <= 0)) {
+    throw new InvalidShippingParcelError(
+      'Parcel de envio inválido.',
+      'parcel.width deve ser um número positivo ou omitido.',
+    )
+  }
+
+  if (p.height !== undefined && (typeof p.height !== 'number' || p.height <= 0)) {
+    throw new InvalidShippingParcelError(
+      'Parcel de envio inválido.',
+      'parcel.height deve ser um número positivo ou omitido.',
+    )
+  }
+}
+
+// ─── Construir ShippingQuoteInput a partir da Order ─────────
+
+function buildShippingQuoteInput(
+  order: any,
+  subtotal: number,
+  origin: PrepareOrderInput['origin'],
+  parcel: ShippingParcel,
+): ShippingQuoteInput {
+  const address = order.shippingAddress || {}
+
+  // Origin: fornecida pelo caller (server-side)
+  const safeOrigin = {
+    recipientName: origin.recipientName,
+    phone: origin.phone || undefined,
+    line1: origin.line1,
+    line2: origin.line2 || undefined,
+    city: origin.city,
+    region: origin.region || undefined,
+    postalCode: origin.postalCode || undefined,
+    country: origin.country,
+  }
+
+  // Destination: construída EXCLUSIVAMENTE a partir de Order.shippingAddress
   const destination = {
     recipientName: address.recipientName || '',
     phone: address.phone || undefined,
@@ -89,11 +134,11 @@ function buildShippingQuoteInput(order: any, subtotal: number): ShippingQuoteInp
     country: address.country || 'PT',
   }
 
-  // Parcels: um por item (estimativa simples)
-  const parcels = items.map(() => ({ weight: 1.0 }))
+  // Parcel único: fornecido server-side, sem inventar peso/dimensões
+  const parcels = [parcel]
 
   return {
-    origin,
+    origin: safeOrigin,
     destination,
     parcels,
     currency: order.currency || 'EUR',
@@ -107,6 +152,11 @@ export async function prepareOrderForPayment(
   payload: Payload,
   input: PrepareOrderInput,
 ): Promise<PrepareOrderResult> {
+  // ════════════════════════════════════════════════════════
+  // 0. Validar parcel server-side (antes de qualquer IO)
+  // ════════════════════════════════════════════════════════
+  validateParcel(input.parcel)
+
   // ════════════════════════════════════════════════════════
   // A. Carregar/validar Order (fora da transacção)
   // ════════════════════════════════════════════════════════
@@ -159,9 +209,9 @@ export async function prepareOrderForPayment(
   // B. Obter shipping quote FORA da transacção
   // ════════════════════════════════════════════════════════
 
-  const provider = resolveProvider(input.shippingProviderId)
+  const provider = input.provider
 
-  const quoteInput = buildShippingQuoteInput(order, subtotal)
+  const quoteInput = buildShippingQuoteInput(order, subtotal, input.origin, input.parcel)
   let quotes: ShippingQuote[]
 
   try {
@@ -181,7 +231,7 @@ export async function prepareOrderForPayment(
   const selectedQuote = quotes.find((q) => q.serviceCode === input.shippingServiceCode)
   if (!selectedQuote) {
     throw new IncompatibleQuoteError(
-      `Serviço "${input.shippingServiceCode}" não encontrado nas cotações do provider "${input.shippingProviderId}".`,
+      `Serviço "${input.shippingServiceCode}" não encontrado nas cotações do provider "${provider.id}".`,
     )
   }
 
