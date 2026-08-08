@@ -75,6 +75,7 @@ vi.mock('./stripe', async () => {
         currency: params.currency.toLowerCase(),
         metadata: params.metadata,
         automatic_payment_methods: params.automatic_payment_methods,
+        excluded_payment_method_types: params.excluded_payment_method_types,
       })
       return mockPaymentIntents[intent.id]
     }),
@@ -350,6 +351,9 @@ describe('createPaymentForOrder', () => {
     // Usa automatic_payment_methods (Stripe Dashboard)
     expect(callArgs).toHaveProperty('automatic_payment_methods')
     expect(callArgs.automatic_payment_methods).toEqual({ enabled: true })
+    // Multibanco excluído explicitamente
+    expect(callArgs).toHaveProperty('excluded_payment_method_types')
+    expect(callArgs.excluded_payment_method_types).toEqual(['multibanco'])
   })
 })
 

@@ -102,7 +102,6 @@ export function amountsMatch(stripeAmount: number, orderTotal: number): boolean 
 }
 
 /**
- * Lista de payment method types — REMOVIDA.
- * A partir da ISSUE 1G, Stripe usa automatic_payment_methods gerido no Dashboard.
- * Multibanco será adicionado no Dashboard quando a ISSUE própria for executada.
+ * A partir da ISSUE 1G, Stripe usa automatic_payment_methods + excluded_payment_method_types.
+ * Multibanco é excluído via excluded_payment_method_types e será reativado em ISSUE própria.
  */

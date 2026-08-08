@@ -22,7 +22,7 @@ function getStripe(): Stripe {
     throw new Error('STRIPE_SECRET_KEY não configurada.')
   }
   return new Stripe(key, {
-    apiVersion: '2024-06-20',
+    apiVersion: '2025-08-27.basil',
     typescript: true,
   })
 }
@@ -35,6 +35,7 @@ interface CreatePaymentIntentParams {
   metadata: Record<string, string>
   idempotencyKey: string
   automatic_payment_methods?: { enabled: boolean }
+  excluded_payment_method_types?: string[]
 }
 
 /**
@@ -58,8 +59,9 @@ export async function createPaymentIntent(
       currency: params.currency.toLowerCase(),
       metadata: params.metadata,
       // Dynamic payment methods via Stripe Dashboard.
-      // Multibanco não está activo no Dashboard — será adicionado em ISSUE própria.
+      // Multibanco excluído explicitamente — será adicionado em ISSUE própria.
       automatic_payment_methods: params.automatic_payment_methods ?? { enabled: true },
+      excluded_payment_method_types: ['multibanco'],
     },
     {
       idempotencyKey: params.idempotencyKey,

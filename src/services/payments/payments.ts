@@ -141,6 +141,7 @@ export async function createPaymentForOrder(
     },
     idempotencyKey,
     automatic_payment_methods: { enabled: true },
+    excluded_payment_method_types: ['multibanco'],
   })
 
   // ─── 6. Guardar stripePaymentIntentId na Order ──────────────
