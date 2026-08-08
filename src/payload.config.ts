@@ -296,6 +296,12 @@ const Orders: CollectionConfig = {
     // --- Checkout hash (hidden, unique when present) ---
     { name: 'checkoutRequestHash', type: 'text', unique: true, label: 'Hash do checkout', admin: { hidden: true } },
 
+    // --- Payment fields ---
+    { name: 'paymentProvider', type: 'text', label: 'Provider de pagamento', defaultValue: 'stripe', admin: { hidden: true } },
+    { name: 'stripePaymentIntentId', type: 'text', unique: true, label: 'Stripe PaymentIntent ID', admin: { hidden: true } },
+    { name: 'paymentMethodType', type: 'text', label: 'Método de pagamento', admin: { hidden: true } },
+    { name: 'paidAt', type: 'date', label: 'Pago em', admin: { hidden: true } },
+
     // --- Checkout attempt id (UUID, server-generated, hidden) ---
     { name: 'checkoutAttemptId', type: 'text', unique: true, label: 'Checkout Attempt ID', admin: { hidden: true } },
 
