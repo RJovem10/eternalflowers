@@ -10,7 +10,7 @@
  * NUNCA aceita amount/cliente_secret do browser.
  */
 import Stripe from 'stripe'
-import { toStripeAmount, ALLOWED_PAYMENT_METHOD_TYPES } from './payment-types'
+import { toStripeAmount } from './payment-types'
 
 // ─── Inicialização do SDK (server-side apenas) ──────────────
 
@@ -34,6 +34,7 @@ interface CreatePaymentIntentParams {
   currency: string     // 'EUR'
   metadata: Record<string, string>
   idempotencyKey: string
+  automatic_payment_methods?: { enabled: boolean }
 }
 
 /**
@@ -56,9 +57,9 @@ export async function createPaymentIntent(
       amount: toStripeAmount(params.amount),
       currency: params.currency.toLowerCase(),
       metadata: params.metadata,
-      payment_method_types: ALLOWED_PAYMENT_METHOD_TYPES,
-      // automatic_payment_methods habilitado com card como base
-      // Multibanco NÃO incluído — será adicionado em ISSUE própria
+      // Dynamic payment methods via Stripe Dashboard.
+      // Multibanco não está activo no Dashboard — será adicionado em ISSUE própria.
+      automatic_payment_methods: params.automatic_payment_methods ?? { enabled: true },
     },
     {
       idempotencyKey: params.idempotencyKey,

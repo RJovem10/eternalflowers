@@ -74,6 +74,7 @@ vi.mock('./stripe', async () => {
         amount: toStripeAmount(params.amount),
         currency: params.currency.toLowerCase(),
         metadata: params.metadata,
+        automatic_payment_methods: params.automatic_payment_methods,
       })
       return mockPaymentIntents[intent.id]
     }),
@@ -332,10 +333,23 @@ describe('createPaymentForOrder', () => {
     expect(callArgs.idempotencyKey).toBe(key)
   })
 
-  it('7. Multibanco é excluído', async () => {
-    const { ALLOWED_PAYMENT_METHOD_TYPES } = await import('./payment-types')
-    expect(ALLOWED_PAYMENT_METHOD_TYPES).not.toContain('multibanco')
-    expect(ALLOWED_PAYMENT_METHOD_TYPES).toContain('card')
+  it('7. usa automatic_payment_methods sem multibanco', async () => {
+    const payload = createMockPayload()
+    const order = createPendingPaymentOrder()
+
+    await createPaymentForOrder(payload, {
+      orderId: order.id,
+      idempotencyKey: uuidv4(),
+    })
+
+    const { createPaymentIntent } = await import('./stripe')
+    expect(createPaymentIntent).toHaveBeenCalled()
+    const callArgs = (createPaymentIntent as any).mock.calls[0][0]
+    // Não usa allow-list manual
+    expect(callArgs).not.toHaveProperty('payment_method_types')
+    // Usa automatic_payment_methods (Stripe Dashboard)
+    expect(callArgs).toHaveProperty('automatic_payment_methods')
+    expect(callArgs.automatic_payment_methods).toEqual({ enabled: true })
   })
 })
 

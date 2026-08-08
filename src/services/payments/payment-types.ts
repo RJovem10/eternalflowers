@@ -4,8 +4,6 @@
  * Define os tipos, inputs, outcomes e erros para o serviço de pagamentos.
  * NUNCA expõe client_secret ou dados sensíveis.
  */
-import type Stripe from 'stripe'
-
 // ─── Payment Provider ───────────────────────────────────────
 
 export const PAYMENT_PROVIDER = 'stripe'
@@ -104,10 +102,7 @@ export function amountsMatch(stripeAmount: number, orderTotal: number): boolean 
 }
 
 /**
- * Lista de payment method types permitidos inicialmente.
- * Multibanco NÃO está incluído — será adicionado em ISSUE própria.
+ * Lista de payment method types — REMOVIDA.
+ * A partir da ISSUE 1G, Stripe usa automatic_payment_methods gerido no Dashboard.
+ * Multibanco será adicionado no Dashboard quando a ISSUE própria for executada.
  */
-export const ALLOWED_PAYMENT_METHOD_TYPES: Stripe.PaymentIntentCreateParams['payment_method_types'] = [
-  'card',
-  // MB WAY é adicionado dinamicamente quando a conta Stripe/configuração o permitir
-]

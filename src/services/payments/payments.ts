@@ -140,6 +140,7 @@ export async function createPaymentForOrder(
       checkoutAttemptId,
     },
     idempotencyKey,
+    automatic_payment_methods: { enabled: true },
   })
 
   // ─── 6. Guardar stripePaymentIntentId na Order ──────────────
