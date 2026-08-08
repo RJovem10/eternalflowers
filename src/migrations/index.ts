@@ -4,6 +4,7 @@ import * as migration_20260802_072328_collections_localized from './20260802_072
 import * as migration_20260802_082923_homepage_localized from './20260802_082923_homepage_localized';
 import * as migration_20260803_123500_product_model from './20260803_123500_product_model';
 import * as migration_20260803_181000_stock_reservations from './20260803_181000_stock_reservations';
+import * as migration_20260808_000000_orders_model from './20260808_000000_orders_model';
 
 export const migrations = [
   {
@@ -35,5 +36,10 @@ export const migrations = [
     up: migration_20260803_181000_stock_reservations.up,
     down: migration_20260803_181000_stock_reservations.down,
     name: '20260803_181000_stock_reservations'
+  },
+  {
+    up: migration_20260808_000000_orders_model.up,
+    down: migration_20260808_000000_orders_model.down,
+    name: '20260808_000000_orders_model'
   },
 ];

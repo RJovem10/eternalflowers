@@ -182,35 +182,134 @@ const Coupons: CollectionConfig = {
 
 const Orders: CollectionConfig = {
   slug: 'orders',
-  admin: { useAsTitle: 'id' },
+  admin: { useAsTitle: 'orderNumber' },
   fields: [
-    { name: 'email', type: 'email', required: true, label: 'Email do cliente' },
+    // --- Order number (unique when present, auto-assigned for legacy) ---
+    { name: 'orderNumber', type: 'text', unique: true, label: 'Nº Encomenda', admin: { hidden: true } },
+
+    // --- Customer group ---
+    {
+      name: 'customer',
+      type: 'group',
+      label: 'Cliente',
+      fields: [
+        { name: 'name', type: 'text', label: 'Nome' },
+        { name: 'email', type: 'email', required: true, label: 'Email' },
+        { name: 'phone', type: 'text', label: 'Telefone' },
+        { name: 'companyName', type: 'text', label: 'Empresa' },
+        { name: 'taxId', type: 'text', label: 'NIF' },
+      ],
+    },
+
+    // --- Shipping address (opcional nesta fase) ---
+    {
+      name: 'shippingAddress',
+      type: 'group',
+      label: 'Morada de Envio',
+      fields: [
+        { name: 'recipientName', type: 'text', label: 'Destinatário' },
+        { name: 'phone', type: 'text', label: 'Telefone' },
+        { name: 'line1', type: 'text', label: 'Morada' },
+        { name: 'line2', type: 'text', label: 'Complemento' },
+        { name: 'city', type: 'text', label: 'Cidade' },
+        { name: 'region', type: 'text', label: 'Distrito' },
+        { name: 'postalCode', type: 'text', label: 'Código Postal' },
+        { name: 'country', type: 'text', label: 'País (ISO 3166-1 alpha-2)' },
+      ],
+    },
+
+    // --- Billing ---
+    { name: 'billingSameAsShipping', type: 'checkbox', defaultValue: true, label: 'Faturação = Envio' },
+    {
+      name: 'billingAddress',
+      type: 'group',
+      label: 'Morada de Faturação',
+      fields: [
+        { name: 'recipientName', type: 'text', label: 'Destinatário' },
+        { name: 'phone', type: 'text', label: 'Telefone' },
+        { name: 'line1', type: 'text', label: 'Morada' },
+        { name: 'line2', type: 'text', label: 'Complemento' },
+        { name: 'city', type: 'text', label: 'Cidade' },
+        { name: 'region', type: 'text', label: 'Distrito' },
+        { name: 'postalCode', type: 'text', label: 'Código Postal' },
+        { name: 'country', type: 'text', label: 'País (ISO 3166-1 alpha-2)' },
+      ],
+    },
+
+    // --- Items ---
     {
       name: 'items',
       type: 'array',
       label: 'Itens',
       fields: [
-        { name: 'flower', type: 'text', label: 'ID da flor' },
-        { name: 'name', type: 'text' },
-        { name: 'price', type: 'number' },
-        { name: 'qty', type: 'number', defaultValue: 1 },
+        { name: 'flower', type: 'relationship', relationTo: 'flowers', required: true, label: 'Flor' },
+        { name: 'name', type: 'text', label: 'Nome' },
+        { name: 'price', type: 'number', label: 'Preço unitário (€)' },
+        { name: 'qty', type: 'number', label: 'Qtd', defaultValue: 1 },
+        { name: 'lineTotal', type: 'number', label: 'Total linha (€)' },
+        { name: 'productionMode', type: 'text', label: 'Modo de produção', admin: { readOnly: true } },
       ],
     },
+
+    // --- Financial summary ---
     { name: 'subtotal', type: 'number', label: 'Subtotal (€)' },
     { name: 'discount', type: 'number', label: 'Desconto (€)', defaultValue: 0 },
+    { name: 'shippingCost', type: 'number', label: 'Portes (€)' },
     { name: 'total', type: 'number', label: 'Total (€)' },
     { name: 'coupon', type: 'text', label: 'Cupão usado' },
+    { name: 'currency', type: 'text', label: 'Moeda', defaultValue: 'EUR' },
+
+    // --- Status ---
+    {
+      name: 'orderStatus',
+      type: 'select',
+      defaultValue: 'pending_payment',
+      label: 'Estado da Encomenda',
+      options: [
+        { label: 'Rascunho', value: 'draft' },
+        { label: 'A aguardar pagamento', value: 'pending_payment' },
+        { label: 'Confirmada', value: 'confirmed' },
+        { label: 'Em preparação', value: 'processing' },
+        { label: 'Expedida', value: 'shipped' },
+        { label: 'Concluída', value: 'completed' },
+        { label: 'Cancelada', value: 'cancelled' },
+        { label: 'Expirada', value: 'expired' },
+      ],
+    },
+    {
+      name: 'paymentStatus',
+      type: 'select',
+      defaultValue: 'unpaid',
+      label: 'Estado do Pagamento',
+      options: [
+        { label: 'Não pago', value: 'unpaid' },
+        { label: 'Pendente', value: 'pending' },
+        { label: 'Pago', value: 'paid' },
+        { label: 'Falhou', value: 'failed' },
+        { label: 'Reembolsado', value: 'refunded' },
+      ],
+    },
+
+    // --- Locale ---
+    { name: 'locale', type: 'text', label: 'Língua do pedido', defaultValue: 'pt' },
+
+    // --- Checkout hash (hidden, unique when present) ---
+    { name: 'checkoutRequestHash', type: 'text', unique: true, label: 'Hash do checkout', admin: { hidden: true } },
+
+    // --- Legacy fields (preserved for backward compatibility, hidden in admin) ---
+    { name: 'email', type: 'email', label: 'Email (legado)', admin: { hidden: true } },
     {
       name: 'status',
       type: 'select',
       defaultValue: 'pending',
+      label: 'Estado (legado)',
+      admin: { hidden: true },
       options: [
         { label: 'Pendente', value: 'pending' },
         { label: 'Pago', value: 'paid' },
         { label: 'Cancelado', value: 'cancelled' },
       ],
     },
-    { name: 'locale', type: 'text', label: 'Língua do pedido', defaultValue: 'pt' },
   ],
 }
 

@@ -31,17 +31,30 @@ export async function POST(req: NextRequest) {
 
   const total = Math.max(0, Number((subtotal - discount).toFixed(2)))
 
-  // cria encomenda (status pending — pagamento Stripe entra depois)
+  // cria encomenda
   const order = await payload.create({
     collection: 'orders',
     data: {
       email: email.toLowerCase(),
-      items: items.map((i: any) => ({ flower: i.id, name: i.name, price: i.price, qty: i.qty })),
+      customer: {
+        email: email.toLowerCase(),
+        name: name || '',
+      },
+      items: items.map((i: any) => ({
+        flower: Number(i.id),
+        name: i.name,
+        price: i.price,
+        qty: i.qty,
+        lineTotal: Number((i.price * i.qty).toFixed(2)),
+      })),
       subtotal: Number(subtotal.toFixed(2)),
       discount: Number(discount.toFixed(2)),
       total,
       coupon: coupon || null,
       status: 'pending',
+      orderStatus: 'pending_payment',
+      paymentStatus: 'unpaid',
+      currency: 'EUR',
       locale: locale || 'pt',
     },
   })
