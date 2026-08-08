@@ -113,6 +113,26 @@ type Dict = {
   couponLabel: string
   catalogDescription: string
   expired: string
+  phone: string
+  companyName: string
+  taxId: string
+  recipientName: string
+  addressLine1: string
+  addressLine2: string
+  city: string
+  region: string
+  postalCode: string
+  country: string
+  selectCountry: string
+  billingSameAsShipping: string
+  checkoutReceived: string
+  orderNumberLabel: string
+  checkoutNextStep: string
+  checkoutConflict: string
+  checkoutServerError: string
+  customerInfo: string
+  shippingInfo: string
+  billingInfo: string
   minOrder: string
   soldOut: string
   incompleteData: string
@@ -237,6 +257,26 @@ export const dictionaries: Record<Locale, Dict> = {
     soldOut: 'Cupão esgotado.',
     incompleteData: 'Dados incompletos.',
         noCode: 'Sem código de cupão.',
+        phone: 'Telefone',
+        companyName: 'Empresa',
+        taxId: 'NIF / VAT',
+        recipientName: 'Destinatário',
+        addressLine1: 'Morada',
+        addressLine2: 'Complemento',
+        city: 'Cidade',
+        region: 'Distrito / Região',
+        postalCode: 'Código Postal',
+        country: 'País',
+        selectCountry: 'Selecionar país',
+        billingSameAsShipping: 'Morada de faturação igual à de entrega',
+        checkoutReceived: 'Dados recebidos!',
+        orderNumberLabel: 'N.º de Encomenda',
+        checkoutNextStep: 'O cálculo de portes e continuação do checkout será o próximo passo.',
+        checkoutConflict: 'Esta tentativa já foi usada com dados diferentes. Tenta novamente.',
+        checkoutServerError: 'Erro interno do servidor. Tenta novamente.',
+        customerInfo: 'Cliente',
+        shippingInfo: 'Morada de Entrega',
+        billingInfo: 'Morada de Faturação',
         leadTimeSingular: 'Produzido em 1 dia útil',
         leadTimePlural: 'Produzido em {days} dias úteis',
         internationalPresence: [
@@ -352,6 +392,26 @@ export const dictionaries: Record<Locale, Dict> = {
     soldOut: 'Coupon fully used.',
     incompleteData: 'Incomplete data.',
     noCode: 'No coupon code.',
+    phone: 'Phone',
+    companyName: 'Company',
+    taxId: 'VAT / Tax ID',
+    recipientName: 'Recipient',
+    addressLine1: 'Address',
+    addressLine2: 'Address Line 2',
+    city: 'City',
+    region: 'Region / State',
+    postalCode: 'Postal Code',
+    country: 'Country',
+    selectCountry: 'Select country',
+    billingSameAsShipping: 'Billing address same as shipping',
+    checkoutReceived: 'Data received!',
+    orderNumberLabel: 'Order Number',
+    checkoutNextStep: 'Shipping calculation and checkout continuation will be the next step.',
+    checkoutConflict: 'This attempt was already used with different data. Please try again.',
+    checkoutServerError: 'Internal server error. Please try again.',
+    customerInfo: 'Customer',
+    shippingInfo: 'Shipping Address',
+    billingInfo: 'Billing Address',
     leadTimeSingular: 'Produced in 1 business day',
     leadTimePlural: 'Produced in {days} business days',
     internationalPresence: [
@@ -467,6 +527,26 @@ export const dictionaries: Record<Locale, Dict> = {
     soldOut: 'Cupón agotado.',
     incompleteData: 'Datos incompletos.',
     noCode: 'Sin código de cupón.',
+    phone: 'Teléfono',
+    companyName: 'Empresa',
+    taxId: 'NIF / CIF',
+    recipientName: 'Destinatario',
+    addressLine1: 'Dirección',
+    addressLine2: 'Complemento',
+    city: 'Ciudad',
+    region: 'Provincia / Región',
+    postalCode: 'Código Postal',
+    country: 'País',
+    selectCountry: 'Seleccionar país',
+    billingSameAsShipping: 'Dirección de facturación igual que la de envío',
+    checkoutReceived: '¡Datos recibidos!',
+    orderNumberLabel: 'N.º de Pedido',
+    checkoutNextStep: 'El cálculo de gastos de envío y la continuación del pago serán el siguiente paso.',
+    checkoutConflict: 'Este intento ya fue usado con datos diferentes. Inténtalo de nuevo.',
+    checkoutServerError: 'Error interno del servidor. Inténtalo de nuevo.',
+    customerInfo: 'Cliente',
+    shippingInfo: 'Dirección de Envío',
+    billingInfo: 'Dirección de Facturación',
     leadTimeSingular: 'Producido en 1 día laborable',
     leadTimePlural: 'Producido en {days} días laborables',
     internationalPresence: [
@@ -582,6 +662,26 @@ export const dictionaries: Record<Locale, Dict> = {
     soldOut: 'Coupon esaurito.',
     incompleteData: 'Dati incompleti.',
     noCode: 'Nessun codice coupon.',
+    phone: 'Telefono',
+    companyName: 'Azienda',
+    taxId: 'Partita IVA',
+    recipientName: 'Destinatario',
+    addressLine1: 'Indirizzo',
+    addressLine2: 'Complemento',
+    city: 'Città',
+    region: 'Regione / Provincia',
+    postalCode: 'CAP',
+    country: 'Paese',
+    selectCountry: 'Seleziona paese',
+    billingSameAsShipping: 'Indirizzo di fatturazione uguale a quello di spedizione',
+    checkoutReceived: 'Dati ricevuti!',
+    orderNumberLabel: 'N. Ordine',
+    checkoutNextStep: 'Il calcolo della spedizione e la continuazione del checkout saranno il prossimo passo.',
+    checkoutConflict: 'Questo tentativo è già stato utilizzato con dati diversi. Riprova.',
+    checkoutServerError: 'Errore interno del server. Riprova.',
+    customerInfo: 'Cliente',
+    shippingInfo: 'Indirizzo di Spedizione',
+    billingInfo: 'Indirizzo di Fatturazione',
     leadTimeSingular: 'Prodotto in 1 giorno lavorativo',
     leadTimePlural: 'Prodotto in {days} giorni lavorativi',
     internationalPresence: [
@@ -697,6 +797,26 @@ export const dictionaries: Record<Locale, Dict> = {
     soldOut: 'Gutschein aufgebraucht.',
     incompleteData: 'Unvollständige Daten.',
     noCode: 'Kein Gutscheincode.',
+    phone: 'Telefon',
+    companyName: 'Firma',
+    taxId: 'USt-IdNr.',
+    recipientName: 'Empfänger',
+    addressLine1: 'Adresse',
+    addressLine2: 'Adresszusatz',
+    city: 'Stadt',
+    region: 'Region / Bundesland',
+    postalCode: 'PLZ',
+    country: 'Land',
+    selectCountry: 'Land auswählen',
+    billingSameAsShipping: 'Rechnungsadresse gleich Lieferadresse',
+    checkoutReceived: 'Daten empfangen!',
+    orderNumberLabel: 'Bestellnummer',
+    checkoutNextStep: 'Die Versandkostenberechnung und die Fortsetzung des Checkouts sind der nächste Schritt.',
+    checkoutConflict: 'Dieser Versuch wurde bereits mit anderen Daten verwendet. Bitte versuche es erneut.',
+    checkoutServerError: 'Interner Serverfehler. Bitte versuche es erneut.',
+    customerInfo: 'Kunde',
+    shippingInfo: 'Lieferadresse',
+    billingInfo: 'Rechnungsadresse',
     leadTimeSingular: 'Hergestellt in 1 Werktag',
     leadTimePlural: 'Hergestellt in {days} Werktagen',
     internationalPresence: [
