@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation'
 import { useRef, useState, useCallback, useMemo } from 'react'
 import { getDictionary } from '@/i18n/dictionaries'
 import { couponErrorToDictKey, type CouponErrorCode, type CouponErrorDictKey } from '@/lib/coupon'
+import StripePaymentSection from '@/components/StripePaymentSection'
 
 // ─── Countries (ISO 3166-1 alpha-2) ────────────────────
 const COUNTRIES: [string, string][] = [
@@ -319,19 +320,34 @@ export default function Checkout() {
 
   if (status.type === 'success') {
     return (
-      <div className="max-w-lg mx-auto py-10 text-center space-y-4">
-        <div className="text-4xl">🌿</div>
-        <h2 className="text-xl font-semibold text-emerald-800">{dict.checkoutReceived}</h2>
-        <p className="text-stone-600">
-          {dict.orderNumberLabel}: <strong>{status.orderNumber}</strong>
-        </p>
-        <p className="text-sm text-stone-500">{dict.checkoutNextStep}</p>
-        <Link
-          href={`/${locale}`}
-          className="inline-block mt-4 text-sm font-medium text-rose-600 hover:underline"
-        >
-          {dict.backToHome}
-        </Link>
+      <div className="max-w-lg mx-auto py-10 space-y-6">
+        <div className="text-center space-y-4">
+          <div className="text-4xl">🌿</div>
+          <h2 className="text-xl font-semibold text-emerald-800">{dict.checkoutReceived}</h2>
+          <p className="text-stone-600">
+            {dict.orderNumberLabel}: <strong>{status.orderNumber}</strong>
+          </p>
+          <p className="text-sm text-stone-500">{dict.checkoutNextStep}</p>
+        </div>
+
+        {/* Payment Element — aparece automaticamente se a Order estiver pending_payment */}
+        <div className="border-t pt-6">
+          <StripePaymentSection
+            orderNumber={status.orderNumber}
+            checkoutRequestId={checkoutRequestIdRef.current}
+            locale={locale}
+            dict={dict}
+          />
+        </div>
+
+        <div className="text-center">
+          <Link
+            href={`/${locale}`}
+            className="inline-block text-sm font-medium text-rose-600 hover:underline"
+          >
+            {dict.backToHome}
+          </Link>
+        </div>
       </div>
     )
   }

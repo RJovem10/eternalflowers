@@ -133,6 +133,18 @@ type Dict = {
   customerInfo: string
   shippingInfo: string
   billingInfo: string
+  payNow: string
+  paymentError: string
+  paymentTryAgain: string
+  stripeNotConfigured: string
+  paymentResultSucceeded: string
+  paymentResultProcessing: string
+  paymentResultFailed: string
+  paymentResultUnknown: string
+  paymentResultError: string
+  startPayment: string
+  loading: string
+  amount: string
   minOrder: string
   soldOut: string
   incompleteData: string
@@ -277,6 +289,18 @@ export const dictionaries: Record<Locale, Dict> = {
         customerInfo: 'Cliente',
         shippingInfo: 'Morada de Entrega',
         billingInfo: 'Morada de Faturação',
+        payNow: 'Pagar agora',
+        paymentError: 'Erro ao processar pagamento. Tenta novamente.',
+        paymentTryAgain: 'Tentar novamente',
+        stripeNotConfigured: 'Pagamento online indisponível de momento. Volta mais tarde.',
+        paymentResultSucceeded: 'Pagamento recebido com sucesso!',
+        paymentResultProcessing: 'Pagamento em processamento.',
+        paymentResultFailed: 'Pagamento não concluído. Tenta novamente.',
+        paymentResultUnknown: 'Estado do pagamento desconhecido.',
+        paymentResultError: 'Erro ao verificar o estado do pagamento.',
+        startPayment: 'Iniciar pagamento',
+        loading: 'A carregar…',
+        amount: 'Valor',
         leadTimeSingular: 'Produzido em 1 dia útil',
         leadTimePlural: 'Produzido em {days} dias úteis',
         internationalPresence: [
@@ -412,6 +436,18 @@ export const dictionaries: Record<Locale, Dict> = {
     customerInfo: 'Customer',
     shippingInfo: 'Shipping Address',
     billingInfo: 'Billing Address',
+    payNow: 'Pay now',
+    paymentError: 'Error processing payment. Please try again.',
+    paymentTryAgain: 'Try again',
+    stripeNotConfigured: 'Online payment is currently unavailable. Please come back later.',
+    paymentResultSucceeded: 'Payment received successfully!',
+    paymentResultProcessing: 'Payment is processing.',
+    paymentResultFailed: 'Payment not completed. Please try again.',
+    paymentResultUnknown: 'Unknown payment status.',
+    paymentResultError: 'Error checking payment status.',
+    startPayment: 'Start payment',
+    loading: 'Loading…',
+    amount: 'Amount',
     leadTimeSingular: 'Produced in 1 business day',
     leadTimePlural: 'Produced in {days} business days',
     internationalPresence: [
@@ -547,6 +583,18 @@ export const dictionaries: Record<Locale, Dict> = {
     customerInfo: 'Cliente',
     shippingInfo: 'Dirección de Envío',
     billingInfo: 'Dirección de Facturación',
+    payNow: 'Pagar ahora',
+    paymentError: 'Error al procesar el pago. Inténtalo de nuevo.',
+    paymentTryAgain: 'Intentar de nuevo',
+    stripeNotConfigured: 'Pago en línea no disponible actualmente. Vuelve más tarde.',
+    paymentResultSucceeded: '¡Pago recibido con éxito!',
+    paymentResultProcessing: 'Pago en proceso.',
+    paymentResultFailed: 'Pago no completado. Inténtalo de nuevo.',
+    paymentResultUnknown: 'Estado del pago desconocido.',
+    paymentResultError: 'Error al verificar el estado del pago.',
+    startPayment: 'Iniciar pago',
+    loading: 'Cargando…',
+    amount: 'Importe',
     leadTimeSingular: 'Producido en 1 día laborable',
     leadTimePlural: 'Producido en {days} días laborables',
     internationalPresence: [
@@ -682,6 +730,18 @@ export const dictionaries: Record<Locale, Dict> = {
     customerInfo: 'Cliente',
     shippingInfo: 'Indirizzo di Spedizione',
     billingInfo: 'Indirizzo di Fatturazione',
+    payNow: 'Paga ora',
+    paymentError: "Errore nell'elaborazione del pagamento. Riprova.",
+    paymentTryAgain: 'Riprova',
+    stripeNotConfigured: 'Pagamento online non disponibile al momento. Riprova più tardi.',
+    paymentResultSucceeded: 'Pagamento ricevuto con successo!',
+    paymentResultProcessing: 'Pagamento in elaborazione.',
+    paymentResultFailed: 'Pagamento non completato. Riprova.',
+    paymentResultUnknown: 'Stato del pagamento sconosciuto.',
+    paymentResultError: "Errore nella verifica dello stato del pagamento.",
+    startPayment: 'Avvia pagamento',
+    loading: 'Caricamento…',
+    amount: 'Importo',
     leadTimeSingular: 'Prodotto in 1 giorno lavorativo',
     leadTimePlural: 'Prodotto in {days} giorni lavorativi',
     internationalPresence: [
@@ -817,6 +877,18 @@ export const dictionaries: Record<Locale, Dict> = {
     customerInfo: 'Kunde',
     shippingInfo: 'Lieferadresse',
     billingInfo: 'Rechnungsadresse',
+    payNow: 'Jetzt bezahlen',
+    paymentError: 'Fehler bei der Zahlungsabwicklung. Bitte versuche es erneut.',
+    paymentTryAgain: 'Erneut versuchen',
+    stripeNotConfigured: 'Online-Zahlung derzeit nicht verfügbar. Bitte komme später zurück.',
+    paymentResultSucceeded: 'Zahlung erfolgreich erhalten!',
+    paymentResultProcessing: 'Zahlung wird verarbeitet.',
+    paymentResultFailed: 'Zahlung nicht abgeschlossen. Bitte versuche es erneut.',
+    paymentResultUnknown: 'Unbekannter Zahlungsstatus.',
+    paymentResultError: 'Fehler beim Überprüfen des Zahlungsstatus.',
+    startPayment: 'Zahlung starten',
+    loading: 'Wird geladen…',
+    amount: 'Betrag',
     leadTimeSingular: 'Hergestellt in 1 Werktag',
     leadTimePlural: 'Hergestellt in {days} Werktagen',
     internationalPresence: [
