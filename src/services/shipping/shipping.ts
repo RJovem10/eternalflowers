@@ -13,6 +13,7 @@
 import {
   InvalidShippingInputError,
   ShippingProviderError,
+  ShippingProviderNotConfiguredError,
   type ShippingQuote,
   type ShippingQuoteInput,
 } from './shipping-types'
@@ -165,7 +166,11 @@ export async function getShippingQuotes(
   try {
     rawQuotes = await provider.quote(normalizedInput)
   } catch (err) {
-    // Erros do provider propagam sem expor detalhes internos
+    // Erros específicos de configuração propagam-se sem embrulhar
+    if (err instanceof ShippingProviderNotConfiguredError) {
+      throw err
+    }
+    // Restantes erros do provider propagam sem expor detalhes internos
     throw new ShippingProviderError(
       `Erro ao obter cotações de ${provider.id}.`,
     )

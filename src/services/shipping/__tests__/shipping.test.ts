@@ -118,8 +118,12 @@ describe('getShippingQuotes', () => {
 
   it('5. CttShippingProvider sem configuração lança ShippingProviderNotConfiguredError', async () => {
     expect(cttProvider.id).toBe('ctt')
-    // Testar o provider directamente (getShippingQuotes encapsula o erro)
+    // Directamente no provider
     await expect(cttProvider.quote(validInput())).rejects.toThrow(ShippingProviderNotConfiguredError)
+    // Através de getShippingQuotes — o erro propaga sem ser embrulhado
+    await expect(
+      getShippingQuotes(cttProvider, validInput()),
+    ).rejects.toThrow(ShippingProviderNotConfiguredError)
   })
 
   it('6. erros do provider são tratados sem expor detalhes internos', async () => {
