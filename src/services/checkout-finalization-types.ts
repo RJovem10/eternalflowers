@@ -4,15 +4,22 @@
  * Tipos e erros para o serviço prepareOrderForPayment.
  */
 
+import type { ShippingProvider } from './shipping/shipping'
+import type { ShippingParcel, ShippingAddress } from './shipping/shipping-types'
+
 // ─── Input ──────────────────────────────────────────────────
 
 export interface PrepareOrderInput {
   /** ID da Order a finalizar */
   orderId: number
-  /** Transportadora a usar (e.g. 'fake', 'ctt') */
-  shippingProviderId: string
+  /** Provider de shipping (server-side, nunca do browser) */
+  provider: ShippingProvider
   /** Código do serviço de envio escolhido (e.g. 'STANDARD') */
   shippingServiceCode: string
+  /** Parcel de envio (server-side, nunca do browser) */
+  parcel: ShippingParcel
+  /** Morada de origem/loja (server-side, nunca do browser) */
+  origin: ShippingAddress
   /** Payload request para transacções internas */
   req?: any
 }
@@ -59,5 +66,23 @@ export class NegativeTotalError extends Error {
   constructor(msg = 'Total final não pode ser negativo.') {
     super(msg)
     this.name = 'NegativeTotalError'
+  }
+}
+
+export class ShippingParcelNotConfiguredError extends Error {
+  code = 'SHIPPING_PARCEL_NOT_CONFIGURED' as const
+  constructor(msg = 'Parcel de envio não configurado.') {
+    super(msg)
+    this.name = 'ShippingParcelNotConfiguredError'
+  }
+}
+
+export class InvalidShippingParcelError extends Error {
+  code = 'INVALID_SHIPPING_PARCEL' as const
+  details: string
+  constructor(msg: string, details: string) {
+    super(msg)
+    this.name = 'InvalidShippingParcelError'
+    this.details = details
   }
 }
