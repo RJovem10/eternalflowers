@@ -5,6 +5,7 @@ import * as migration_20260802_082923_homepage_localized from './20260802_082923
 import * as migration_20260803_123500_product_model from './20260803_123500_product_model';
 import * as migration_20260803_181000_stock_reservations from './20260803_181000_stock_reservations';
 import * as migration_20260808_000000_orders_model from './20260808_000000_orders_model';
+import * as migration_20260808_000001_checkout_fields from './20260808_000001_checkout_fields';
 
 export const migrations = [
   {
@@ -41,5 +42,10 @@ export const migrations = [
     up: migration_20260808_000000_orders_model.up,
     down: migration_20260808_000000_orders_model.down,
     name: '20260808_000000_orders_model'
+  },
+  {
+    up: migration_20260808_000001_checkout_fields.up,
+    down: migration_20260808_000001_checkout_fields.down,
+    name: '20260808_000001_checkout_fields'
   },
 ];
