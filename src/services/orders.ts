@@ -127,8 +127,10 @@ function validateInput(input: CreateOrderInput): void {
   }
 
   // billingAddress if not same as shipping
-  if (!input.billingSameAsShipping && input.billingAddress) {
-    if (input.billingAddress.country) {
+  if (!input.billingSameAsShipping) {
+    if (!input.billingAddress) {
+      errors.push('billingAddress é obrigatório quando billingSameAsShipping é false.')
+    } else if (input.billingAddress.country) {
       const normalized = normalizeCountry(input.billingAddress.country)
       if (!ISO_ALPHA2_RE.test(normalized)) {
         errors.push('billingAddress.country deve ser ISO 3166-1 alpha-2.')
@@ -203,8 +205,15 @@ async function executeCreateOrder(
 
     // Nome da flor: usar o campo localizado ou cair para namePt
     const name = flower.namePt || flower.nameEn || ''
+    if (!name) {
+      throw new InvalidProductError(`Flor ${itemInput.flowerId} não tem nome definido.`)
+    }
 
     const price = Number(flower.price) || 0
+    if (price <= 0) {
+      throw new InvalidProductError(`Flor ${itemInput.flowerId} tem preço inválido (${flower.price}).`)
+    }
+
     const qty = itemInput.qty
     const lineTotal = Number((price * qty).toFixed(2))
     subtotal += lineTotal

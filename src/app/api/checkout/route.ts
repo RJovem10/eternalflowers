@@ -1,66 +1,156 @@
+/**
+ * POST /api/checkout — Cria uma encomenda.
+ *
+ * Delega a lógica de domínio a createOrder() (services/orders.ts):
+ * - Não confia em price/name/subtotal do frontend
+ * - Não incrementa usesCount de cupões
+ * - Idempotente via checkoutRequestId
+ *
+ * Input: CreateOrderInput (checkoutRequestId, customer, shippingAddress, items, coupon?, locale)
+ * Output: { ok, orderId, orderNumber, subtotal, discount, shippingCost, total, orderStatus, paymentStatus }
+ */
 import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
-import { validateCoupon } from '@/lib/coupon'
+import { createOrder } from '@/services/orders'
+import type { CreateOrderInput } from '@/services/order-types'
+import {
+  OrderValidationError,
+  InvalidProductError,
+  CouponValidationError,
+  IdempotencyConflictError,
+} from '@/services/order-types'
 
 export async function POST(req: NextRequest) {
-  const body = await req.json()
-  const { email, name, items, coupon, locale, subtotal } = body
-
-  if (!email || !items?.length)
-    return NextResponse.json({ ok: false, error: 'Dados incompletos.', error_code: 'INCOMPLETE_DATA' })
-
-  const payload = await getPayload({ config })
-
-  // valida e aplica cupão (se houver)
-  let discount = 0
-  let appliedCoupon: any = null
-  if (coupon) {
-    const result = await validateCoupon(payload, coupon, email, subtotal)
-    if (result.valid && result.coupon) {
-      discount = result.discount ?? 0
-      appliedCoupon = result.coupon
-      // incrementa contador de usos
-      await payload.update({
-        collection: 'coupons',
-        id: appliedCoupon.id,
-        data: { usesCount: (appliedCoupon.usesCount || 0) + 1 },
-      })
+  try {
+    let body: Record<string, unknown>
+    try {
+      body = await req.json()
+    } catch {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: 'Corpo do pedido inválido. Envie JSON válido.',
+          error_code: 'INVALID_JSON',
+        },
+        { status: 400 },
+      )
     }
+
+    const payload = await getPayload({ config })
+
+    // Mapear input do body para CreateOrderInput
+    const rawItems: unknown[] = Array.isArray(body.items) ? body.items : []
+    const items = rawItems
+      .filter((i): i is Record<string, unknown> => typeof i === 'object' && i !== null)
+      .map((i) => ({
+        flowerId: Number(i.flowerId) || 0,
+        qty: Number(i.qty) || 0,
+      }))
+
+    const input: CreateOrderInput = {
+      checkoutRequestId: asString(body.checkoutRequestId) || '',
+      customer: asObject(body.customer) as unknown as CreateOrderInput['customer'],
+      shippingAddress: asObject(body.shippingAddress) as unknown as CreateOrderInput['shippingAddress'],
+      billingSameAsShipping: body.billingSameAsShipping !== false,
+      billingAddress: asObject(body.billingAddress) as unknown as CreateOrderInput['billingAddress'] | undefined,
+      items,
+      coupon: asString(body.coupon) || undefined,
+      locale: asString(body.locale) || 'pt',
+      req: (req as any).payload ? { payload: (req as any).payload } : undefined,
+    }
+
+    const result = await createOrder(payload, input)
+
+    const order = result.order
+
+    return NextResponse.json(
+      {
+        ok: true,
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        subtotal: order.subtotal,
+        discount: order.discount,
+        shippingCost: order.shippingCost ?? null,
+        total: order.total ?? null,
+        orderStatus: order.orderStatus,
+        paymentStatus: order.paymentStatus,
+      },
+      { status: 201 },
+    )
+  } catch (err: any) {
+    return handleError(err)
+  }
+}
+
+// ─── Error handling ─────────────────────────────────────────
+
+function handleError(err: any): NextResponse {
+  if (err instanceof OrderValidationError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: err.message,
+        error_code: 'ORDER_VALIDATION_ERROR',
+        details: err.details,
+      },
+      { status: 400 },
+    )
   }
 
-  const total = Math.max(0, Number((subtotal - discount).toFixed(2)))
-
-  // cria encomenda
-  const order = await payload.create({
-    collection: 'orders',
-    data: {
-      email: email.toLowerCase(),
-      customer: {
-        email: email.toLowerCase(),
-        name: name || '',
+  if (err instanceof InvalidProductError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: err.message || 'Produto inválido.',
+        error_code: 'INVALID_PRODUCT',
       },
-      items: items.map((i: any) => ({
-        flower: Number(i.id),
-        name: i.name,
-        price: i.price,
-        qty: i.qty,
-        lineTotal: Number((i.price * i.qty).toFixed(2)),
-      })),
-      subtotal: Number(subtotal.toFixed(2)),
-      discount: Number(discount.toFixed(2)),
-      total,
-      coupon: coupon || null,
-      status: 'pending',
-      orderStatus: 'pending_payment',
-      paymentStatus: 'unpaid',
-      currency: 'EUR',
-      locale: locale || 'pt',
+      { status: 404 },
+    )
+  }
+
+  if (err instanceof CouponValidationError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: err.message || 'Cupão inválido.',
+        error_code: 'COUPON_VALIDATION_ERROR',
+      },
+      { status: 400 },
+    )
+  }
+
+  if (err instanceof IdempotencyConflictError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: err.message || 'Conflito de idempotência.',
+        error_code: 'IDEMPOTENCY_CONFLICT',
+      },
+      { status: 409 },
+    )
+  }
+
+  // Erro inesperado — sem detalhes internos
+  console.error('[checkout] Unexpected error:', err)
+  return NextResponse.json(
+    {
+      ok: false,
+      error: 'Erro interno do servidor.',
+      error_code: 'INTERNAL_ERROR',
     },
-  })
+    { status: 500 },
+  )
+}
 
-  // NOTA: integração Stripe (MB WAY/Multibanco) entra aqui quando confirmada a conta PT.
-  // Por agora a encomenda fica registada e a Marina trata do pagamento manualmente.
+// ─── Helpers ─────────────────────────────────────────────────
 
-  return NextResponse.json({ ok: true, orderId: (order as any).id, total })
+function asString(v: unknown): string | null {
+  return typeof v === 'string' && v.length > 0 ? v : null
+}
+
+function asObject(v: unknown): Record<string, unknown> | null {
+  return typeof v === 'object' && v !== null && !Array.isArray(v)
+    ? (v as Record<string, unknown>)
+    : null
 }
