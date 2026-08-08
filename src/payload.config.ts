@@ -302,6 +302,10 @@ const Orders: CollectionConfig = {
     { name: 'paymentMethodType', type: 'text', label: 'Método de pagamento', admin: { hidden: true } },
     { name: 'paidAt', type: 'date', label: 'Pago em', admin: { hidden: true } },
 
+    // --- Refund fields (Issue 1I) ---
+    { name: 'stripeRefundId', type: 'text', unique: true, label: 'Stripe Refund ID', admin: { hidden: true } },
+    { name: 'refundReason', type: 'text', label: 'Razão do reembolso', admin: { hidden: true } },
+
     // --- Checkout attempt id (UUID, server-generated, hidden) ---
     { name: 'checkoutAttemptId', type: 'text', unique: true, label: 'Checkout Attempt ID', admin: { hidden: true } },
 

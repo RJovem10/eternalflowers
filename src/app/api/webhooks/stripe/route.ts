@@ -16,7 +16,7 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { constructWebhookEvent } from '@/services/payments/stripe'
 import {
-  handlePaymentSucceeded,
+  handlePaymentSucceededWithFallback,
   handlePaymentFailed,
   handlePaymentProcessing,
   handlePaymentCanceled,
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
 
     switch (event.type) {
       case 'payment_intent.succeeded':
-        result = await handlePaymentSucceeded(payload, paymentIntent)
+        result = await handlePaymentSucceededWithFallback(payload, paymentIntent)
         break
 
       case 'payment_intent.payment_failed':

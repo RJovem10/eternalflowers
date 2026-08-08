@@ -1,6 +1,11 @@
 /**
  * Testes unitários para POST /api/payments/session
  *
+ * ISSUE-1I:
+ * - Reservation guard: active/confirmed → clientSecret
+ * - Reservation guard: expired → PAYMENT_RESERVATION_EXPIRED
+ * - made_to_order-only não bloqueado pelo guard
+ *
  * Testa:
  *  1. capability correta + pending_payment → clientSecret
  *  2. checkoutRequestId errado → acesso negado sem leak
@@ -10,6 +15,11 @@
  *  6. amount/currency não podem ser controlados pelo input
  *  7. clientSecret não é persistido na Order
  *  8. malformed body → 400
+ *  9. reservation active → clientSecret
+ * 10. reservation expirada → PAYMENT_RESERVATION_EXPIRED
+ * 11. made_to_order-only não bloqueado
+ * 12. reservation released → PAYMENT_RESERVATION_EXPIRED
+ * 13. reservation em falta → PAYMENT_RESERVATION_EXPIRED
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -52,8 +62,7 @@ vi.mock('@/services/payments/stripe', async () => {
         amount: toStripeAmount(params.amount),
         currency: params.currency.toLowerCase(),
         metadata: params.metadata,
-        automatic_payment_methods: params.automatic_payment_methods,
-        excluded_payment_method_types: params.excluded_payment_method_types,
+        payment_method_types: params.payment_method_types,
       })
       return mockPaymentIntents[intent.id]
     }),
@@ -82,6 +91,8 @@ vi.mock('@/services/payments/stripe', async () => {
       return { valid: errors.length === 0, errors }
     }),
     constructWebhookEvent: vi.fn(),
+    createFullRefund: vi.fn(),
+    getSupportedPaymentMethods: vi.fn(() => ['card', 'mb_way', 'link']),
   }
 })
 
@@ -95,20 +106,23 @@ vi.mock('crypto', async () => {
   }
 })
 
-// ─── Mock Payload / Orders ────────────────────────────────────
+// ─── Mock Payload / Orders / Reservations ─────────────────────
 
 let mockOrders: any[] = []
 let mockOrderIdSeq = 0
+let mockReservations: any[] = []
+let mockReservationIdSeq = 0
 
 function resetMocks() {
   mockOrders = []
   mockOrderIdSeq = 0
+  mockReservations = []
+  mockReservationIdSeq = 0
   resetStripeMocks()
   vi.clearAllMocks()
 }
 
 function createHash(id: string): string {
-  // SHA-256 simulado para testes (determinístico)
   const crypto = require('crypto')
   return crypto.createHash('sha256').update(id).digest('hex')
 }
@@ -125,6 +139,8 @@ function createTestOrder(overrides: Partial<any> = {}): any {
     stripePaymentIntentId: null,
     paymentMethodType: null,
     paidAt: null,
+    stripeRefundId: null,
+    refundReason: null,
     checkoutAttemptId: `ca-${mockOrderIdSeq}`,
     checkoutRequestHash: createHash(checkoutRequestId),
     total: 100.00,
@@ -132,8 +148,41 @@ function createTestOrder(overrides: Partial<any> = {}): any {
     discount: 0,
     shippingCost: 0,
     currency: 'EUR',
-    items: [],
+    items: [
+      { flower: 1, name: 'Rosa Vermelha', price: 50.00, qty: 2, lineTotal: 100.00, productionMode: 'reproducible' },
+    ],
     customer: { name: 'Maria Silva', email: 'maria@example.com' },
+    ...overrides,
+  }
+  mockOrders.push(order)
+  return order
+}
+
+function createMTOOnlyOrder(overrides: Partial<any> = {}): any {
+  mockOrderIdSeq++
+  const checkoutRequestId = overrides.checkoutRequestId || `mto-uuid-${mockOrderIdSeq}`
+  const order = {
+    id: mockOrderIdSeq,
+    orderNumber: `EF-20260808-${String(mockOrderIdSeq).padStart(4, '0')}`,
+    orderStatus: 'pending_payment',
+    paymentStatus: 'unpaid',
+    paymentProvider: null,
+    stripePaymentIntentId: null,
+    paymentMethodType: null,
+    paidAt: null,
+    stripeRefundId: null,
+    refundReason: null,
+    checkoutAttemptId: `ca-${mockOrderIdSeq}`,
+    checkoutRequestHash: createHash(checkoutRequestId),
+    total: 90.00,
+    subtotal: 90.00,
+    discount: 0,
+    shippingCost: 0,
+    currency: 'EUR',
+    items: [
+      { flower: 3, name: 'Girassol MTO', price: 90.00, qty: 1, lineTotal: 90.00, productionMode: 'made_to_order' },
+    ],
+    customer: { name: 'João Silva', email: 'joao@example.com' },
     ...overrides,
   }
   mockOrders.push(order)
@@ -147,6 +196,13 @@ vi.mock('payload', () => ({
         if (where?.orderNumber?.equals) {
           const found = mockOrders.filter((o) => o.orderNumber === where.orderNumber.equals)
           return { docs: found.slice(0, limit || 10), totalDocs: found.length }
+        }
+        return { docs: [], totalDocs: 0 }
+      }
+      if (collection === 'stock-reservations') {
+        if (where?.order?.equals) {
+          const filtered = mockReservations.filter((r: any) => r.order === where.order.equals)
+          return { docs: filtered, totalDocs: filtered.length }
         }
         return { docs: [], totalDocs: 0 }
       }
@@ -201,6 +257,16 @@ describe('POST /api/payments/session', () => {
   it('1. pending_payment com checkoutRequestId correcto → clientSecret', async () => {
     const checkoutRequestId = 'a1b2c3d4-e5f6-4789-abcd-ef0123456789'
     const order = createTestOrder({ checkoutRequestId })
+    // Add active reservation so guard passes
+    mockReservationIdSeq++
+    mockReservations.push({
+      id: mockReservationIdSeq,
+      order: order.id,
+      flower: 1,
+      quantity: 2,
+      status: 'active',
+      expiresAt: new Date(Date.now() + 1800000).toISOString(),
+    })
     const req = createRequest({ orderNumber: order.orderNumber, checkoutRequestId })
 
     const res = await POST(req)
@@ -220,7 +286,6 @@ describe('POST /api/payments/session', () => {
 
     expect(res.status).toBe(404)
     expect(body.error).toBe('Encomenda não encontrada.')
-    // Não deve revelar dados da Order
     expect(body.clientSecret).toBeUndefined()
     expect(body.orderNumber).toBeUndefined()
   })
@@ -238,7 +303,6 @@ describe('POST /api/payments/session', () => {
   it('4. draft → ORDER_NOT_READY_FOR_PAYMENT', async () => {
     const checkoutRequestId = 'draft-order-uuid'
     createTestOrder({ checkoutRequestId, orderStatus: 'draft', total: null, shippingCost: null })
-    // Precisamos do orderNumber deste draft
     const draftOrder = mockOrders[0]
     const req = createRequest({ orderNumber: draftOrder.orderNumber, checkoutRequestId })
 
@@ -253,17 +317,24 @@ describe('POST /api/payments/session', () => {
   it('5. segunda chamada → mesmo PaymentIntent (idempotente)', async () => {
     const checkoutRequestId = 'idempotent-test-uuid'
     const order = createTestOrder({ checkoutRequestId })
+    mockReservationIdSeq++
+    mockReservations.push({
+      id: mockReservationIdSeq,
+      order: order.id,
+      flower: 1,
+      quantity: 2,
+      status: 'active',
+      expiresAt: new Date(Date.now() + 1800000).toISOString(),
+    })
 
     const req1 = createRequest({ orderNumber: order.orderNumber, checkoutRequestId })
     const res1 = await POST(req1)
     const body1 = await res1.json()
 
-    // Segunda chamada
     const req2 = createRequest({ orderNumber: order.orderNumber, checkoutRequestId })
     const res2 = await POST(req2)
     const body2 = await res2.json()
 
-    // Ambos devem ter clientSecret (reused ou created)
     expect(body1.clientSecret).toBeDefined()
     expect(body2.clientSecret).toBeDefined()
   })
@@ -271,8 +342,16 @@ describe('POST /api/payments/session', () => {
   it('6. amount/currency do browser são ignorados', async () => {
     const checkoutRequestId = 'amount-test-uuid'
     const order = createTestOrder({ checkoutRequestId })
+    mockReservationIdSeq++
+    mockReservations.push({
+      id: mockReservationIdSeq,
+      order: order.id,
+      flower: 1,
+      quantity: 2,
+      status: 'active',
+      expiresAt: new Date(Date.now() + 1800000).toISOString(),
+    })
 
-    // Tentar enviar amount/currency no body (devem ser ignorados)
     const bodyWithExtras = {
       orderNumber: order.orderNumber,
       checkoutRequestId,
@@ -284,7 +363,6 @@ describe('POST /api/payments/session', () => {
     const body = await res.json()
 
     expect(res.status).toBe(200)
-    // O payment intent deve usar o total da Order (100 EUR), não o do browser
     const { createPaymentIntent } = await import('@/services/payments/stripe')
     const calls = (createPaymentIntent as any).mock.calls
     const lastCall = calls[calls.length - 1]
@@ -295,14 +373,21 @@ describe('POST /api/payments/session', () => {
   it('7. clientSecret não é persistido na Order', async () => {
     const checkoutRequestId = 'no-persist-uuid'
     const order = createTestOrder({ checkoutRequestId })
+    mockReservationIdSeq++
+    mockReservations.push({
+      id: mockReservationIdSeq,
+      order: order.id,
+      flower: 1,
+      quantity: 2,
+      status: 'active',
+      expiresAt: new Date(Date.now() + 1800000).toISOString(),
+    })
     const req = createRequest({ orderNumber: order.orderNumber, checkoutRequestId })
 
     await POST(req)
 
     const updatedOrder = mockOrders.find((o) => o.id === order.id)
-    // clientSecret não deve estar na Order
     expect((updatedOrder as any).clientSecret).toBeUndefined()
-    // stripePaymentIntentId foi guardado, mas não o client_secret
     expect(updatedOrder.stripePaymentIntentId).toBeDefined()
   })
 
@@ -313,5 +398,94 @@ describe('POST /api/payments/session', () => {
 
     expect(res.status).toBe(400)
     expect(body.error).toContain('inválido')
+  })
+
+  it('9. reservation active → clientSecret (guard passa)', async () => {
+    const checkoutRequestId = 'guard-active-uuid'
+    const order = createTestOrder({ checkoutRequestId })
+    mockReservationIdSeq++
+    mockReservations.push({
+      id: mockReservationIdSeq,
+      order: order.id,
+      flower: 1,
+      quantity: 2,
+      status: 'active',
+      expiresAt: new Date(Date.now() + 1800000).toISOString(),
+    })
+
+    const req = createRequest({ orderNumber: order.orderNumber, checkoutRequestId })
+    const res = await POST(req)
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.clientSecret).toBeDefined()
+  })
+
+  it('10. reservation expirada → PAYMENT_RESERVATION_EXPIRED', async () => {
+    const checkoutRequestId = 'guard-expired-uuid'
+    const order = createTestOrder({ checkoutRequestId })
+    mockReservationIdSeq++
+    mockReservations.push({
+      id: mockReservationIdSeq,
+      order: order.id,
+      flower: 1,
+      quantity: 2,
+      status: 'expired',
+      expiresAt: new Date(Date.now() - 60000).toISOString(),
+    })
+
+    const req = createRequest({ orderNumber: order.orderNumber, checkoutRequestId })
+    const res = await POST(req)
+    const body = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(body.code).toBe('PAYMENT_RESERVATION_EXPIRED')
+    expect(body.clientSecret).toBeUndefined()
+  })
+
+  it('11. made_to_order-only não bloqueado pelo guard', async () => {
+    const checkoutRequestId = 'mto-guard-uuid'
+    const order = createMTOOnlyOrder({ checkoutRequestId })
+
+    const req = createRequest({ orderNumber: order.orderNumber, checkoutRequestId })
+    const res = await POST(req)
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.clientSecret).toBeDefined()
+  })
+
+  it('12. reservation released → PAYMENT_RESERVATION_EXPIRED', async () => {
+    const checkoutRequestId = 'guard-released-uuid'
+    const order = createTestOrder({ checkoutRequestId })
+    mockReservationIdSeq++
+    mockReservations.push({
+      id: mockReservationIdSeq,
+      order: order.id,
+      flower: 1,
+      quantity: 2,
+      status: 'released',
+      expiresAt: new Date(Date.now() + 1800000).toISOString(),
+    })
+
+    const req = createRequest({ orderNumber: order.orderNumber, checkoutRequestId })
+    const res = await POST(req)
+    const body = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(body.code).toBe('PAYMENT_RESERVATION_EXPIRED')
+  })
+
+  it('13. reservation em falta para item reservável → PAYMENT_RESERVATION_EXPIRED', async () => {
+    const checkoutRequestId = 'guard-missing-uuid'
+    const order = createTestOrder({ checkoutRequestId })
+    // Sem reservas — o item é reproducible e precisa de reserva
+
+    const req = createRequest({ orderNumber: order.orderNumber, checkoutRequestId })
+    const res = await POST(req)
+    const body = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(body.code).toBe('PAYMENT_RESERVATION_EXPIRED')
   })
 })
