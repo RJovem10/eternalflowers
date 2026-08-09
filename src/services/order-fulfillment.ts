@@ -142,52 +142,46 @@ async function transitionOrderFulfillment(
     })
 
     // ─── 8a. Enqueue email notification (na mesma transacção) ──
+    // Faz parte da transactional outbox: falha ao persistir a notification
+    // faz rollback da transacção de domínio.
     const customer = (order.customer || {}) as any
     const recipientEmail = customer.email || order.email || ''
 
     if (targetStatus === 'shipped' && recipientEmail) {
-      try {
-        const sanitized = sanitizeTrackingNumber(trackingNumber)
-        await enqueueEmailNotification(payload, {
+      const sanitized = sanitizeTrackingNumber(trackingNumber)
+      await enqueueEmailNotification(payload, {
+        type: 'order_shipped',
+        orderId: input.orderId,
+        recipientEmail,
+        locale: order.locale || 'pt',
+        deduplicationKey: dedupKeyShipped(input.orderId),
+        snapshot: {
           type: 'order_shipped',
-          orderId: input.orderId,
-          recipientEmail,
-          locale: order.locale || 'pt',
-          deduplicationKey: dedupKeyShipped(input.orderId),
-          snapshot: {
-            type: 'order_shipped',
-            data: {
-              orderNumber: order.orderNumber || String(input.orderId),
-              customerName: customer.name || '',
-              trackingNumber: sanitized,
-              shippingServiceName: order.shippingServiceName || null,
-            },
+          data: {
+            orderNumber: order.orderNumber || String(input.orderId),
+            customerName: customer.name || '',
+            trackingNumber: sanitized,
+            shippingServiceName: order.shippingServiceName || null,
           },
-          req: ctx.req,
-        })
-      } catch {
-        // Falha não aborta a transacção de fulfillment
-      }
+        },
+        req: ctx.req,
+      })
     } else if (targetStatus === 'completed' && recipientEmail) {
-      try {
-        await enqueueEmailNotification(payload, {
+      await enqueueEmailNotification(payload, {
+        type: 'order_completed',
+        orderId: input.orderId,
+        recipientEmail,
+        locale: order.locale || 'pt',
+        deduplicationKey: dedupKeyCompleted(input.orderId),
+        snapshot: {
           type: 'order_completed',
-          orderId: input.orderId,
-          recipientEmail,
-          locale: order.locale || 'pt',
-          deduplicationKey: dedupKeyCompleted(input.orderId),
-          snapshot: {
-            type: 'order_completed',
-            data: {
-              orderNumber: order.orderNumber || String(input.orderId),
-              customerName: customer.name || '',
-            },
+          data: {
+            orderNumber: order.orderNumber || String(input.orderId),
+            customerName: customer.name || '',
           },
-          req: ctx.req,
-        })
-      } catch {
-        // Falha não aborta a transacção de fulfillment
-      }
+        },
+        req: ctx.req,
+      })
     }
 
     // ─── 8b. Construir resultado ───────────────────────────────

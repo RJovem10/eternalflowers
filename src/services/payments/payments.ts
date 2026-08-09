@@ -387,42 +387,37 @@ async function executePaymentSucceeded(
     overrideAccess: true,
   })
 
-  // ─── Enqueue order_confirmed email notification ───────────
-  try {
-    const items = (order.items as any[]) || []
-    const customer = (order.customer || {}) as any
+  // ─── Enqueue order_confirmed email notification (mesma transacção) ──
+  // Faz parte da transactional outbox: falha ao persistir a notification
+  // faz rollback da transacção de domínio.
+  const customer = (order.customer || {}) as any
 
-    await enqueueEmailNotification(payload, {
+  await enqueueEmailNotification(payload, {
+    type: 'order_confirmed',
+    orderId: order.id,
+    recipientEmail: customer.email || order.email || '',
+    locale: order.locale || 'pt',
+    deduplicationKey: dedupKeyConfirmed(order.id),
+    snapshot: {
       type: 'order_confirmed',
-      orderId: order.id,
-      recipientEmail: customer.email || order.email || '',
-      locale: order.locale || 'pt',
-      deduplicationKey: dedupKeyConfirmed(order.id),
-      snapshot: {
-        type: 'order_confirmed',
-        data: {
-          orderNumber: order.orderNumber || String(order.id),
-          customerName: customer.name || '',
-          items: items.map((item: any) => ({
-            name: item.name || '',
-            qty: Number(item.qty) || 1,
-            unitPrice: Number(item.price) || 0,
-            lineTotal: Number(item.lineTotal) || 0,
-          })),
-          subtotal: Number(order.subtotal) || 0,
-          discount: Number(order.discount) || 0,
-          shippingCost: Number(order.shippingCost) || 0,
-          total: Number(order.total) || 0,
-          currency: order.currency || 'EUR',
-        },
+      data: {
+        orderNumber: order.orderNumber || String(order.id),
+        customerName: customer.name || '',
+        items: items.map((item: any) => ({
+          name: item.name || '',
+          qty: Number(item.qty) || 1,
+          unitPrice: Number(item.price) || 0,
+          lineTotal: Number(item.lineTotal) || 0,
+        })),
+        subtotal: Number(order.subtotal) || 0,
+        discount: Number(order.discount) || 0,
+        shippingCost: Number(order.shippingCost) || 0,
+        total: Number(order.total) || 0,
+        currency: order.currency || 'EUR',
       },
-      req: ctx.req,
-    })
-  } catch {
-    // Falha no enqueue não deve abortar a transacção de pagamento.
-    // Email notification será perdida até haver retry manual ou
-    // ferramenta de reconciliação.
-  }
+    },
+    req: ctx.req,
+  })
 
   return { kind: 'processed', orderId: order.id }
 }
