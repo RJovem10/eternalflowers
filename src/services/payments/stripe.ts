@@ -195,6 +195,52 @@ export function constructWebhookEvent(
   return stripe.webhooks.constructEvent(rawBody, signature, webhookSecret)
 }
 
+
+// ─── Cancel PaymentIntent (idempotente) ─────────────────────
+
+/**
+ * Cancela um PaymentIntent de forma idempotente.
+ *
+ * Usa idempotency key estável derivada do paymentIntentId:
+ *   expire-order:{paymentIntentId}
+ *
+ * Se o PI já estiver canceled (por qualquer via), recupera o estado
+ * e devolve sucesso lógico.
+ * Se o PI mudou para processing/succeeded entretanto, retorna o
+ * estado actual para o caller decidir.
+ */
+export async function cancelPaymentIntent(
+  paymentIntentId: string,
+): Promise<
+  | { canceled: true }
+  | { canceled: false; currentStatus: string }
+> {
+  const stripe = getStripe()
+  const idempotencyKey = `expire-order:${paymentIntentId}`
+
+  try {
+    await stripe.paymentIntents.cancel(
+      paymentIntentId,
+      {},
+      { idempotencyKey },
+    )
+    return { canceled: true }
+  } catch (err: any) {
+    // Pode ter falhado por race (PI já não cancelável).
+    // Recuperar estado actual para decidir.
+    try {
+      const pi = await stripe.paymentIntents.retrieve(paymentIntentId)
+      if (pi.status === 'canceled') {
+        return { canceled: true }
+      }
+      return { canceled: false, currentStatus: pi.status }
+    } catch {
+      // Se retrieve também falhar, propagar o erro original
+      throw err
+    }
+  }
+}
+
 // ─── Supported payment methods (export for tests) ───────────
 
 export function getSupportedPaymentMethods(): readonly string[] {
