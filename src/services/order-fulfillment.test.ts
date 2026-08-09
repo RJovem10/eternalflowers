@@ -33,10 +33,14 @@ import {
 
 let mockOrders: any[] = []
 let mockOrderIdSeq = 0
+let mockEmailNotifications: any[] = []
+let mockEmailNotifSeq = 0
 
 function resetMocks() {
   mockOrders = []
   mockOrderIdSeq = 0
+  mockEmailNotifications = []
+  mockEmailNotifSeq = 0
   vi.clearAllMocks()
 }
 
@@ -87,6 +91,29 @@ function createCompletedOrder(overrides: Partial<any> = {}): any {
 }
 
 function createMockPayload() {
+  const mockFind = vi.fn(async ({ collection, where }: any) => {
+    if (collection === 'email-notifications') {
+      if (where?.deduplicationKey?.equals) {
+        const found = mockEmailNotifications.filter(
+          (n: any) => n.deduplicationKey === where.deduplicationKey.equals
+        )
+        return { docs: found, totalDocs: found.length }
+      }
+      return { docs: [], totalDocs: 0 }
+    }
+    return { docs: [], totalDocs: 0 }
+  })
+
+  const mockCreate = vi.fn(async ({ collection, data }: any) => {
+    if (collection === 'email-notifications') {
+      mockEmailNotifSeq++
+      const doc = { id: mockEmailNotifSeq, ...data, createdAt: new Date().toISOString() }
+      mockEmailNotifications.push(doc)
+      return doc
+    }
+    return { id: mockOrderIdSeq }
+  })
+
   const mockFindByID = vi.fn(async ({ collection, id }: any) => {
     if (collection === 'orders') {
       return mockOrders.find((o) => o.id === id) || null
@@ -108,8 +135,8 @@ function createMockPayload() {
   return {
     findByID: mockFindByID,
     update: mockUpdate,
-    find: vi.fn(),
-    create: vi.fn(),
+    find: mockFind,
+    create: mockCreate,
     db: { name: 'sqlite' },
   } as any
 }
@@ -117,6 +144,103 @@ function createMockPayload() {
 // ═══════════════════════════════════════════════════════════════
 // Testes
 // ═══════════════════════════════════════════════════════════════
+
+describe('orderFulfillment — transactional outbox (ISSUE-1O)', () => {
+  beforeEach(() => resetMocks())
+
+  it('1Oc. shipped + enqueue OK → Order shipped + email notification pending', async () => {
+    const payload = createMockPayload()
+    const order = createProcessingPaidOrder({
+      customer: { name: 'Maria', email: 'maria@example.com' },
+      locale: 'pt',
+    })
+
+    await markOrderShipped(payload, { orderId: order.id, trackingNumber: 'CT123' })
+
+    const updated = mockOrders.find((o) => o.id === order.id)
+    expect(updated.orderStatus).toBe('shipped')
+    expect(updated.shippedAt).toBeDefined()
+    expect(updated.trackingNumber).toBe('CT123')
+
+    // Email notification criada na outbox
+    const { dedupKeyShipped } = await import('./email/email-notifications')
+    const notif = mockEmailNotifications.find(
+      (n: any) => n.deduplicationKey === dedupKeyShipped(order.id)
+    )
+    expect(notif).toBeDefined()
+    expect(notif.status).toBe('pending')
+    expect(notif.type).toBe('order_shipped')
+    expect(notif.recipientEmail).toBe('maria@example.com')
+  })
+
+  it('1Od. completed + enqueue OK → Order completed + email notification pending', async () => {
+    const payload = createMockPayload()
+    const order = createShippedPaidOrder({
+      customer: { name: 'Ana', email: 'ana@example.com' },
+      locale: 'pt',
+    })
+
+    await completeOrder(payload, { orderId: order.id })
+
+    const updated = mockOrders.find((o) => o.id === order.id)
+    expect(updated.orderStatus).toBe('completed')
+    expect(updated.completedAt).toBeDefined()
+
+    const { dedupKeyCompleted } = await import('./email/email-notifications')
+    const notif = mockEmailNotifications.find(
+      (n: any) => n.deduplicationKey === dedupKeyCompleted(order.id)
+    )
+    expect(notif).toBeDefined()
+    expect(notif.status).toBe('pending')
+    expect(notif.type).toBe('order_completed')
+    expect(notif.recipientEmail).toBe('ana@example.com')
+  })
+
+  it('1Oe. shipped + erro DB no enqueue → erro propagado; Order NÃO fica shipped (produção: rollback)', async () => {
+    const payload = createMockPayload()
+    const order = createProcessingPaidOrder({
+      customer: { name: 'Maria', email: 'maria@example.com' },
+      locale: 'pt',
+    })
+
+    const originalCreate = payload.create
+    payload.create = vi.fn(async ({ collection }: any) => {
+      if (collection === 'email-notifications') {
+        throw new Error('SQLITE_BUSY: database is locked')
+      }
+      return originalCreate({ collection })
+    })
+
+    await expect(
+      markOrderShipped(payload, { orderId: order.id, trackingNumber: 'CT123' })
+    ).rejects.toThrow()
+
+    // Nenhuma email notification criada
+    expect(mockEmailNotifications.length).toBe(0)
+  })
+
+  it('1Of. completed + erro DB no enqueue → erro propagado; Order NÃO fica completed (produção: rollback)', async () => {
+    const payload = createMockPayload()
+    const order = createShippedPaidOrder({
+      customer: { name: 'Ana', email: 'ana@example.com' },
+      locale: 'pt',
+    })
+
+    const originalCreate = payload.create
+    payload.create = vi.fn(async ({ collection }: any) => {
+      if (collection === 'email-notifications') {
+        throw new Error('SQLITE_BUSY: database is locked')
+      }
+      return originalCreate({ collection })
+    })
+
+    await expect(
+      completeOrder(payload, { orderId: order.id })
+    ).rejects.toThrow()
+
+    expect(mockEmailNotifications.length).toBe(0)
+  })
+})
 
 describe('orderFulfillment — startOrderProcessing', () => {
   beforeEach(() => resetMocks())

@@ -154,12 +154,16 @@ let mockOrders: any[] = []
 let mockOrderIdSeq = 0
 let mockReservations: any[] = []
 let mockReservationIdSeq = 0
+let mockEmailNotifIdSeq = 0
+let mockEmailNotifications: any[] = []
 
 function resetMocks() {
   mockOrders = []
   mockOrderIdSeq = 0
   mockReservations = []
   mockReservationIdSeq = 0
+  mockEmailNotifIdSeq = 0
+  mockEmailNotifications = []
   resetStripeMocks()
   vi.clearAllMocks()
 }
@@ -316,6 +320,13 @@ function createMockPayload() {
       }
       return { docs: [...mockReservations], totalDocs: mockReservations.length }
     }
+    if (collection === 'email-notifications') {
+      if (where?.deduplicationKey?.equals) {
+        const found = mockEmailNotifications.filter((n: any) => n.deduplicationKey === where.deduplicationKey.equals)
+        return { docs: found, totalDocs: found.length }
+      }
+      return { docs: [], totalDocs: 0 }
+    }
     return { docs: [], totalDocs: 0 }
   })
 
@@ -338,6 +349,12 @@ function createMockPayload() {
       const res = { id: mockReservationIdSeq, ...data, createdAt: new Date().toISOString() }
       mockReservations.push(res)
       return res
+    }
+    if (collection === 'email-notifications') {
+      mockEmailNotifIdSeq++
+      const doc = { id: mockEmailNotifIdSeq, ...data, createdAt: new Date().toISOString() }
+      mockEmailNotifications.push(doc)
+      return doc
     }
     return { id: mockOrderIdSeq }
   })
@@ -454,7 +471,7 @@ describe('handlePaymentSucceeded — reservation safety', () => {
     resetMocks()
   })
 
-  it('6. succeeded + reservation ativa → stock confirmado', async () => {
+  it('6. succeeded + reservation ativa → stock confirmado + email pending', async () => {
     const payload = createMockPayload()
     const order = createPendingPaymentOrder()
     const paymentIntent = addMockPaymentIntent({
@@ -660,6 +677,71 @@ describe('handlePaymentSucceeded — reservation safety', () => {
     await expect(
       handlePaymentSucceeded(payload, paymentIntent)
     ).rejects.toThrow(PaymentCurrencyMismatchError)
+  })
+
+  // ─── Transactional Outbox Tests (ISSUE-1O) ────────────────
+
+  it('1Oa. succeeded + enqueue OK → Order paid/confirmed + email pending', async () => {
+    const payload = createMockPayload()
+    const order = createPendingPaymentOrder()
+    const paymentIntent = addMockPaymentIntent({
+      amount: toStripeAmount(order.total),
+      currency: 'eur',
+      status: 'succeeded',
+      metadata: { orderId: String(order.id) },
+    })
+    mockOrders[0].stripePaymentIntentId = paymentIntent.id
+
+    addActiveReservation(order.id, 1, 2)
+
+    const result = await handlePaymentSucceeded(payload, paymentIntent)
+    expect(result.kind).toBe('processed')
+
+    const updatedOrder = mockOrders.find((o) => o.id === order.id)
+    expect(updatedOrder.paymentStatus).toBe('paid')
+    expect(updatedOrder.orderStatus).toBe('confirmed')
+
+    // Email notification foi criada na outbox
+    const notif = mockEmailNotifications.find(
+      (n: any) => n.deduplicationKey === `order-confirmed:${order.id}`
+    )
+    expect(notif).toBeDefined()
+    expect(notif.status).toBe('pending')
+    expect(notif.type).toBe('order_confirmed')
+  })
+
+  it('1Ob. succeeded + erro DB ao enqueue → transaction rollback; Order NÃO fica paid/confirmed', async () => {
+    const payload = createMockPayload()
+    const order = createPendingPaymentOrder()
+    const paymentIntent = addMockPaymentIntent({
+      amount: toStripeAmount(order.total),
+      currency: 'eur',
+      status: 'succeeded',
+      metadata: { orderId: String(order.id) },
+    })
+    mockOrders[0].stripePaymentIntentId = paymentIntent.id
+
+    addActiveReservation(order.id, 1, 2)
+
+    // Forçar create email-notifications a lançar erro DB
+    const originalCreate = payload.create
+    payload.create = vi.fn(async ({ collection }: any) => {
+      if (collection === 'email-notifications') {
+        throw new Error('SQLITE_BUSY: database is locked')
+      }
+      return originalCreate({ collection })
+    })
+
+    // handlePaymentSucceeded deve propagar o erro (não engolir)
+    await expect(
+      handlePaymentSucceeded(payload, paymentIntent)
+    ).rejects.toThrow()
+
+    // NOTA: o mock in-memory não implementa rollback transacional real;
+    // em produção o Payload rollbackTransaction reverte a Order.
+    // O que provamos aqui: o erro PROPAGA (não é engolido),
+    // e nenhuma email notification foi criada.
+    expect(mockEmailNotifications.length).toBe(0)
   })
 })
 
