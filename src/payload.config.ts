@@ -1,4 +1,4 @@
-import { buildConfig, type CollectionConfig, type GlobalConfig } from 'payload'
+import { buildConfig, type CollectionConfig, type GlobalConfig, type PayloadHandler, type PayloadRequest } from 'payload'
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { sqliteAdapter } from '@payloadcms/db-sqlite'
 
@@ -194,13 +194,102 @@ const Coupons: CollectionConfig = {
   ],
 }
 
+// ─── Fulfillment endpoint handlers ──────────────────────────────
+function fulfillmentJson(data: unknown, status = 200): Response {
+  return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } })
+}
+function fulfillmentError(msg: string, status: number): Response {
+  return fulfillmentJson({ error: msg }, status)
+}
+function getFulfillmentId(req: PayloadRequest): number | null {
+  const id = (req.routeParams as any)?.id as string | undefined
+  if (!id) return null
+  const num = parseInt(id, 10)
+  return Number.isNaN(num) ? null : num
+}
+
+const startProcessingHandler: PayloadHandler = async (req) => {
+  if (!(req as any).user) return fulfillmentError('Autenticação necessária.', 401)
+  const orderId = getFulfillmentId(req)
+  if (orderId === null) return fulfillmentError('ID de encomenda inválido.', 400)
+  try {
+    const { startOrderProcessing } = require('@/services/order-fulfillment')
+    const result = await startOrderProcessing(req.payload, { orderId, req })
+    return fulfillmentJson(result)
+  } catch (err: any) {
+    const status = err.code === 'INVALID_ORDER_TRANSITION' || err.code === 'ORDER_NOT_PAID' || err.code === 'ORDER_NOT_FOUND' ? 409 : 500
+    return fulfillmentJson({ error: err.message, code: err.code }, status)
+  }
+}
+
+const markShippedHandler: PayloadHandler = async (req) => {
+  if (!(req as any).user) return fulfillmentError('Autenticação necessária.', 401)
+  const orderId = getFulfillmentId(req)
+  if (orderId === null) return fulfillmentError('ID de encomenda inválido.', 400)
+  let trackingNumber: string | undefined
+  try {
+    const body = await req.json?.()
+    if (body && typeof body === 'object' && 'trackingNumber' in body) {
+      trackingNumber = String(body.trackingNumber)
+    }
+  } catch { /* no body or invalid — ignore */ }
+  try {
+    const { markOrderShipped } = require('@/services/order-fulfillment')
+    const result = await markOrderShipped(req.payload, { orderId, trackingNumber, req })
+    return fulfillmentJson(result)
+  } catch (err: any) {
+    const status = err.code === 'INVALID_ORDER_TRANSITION' || err.code === 'ORDER_NOT_PAID' || err.code === 'TRACKING_CONFLICT' || err.code === 'ORDER_NOT_FOUND' ? 409 : 500
+    return fulfillmentJson({ error: err.message, code: err.code }, status)
+  }
+}
+
+const completeHandler: PayloadHandler = async (req) => {
+  if (!(req as any).user) return fulfillmentError('Autenticação necessária.', 401)
+  const orderId = getFulfillmentId(req)
+  if (orderId === null) return fulfillmentError('ID de encomenda inválido.', 400)
+  try {
+    const { completeOrder } = require('@/services/order-fulfillment')
+    const result = await completeOrder(req.payload, { orderId, req })
+    return fulfillmentJson(result)
+  } catch (err: any) {
+    const status = err.code === 'INVALID_ORDER_TRANSITION' || err.code === 'ORDER_NOT_PAID' || err.code === 'ORDER_NOT_FOUND' ? 409 : 500
+    return fulfillmentJson({ error: err.message, code: err.code }, status)
+  }
+}
+
 const Orders: CollectionConfig = {
   slug: 'orders',
   admin: {
     useAsTitle: 'orderNumber',
     defaultColumns: ['orderNumber', 'customer.name', 'orderStatus', 'paymentStatus', 'total', 'createdAt'],
     listSearchableFields: ['orderNumber', 'name', 'email'],
+    components: {
+      edit: {
+        beforeDocumentControls: [
+          {
+            path: '@/components/admin/FulfillmentActions#FulfillmentActions',
+          },
+        ],
+      },
+    },
   },
+  endpoints: [
+    {
+      path: '/:id/start-processing',
+      method: 'post',
+      handler: startProcessingHandler,
+    },
+    {
+      path: '/:id/mark-shipped',
+      method: 'post',
+      handler: markShippedHandler,
+    },
+    {
+      path: '/:id/complete',
+      method: 'post',
+      handler: completeHandler,
+    },
+  ],
   fields: [
     // ── Nº Encomenda ────────────────────────────────────────────
     { name: 'orderNumber', type: 'text', unique: true, label: 'Nº Encomenda', admin: { readOnly: true } },
@@ -324,6 +413,13 @@ const Orders: CollectionConfig = {
     { name: 'stripePaymentIntentId', type: 'text', unique: true, label: 'Stripe PaymentIntent ID', admin: { readOnly: true } },
     { name: 'paymentMethodType', type: 'text', label: 'Método de pagamento', admin: { readOnly: true } },
     { name: 'paidAt', type: 'date', label: 'Pago em', admin: { readOnly: true } },
+
+    // ── Fulfillment ──────────────────────────────────────────────
+    { name: 'processingAt', type: 'date', label: 'Preparação iniciada em', admin: { readOnly: true } },
+    { name: 'shippedAt', type: 'date', label: 'Expedida em', admin: { readOnly: true } },
+    { name: 'completedAt', type: 'date', label: 'Concluída em', admin: { readOnly: true } },
+    { name: 'trackingNumber', type: 'text', label: 'Código de Tracking', admin: { readOnly: true } },
+
     { name: 'stripeRefundId', type: 'text', unique: true, label: 'Stripe Refund ID', admin: { readOnly: true } },
     { name: 'refundReason', type: 'text', label: 'Razão do reembolso', admin: { readOnly: true } },
 
