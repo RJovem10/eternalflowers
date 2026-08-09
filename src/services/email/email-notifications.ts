@@ -87,24 +87,54 @@ async function executeEnqueue(
     payloadData.data = input.snapshot.data
   }
 
-  const doc = await payload.create({
-    collection: 'email-notifications' as any,
-    data: {
-      type: input.type,
-      order: input.orderId,
-      recipientEmail: input.recipientEmail,
-      locale: input.locale,
-      status: 'pending',
-      deduplicationKey: input.deduplicationKey,
-      attemptCount: 0,
-      payload: {
-        type: input.snapshot.type,
-        data: payloadData.data,
-      },
-    } as any,
-    req: ctx.req,
-    overrideAccess: true,
-  })
+  let doc: any
+  try {
+    doc = await payload.create({
+      collection: 'email-notifications' as any,
+      data: {
+        type: input.type,
+        order: input.orderId,
+        recipientEmail: input.recipientEmail,
+        locale: input.locale,
+        status: 'pending',
+        deduplicationKey: input.deduplicationKey,
+        attemptCount: 0,
+        payload: {
+          type: input.snapshot.type,
+          data: payloadData.data,
+        },
+      } as any,
+      req: ctx.req,
+      overrideAccess: true,
+    })
+  } catch (err: any) {
+    // Unique constraint violation na deduplicationKey devido a
+    // race condition entre transacções concorrentes (TOCTOU).
+    // Resolver idempotentemente: procurar o registo existente
+    // e devolver already_queued.
+    const msg = err?.message || ''
+    const isUniqueViolation =
+      msg.includes('UNIQUE') ||
+      msg.includes('unique') ||
+      msg.includes('duplicate key') ||
+      msg.includes('Duplicate entry')
+
+    if (isUniqueViolation) {
+      const existing = await payload.find({
+        collection: 'email-notifications' as any,
+        where: { deduplicationKey: { equals: input.deduplicationKey } },
+        limit: 1,
+        depth: 0,
+        overrideAccess: true,
+      })
+      const existingDoc = existing.docs[0] as any
+      if (existingDoc) {
+        return { kind: 'already_queued', existingId: existingDoc.id }
+      }
+    }
+    // Erro DB não relacionado — propagar
+    throw err
+  }
 
   return { kind: 'created', notificationId: doc.id }
 }

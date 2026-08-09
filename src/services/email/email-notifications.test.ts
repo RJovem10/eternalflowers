@@ -310,7 +310,6 @@ describe('enqueueEmailNotification — outbox', () => {
 
   it('7. completed retry não duplica', async () => {
     const payload = createMockPayload()
-
     const first = await enqueueEmailNotification(payload, {
       type: 'order_completed',
       orderId: 1,
@@ -338,6 +337,45 @@ describe('enqueueEmailNotification — outbox', () => {
     })
 
     expect(second.kind).toBe('already_queued')
+    expect(mockNotifications.length).toBe(1)
+  })
+
+  it('7b. unique constraint violation por race → already_queued sem rollback', async () => {
+    const payload = createMockPayload()
+
+    // Simular race: find retorna vazio, mas create falha com UNIQUE
+    const originalCreate = payload.create
+    payload.create = vi.fn(async ({ collection, data }: any) => {
+      if (collection === 'email-notifications') {
+        mockNotifIdSeq++
+        mockNotifications.push({
+          id: mockNotifIdSeq,
+          ...data,
+          deduplicationKey: data.deduplicationKey,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })
+        throw new Error('SQLITE_CONSTRAINT_UNIQUE: UNIQUE constraint failed: email-notifications.deduplicationKey')
+      }
+      return originalCreate({ collection, data })
+    })
+
+    const result = await enqueueEmailNotification(payload, {
+      type: 'order_confirmed',
+      orderId: 99,
+      recipientEmail: 'test@example.com',
+      locale: 'pt',
+      deduplicationKey: dedupKeyConfirmed(99),
+      snapshot: {
+        type: 'order_confirmed',
+        data: {
+          orderNumber: 'EF-0099', customerName: 'Test',
+          items: [], subtotal: 0, discount: 0, shippingCost: 0, total: 0, currency: 'EUR',
+        },
+      },
+    })
+
+    expect(result.kind).toBe('already_queued')
     expect(mockNotifications.length).toBe(1)
   })
 })
