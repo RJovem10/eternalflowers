@@ -196,12 +196,50 @@ const Coupons: CollectionConfig = {
 
 const Orders: CollectionConfig = {
   slug: 'orders',
-  admin: { useAsTitle: 'orderNumber' },
+  admin: {
+    useAsTitle: 'orderNumber',
+    defaultColumns: ['orderNumber', 'customer.name', 'orderStatus', 'paymentStatus', 'total', 'createdAt'],
+    listSearchableFields: ['orderNumber', 'name', 'email'],
+  },
   fields: [
-    // --- Order number (unique when present, auto-assigned for legacy) ---
-    { name: 'orderNumber', type: 'text', unique: true, label: 'Nº Encomenda', admin: { hidden: true } },
+    // ── Nº Encomenda ────────────────────────────────────────────
+    { name: 'orderNumber', type: 'text', unique: true, label: 'Nº Encomenda', admin: { readOnly: true } },
 
-    // --- Customer group ---
+    // ── Estado ──────────────────────────────────────────────────
+    {
+      name: 'orderStatus',
+      type: 'select',
+      defaultValue: 'pending_payment',
+      label: 'Estado da Encomenda',
+      admin: { readOnly: true },
+      options: [
+        { label: 'Rascunho', value: 'draft' },
+        { label: 'A aguardar pagamento', value: 'pending_payment' },
+        { label: 'Confirmada', value: 'confirmed' },
+        { label: 'Em preparação', value: 'processing' },
+        { label: 'Expedida', value: 'shipped' },
+        { label: 'Concluída', value: 'completed' },
+        { label: 'Cancelada', value: 'cancelled' },
+        { label: 'Expirada', value: 'expired' },
+      ],
+    },
+    {
+      name: 'paymentStatus',
+      type: 'select',
+      defaultValue: 'unpaid',
+      label: 'Estado do Pagamento',
+      admin: { readOnly: true },
+      options: [
+        { label: 'Não pago', value: 'unpaid' },
+        { label: 'Pendente', value: 'pending' },
+        { label: 'Pago', value: 'paid' },
+        { label: 'Falhou', value: 'failed' },
+        { label: 'Reembolsado', value: 'refunded' },
+      ],
+    },
+    { name: 'locale', type: 'text', label: 'Língua do pedido', defaultValue: 'pt' },
+
+    // ── Cliente ─────────────────────────────────────────────────
     {
       name: 'customer',
       type: 'group',
@@ -215,7 +253,7 @@ const Orders: CollectionConfig = {
       ],
     },
 
-    // --- Shipping address (opcional nesta fase) ---
+    // ── Entrega ─────────────────────────────────────────────────
     {
       name: 'shippingAddress',
       type: 'group',
@@ -232,7 +270,7 @@ const Orders: CollectionConfig = {
       ],
     },
 
-    // --- Billing ---
+    // ── Faturação ───────────────────────────────────────────────
     { name: 'billingSameAsShipping', type: 'checkbox', defaultValue: true, label: 'Faturação = Envio' },
     {
       name: 'billingAddress',
@@ -250,11 +288,12 @@ const Orders: CollectionConfig = {
       ],
     },
 
-    // --- Items ---
+    // ── Artigos ─────────────────────────────────────────────────
     {
       name: 'items',
       type: 'array',
-      label: 'Itens',
+      label: 'Artigos',
+      admin: { readOnly: true },
       fields: [
         { name: 'flower', type: 'relationship', relationTo: 'flowers', required: true, label: 'Flor' },
         { name: 'name', type: 'text', label: 'Nome' },
@@ -265,72 +304,34 @@ const Orders: CollectionConfig = {
       ],
     },
 
-    // --- Financial summary ---
-    { name: 'subtotal', type: 'number', label: 'Subtotal (€)' },
-    { name: 'discount', type: 'number', label: 'Desconto (€)', defaultValue: 0 },
-    { name: 'shippingCost', type: 'number', label: 'Portes (€)' },
-    { name: 'total', type: 'number', label: 'Total (€)' },
-    { name: 'coupon', type: 'text', label: 'Cupão usado' },
-    { name: 'currency', type: 'text', label: 'Moeda', defaultValue: 'EUR' },
+    // ── Valores ─────────────────────────────────────────────────
+    { name: 'subtotal', type: 'number', label: 'Subtotal (€)', admin: { readOnly: true } },
+    { name: 'discount', type: 'number', label: 'Desconto (€)', defaultValue: 0, admin: { readOnly: true } },
+    { name: 'shippingCost', type: 'number', label: 'Portes (€)', admin: { readOnly: true } },
+    { name: 'total', type: 'number', label: 'Total (€)', admin: { readOnly: true } },
+    { name: 'coupon', type: 'text', label: 'Cupão usado', admin: { readOnly: true } },
+    { name: 'currency', type: 'text', label: 'Moeda', defaultValue: 'EUR', admin: { readOnly: true } },
 
-    // --- Status ---
-    {
-      name: 'orderStatus',
-      type: 'select',
-      defaultValue: 'pending_payment',
-      label: 'Estado da Encomenda',
-      options: [
-        { label: 'Rascunho', value: 'draft' },
-        { label: 'A aguardar pagamento', value: 'pending_payment' },
-        { label: 'Confirmada', value: 'confirmed' },
-        { label: 'Em preparação', value: 'processing' },
-        { label: 'Expedida', value: 'shipped' },
-        { label: 'Concluída', value: 'completed' },
-        { label: 'Cancelada', value: 'cancelled' },
-        { label: 'Expirada', value: 'expired' },
-      ],
-    },
-    {
-      name: 'paymentStatus',
-      type: 'select',
-      defaultValue: 'unpaid',
-      label: 'Estado do Pagamento',
-      options: [
-        { label: 'Não pago', value: 'unpaid' },
-        { label: 'Pendente', value: 'pending' },
-        { label: 'Pago', value: 'paid' },
-        { label: 'Falhou', value: 'failed' },
-        { label: 'Reembolsado', value: 'refunded' },
-      ],
-    },
+    // ── Envio (snapshot do checkout) ────────────────────────────
+    { name: 'shippingProvider', type: 'text', label: 'Transportadora', admin: { readOnly: true } },
+    { name: 'shippingServiceCode', type: 'text', label: 'Cód. Serviço Envio', admin: { readOnly: true } },
+    { name: 'shippingServiceName', type: 'text', label: 'Serviço Envio', admin: { readOnly: true } },
+    { name: 'shippingEstimatedMinDays', type: 'number', label: 'Estimativa Min (dias)', admin: { readOnly: true } },
+    { name: 'shippingEstimatedMaxDays', type: 'number', label: 'Estimativa Max (dias)', admin: { readOnly: true } },
 
-    // --- Locale ---
-    { name: 'locale', type: 'text', label: 'Língua do pedido', defaultValue: 'pt' },
+    // ── Pagamento (Stripe) ──────────────────────────────────────
+    { name: 'paymentProvider', type: 'text', label: 'Provider de pagamento', defaultValue: 'stripe', admin: { readOnly: true } },
+    { name: 'stripePaymentIntentId', type: 'text', unique: true, label: 'Stripe PaymentIntent ID', admin: { readOnly: true } },
+    { name: 'paymentMethodType', type: 'text', label: 'Método de pagamento', admin: { readOnly: true } },
+    { name: 'paidAt', type: 'date', label: 'Pago em', admin: { readOnly: true } },
+    { name: 'stripeRefundId', type: 'text', unique: true, label: 'Stripe Refund ID', admin: { readOnly: true } },
+    { name: 'refundReason', type: 'text', label: 'Razão do reembolso', admin: { readOnly: true } },
 
-    // --- Checkout hash (hidden, unique when present) ---
-    { name: 'checkoutRequestHash', type: 'text', unique: true, label: 'Hash do checkout', admin: { hidden: true } },
+    // ── Checkout interno (hidden) ──────────────────────────────
+    { name: 'checkoutRequestHash', type: 'text', unique: true, label: 'Hash do checkout', admin: { hidden: true, readOnly: true } },
+    { name: 'checkoutAttemptId', type: 'text', unique: true, label: 'Checkout Attempt ID', admin: { hidden: true, readOnly: true } },
 
-    // --- Payment fields ---
-    { name: 'paymentProvider', type: 'text', label: 'Provider de pagamento', defaultValue: 'stripe', admin: { hidden: true } },
-    { name: 'stripePaymentIntentId', type: 'text', unique: true, label: 'Stripe PaymentIntent ID', admin: { hidden: true } },
-    { name: 'paymentMethodType', type: 'text', label: 'Método de pagamento', admin: { hidden: true } },
-    { name: 'paidAt', type: 'date', label: 'Pago em', admin: { hidden: true } },
-
-    // --- Refund fields (Issue 1I) ---
-    { name: 'stripeRefundId', type: 'text', unique: true, label: 'Stripe Refund ID', admin: { hidden: true } },
-    { name: 'refundReason', type: 'text', label: 'Razão do reembolso', admin: { hidden: true } },
-
-    // --- Checkout attempt id (UUID, server-generated, hidden) ---
-    { name: 'checkoutAttemptId', type: 'text', unique: true, label: 'Checkout Attempt ID', admin: { hidden: true } },
-
-    // --- Shipping snapshot (populated on finalization) ---
-    { name: 'shippingProvider', type: 'text', label: 'Transportadora', admin: { hidden: true } },
-    { name: 'shippingServiceCode', type: 'text', label: 'Cód. Serviço Envio', admin: { hidden: true } },
-    { name: 'shippingServiceName', type: 'text', label: 'Serviço Envio', admin: { hidden: true } },
-    { name: 'shippingEstimatedMinDays', type: 'number', label: 'Estimativa Min (dias)', admin: { hidden: true } },
-    { name: 'shippingEstimatedMaxDays', type: 'number', label: 'Estimativa Max (dias)', admin: { hidden: true } },
-
-    // --- Legacy fields (preserved for backward compatibility, hidden in admin) ---
+    // ── Legado (preservado para retrocompatibilidade) ────────────
     { name: 'email', type: 'email', label: 'Email (legado)', admin: { hidden: true } },
     {
       name: 'status',
