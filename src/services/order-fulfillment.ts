@@ -16,6 +16,7 @@
  */
 import type { Payload } from 'payload'
 import { runInTransaction, type TransactionCtx } from './transact'
+import { enqueueEmailNotification, dedupKeyShipped, dedupKeyCompleted } from './email/email-notifications'
 import type {
   StartProcessingInput,
   MarkShippedInput,
@@ -140,7 +141,56 @@ async function transitionOrderFulfillment(
       overrideAccess: true,
     })
 
-    // ─── 8. Construir resultado ───────────────────────────────
+    // ─── 8a. Enqueue email notification (na mesma transacção) ──
+    const customer = (order.customer || {}) as any
+    const recipientEmail = customer.email || order.email || ''
+
+    if (targetStatus === 'shipped' && recipientEmail) {
+      try {
+        const sanitized = sanitizeTrackingNumber(trackingNumber)
+        await enqueueEmailNotification(payload, {
+          type: 'order_shipped',
+          orderId: input.orderId,
+          recipientEmail,
+          locale: order.locale || 'pt',
+          deduplicationKey: dedupKeyShipped(input.orderId),
+          snapshot: {
+            type: 'order_shipped',
+            data: {
+              orderNumber: order.orderNumber || String(input.orderId),
+              customerName: customer.name || '',
+              trackingNumber: sanitized,
+              shippingServiceName: order.shippingServiceName || null,
+            },
+          },
+          req: ctx.req,
+        })
+      } catch {
+        // Falha não aborta a transacção de fulfillment
+      }
+    } else if (targetStatus === 'completed' && recipientEmail) {
+      try {
+        await enqueueEmailNotification(payload, {
+          type: 'order_completed',
+          orderId: input.orderId,
+          recipientEmail,
+          locale: order.locale || 'pt',
+          deduplicationKey: dedupKeyCompleted(input.orderId),
+          snapshot: {
+            type: 'order_completed',
+            data: {
+              orderNumber: order.orderNumber || String(input.orderId),
+              customerName: customer.name || '',
+            },
+          },
+          req: ctx.req,
+        })
+      } catch {
+        // Falha não aborta a transacção de fulfillment
+      }
+    }
+
+    // ─── 8b. Construir resultado ───────────────────────────────
     if (targetStatus === 'processing') {
       return { kind: 'processing_started', orderId: input.orderId, processingAt: nowISO }
     } else if (targetStatus === 'shipped') {

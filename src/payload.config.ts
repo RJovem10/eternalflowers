@@ -648,9 +648,112 @@ const ShippingSettings: GlobalConfig = {
   ],
 }
 
+// ─── Email Notifications Collection ────────────────────────────
+
+const EmailNotifications: CollectionConfig = {
+  slug: 'email-notifications',
+  admin: {
+    useAsTitle: 'id',
+    group: 'Loja',
+    description: 'Notificações de email transacionais. Apenas consulta.',
+    defaultColumns: ['type', 'order', 'recipientEmail', 'status', 'attemptCount', 'sentAt', 'createdAt'],
+    listSearchableFields: ['recipientEmail'],
+  },
+  access: {
+    read: ({ req }: any) => req?.user?.collection === 'users',
+    create: () => false,
+    update: () => false,
+    delete: () => false,
+  },
+  lockDocuments: false,
+  fields: [
+    {
+      name: 'type',
+      type: 'select',
+      required: true,
+      label: 'Tipo',
+      options: [
+        { label: 'Encomenda Confirmada', value: 'order_confirmed' },
+        { label: 'Encomenda Expedida', value: 'order_shipped' },
+        { label: 'Encomenda Concluída', value: 'order_completed' },
+      ],
+      admin: { readOnly: true },
+    },
+    {
+      name: 'order',
+      type: 'relationship',
+      relationTo: 'orders',
+      required: true,
+      label: 'Encomenda',
+      admin: { readOnly: true },
+    },
+    {
+      name: 'recipientEmail',
+      type: 'email',
+      required: true,
+      label: 'Email do Destinatário',
+      admin: { readOnly: true },
+    },
+    {
+      name: 'locale',
+      type: 'text',
+      defaultValue: 'pt',
+      label: 'Idioma',
+      admin: { readOnly: true },
+    },
+    {
+      name: 'status',
+      type: 'select',
+      required: true,
+      defaultValue: 'pending',
+      label: 'Estado',
+      options: [
+        { label: 'Pendente', value: 'pending' },
+        { label: 'A Enviar', value: 'sending' },
+        { label: 'Enviado', value: 'sent' },
+        { label: 'Falhou', value: 'failed' },
+      ],
+      admin: { readOnly: true },
+    },
+    {
+      name: 'deduplicationKey',
+      type: 'text',
+      required: true,
+      unique: true,
+      label: 'Chave de Deduplicação',
+      admin: { readOnly: true },
+    },
+    {
+      name: 'attemptCount',
+      type: 'number',
+      defaultValue: 0,
+      label: 'Tentativas',
+      admin: { readOnly: true },
+    },
+    {
+      name: 'lastError',
+      type: 'text',
+      label: 'Último Erro',
+      admin: { readOnly: true, hidden: true },
+    },
+    {
+      name: 'sentAt',
+      type: 'date',
+      label: 'Enviado em',
+      admin: { readOnly: true },
+    },
+    {
+      name: 'payload',
+      type: 'json',
+      label: 'Payload',
+      admin: { readOnly: true, hidden: true },
+    },
+  ],
+}
+
 export default buildConfig({
   serverURL: process.env.NEXT_PUBLIC_SERVER_URL || '',
-  collections: [Flowers, Categories, Collections, Media, Coupons, Orders, StockReservations],
+  collections: [Flowers, Categories, Collections, Media, Coupons, Orders, StockReservations, EmailNotifications],
   globals: [Homepage, ShippingSettings],
   db,
   localization: {
