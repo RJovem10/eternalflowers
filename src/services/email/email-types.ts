@@ -69,6 +69,8 @@ export interface EmailNotificationDB {
   attemptCount: number
   lastError: string | null
   sentAt: string | null
+  provider: string | null
+  providerMessageId: string | null
   payload: Record<string, unknown>
   createdAt: string
   updatedAt: string

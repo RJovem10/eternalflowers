@@ -743,6 +743,21 @@ const EmailNotifications: CollectionConfig = {
       admin: { readOnly: true },
     },
     {
+      name: 'provider',
+      type: 'select',
+      label: 'Provider',
+      options: [
+        { label: 'Resend', value: 'resend' },
+      ],
+      admin: { readOnly: true },
+    },
+    {
+      name: 'providerMessageId',
+      type: 'text',
+      label: 'ID da Mensagem (Provider)',
+      admin: { readOnly: true },
+    },
+    {
       name: 'payload',
       type: 'json',
       label: 'Payload',

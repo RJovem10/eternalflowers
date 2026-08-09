@@ -273,7 +273,7 @@ export async function processPendingEmailNotifications(
 
     // ─── 2d. Persistir resultado ─────────────────────────
     if (sendResult.kind === 'sent') {
-      await markSent(payload, notification.id)
+      await markSent(payload, notification.id, provider!.name, sendResult.providerMessageId)
       details.push({
         notificationId: notification.id,
         type: notification.type,
@@ -362,15 +362,26 @@ async function claimNotification(
 async function markSent(
   payload: Payload,
   notificationId: number,
+  providerName?: string,
+  providerMessageId?: string,
 ): Promise<void> {
+  const updateData: Record<string, unknown> = {
+    status: 'sent',
+    sentAt: new Date().toISOString(),
+    lastError: null,
+  }
+
+  if (providerName) {
+    updateData.provider = providerName
+  }
+  if (providerMessageId) {
+    updateData.providerMessageId = providerMessageId
+  }
+
   await payload.update({
     collection: 'email-notifications' as any,
     id: notificationId,
-    data: {
-      status: 'sent',
-      sentAt: new Date().toISOString(),
-      lastError: null,
-    } as any,
+    data: updateData as any,
     overrideAccess: true,
   })
 }
