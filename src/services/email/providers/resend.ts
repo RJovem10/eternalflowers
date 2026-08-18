@@ -77,7 +77,7 @@ export const resendEmailProvider: EmailProvider = {
     }
 
     if (replyTo) {
-      payload.reply_to = replyTo
+      payload.replyTo = replyTo
     }
 
     const opts: Record<string, unknown> = {}

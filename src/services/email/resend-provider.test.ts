@@ -80,7 +80,7 @@ describe('Resend provider', () => {
     expect(payload.text).toBe('Olá')
   })
 
-  it('2. reply_to opcional é passado quando configurado', async () => {
+  it('2. EMAIL_REPLY_TO configurado → payload Resend contém replyTo correto', async () => {
     mockSend.mockResolvedValueOnce({
       data: { id: 'resend-msg-002' },
       error: null,
@@ -95,10 +95,10 @@ describe('Resend provider', () => {
     })
 
     const payload = mockSend.mock.calls[0][0]
-    expect(payload.reply_to).toBe('support@teste.pt')
+    expect(payload.replyTo).toBe('support@teste.pt')
   })
 
-  it('2b. se EMAIL_REPLY_TO ausente, reply_to não é enviado', async () => {
+  it('2b. EMAIL_REPLY_TO ausente → payload não contém replyTo', async () => {
     setEnv('EMAIL_REPLY_TO', undefined)
     mockSend.mockResolvedValueOnce({
       data: { id: 'resend-msg-003' },
@@ -115,7 +115,7 @@ describe('Resend provider', () => {
     })
 
     const payload = mockSend.mock.calls[0][0]
-    expect(payload.reply_to).toBeUndefined()
+    expect(payload.replyTo).toBeUndefined()
   })
 
   it('3. idempotency key passada como opção do SDK', async () => {
