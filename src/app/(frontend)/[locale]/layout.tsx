@@ -21,9 +21,10 @@ const body = Inter({
   display: 'swap',
 })
 
-export function generateStaticParams() {
-  return locales.map((locale) => ({ locale }))
-}
+// generateStaticParams removido para permitir build em Docker sem DB.
+// As páginas sob [locale] são server-rendered on demand, o que é
+// o comportamento correcto para produção com PostgreSQL.
+// O locale route segment funciona sem generateStaticParams.
 
 export async function generateMetadata(): Promise<Metadata> {
   const siteUrl =

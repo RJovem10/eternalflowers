@@ -3,6 +3,7 @@ node_modules/
 out/
 .env
 .env.local
+.env.production
 *.sqlite
 *.sqlite3
 *.db
@@ -21,3 +22,4 @@ tsconfig.tsbuildinfo
 .env.staging.local
 media-staging/
 backups/staging-*
+docker-compose.production.yml
