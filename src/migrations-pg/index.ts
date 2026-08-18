@@ -11,6 +11,7 @@ import * as migration_20260808_000002_payment_fields_pg from './20260808_000002_
 import * as migration_20260808_000003_refund_fields_pg from './20260808_000003_refund_fields';
 import * as migration_20260809_000001_fulfillment_fields from './20260809_000001_fulfillment_fields';
 import * as migration_20260809_000002_email_notifications from './20260809_000002_email_notifications';
+import * as migration_20260818_000001_cancelled_at from './20260818_000001_cancelled_at';
 
 export const migrations = [
   { up: migration_20260731_000000_baseline.up, down: migration_20260731_000000_baseline.down, name: '20260731_000000_baseline' },
@@ -27,4 +28,5 @@ export const migrations = [
   { up: migration_20260808_000003_refund_fields_pg.up, down: migration_20260808_000003_refund_fields_pg.down, name: '20260808_000003_refund_fields' },
   { up: migration_20260809_000001_fulfillment_fields.up, down: migration_20260809_000001_fulfillment_fields.down, name: '20260809_000001_fulfillment_fields' },
   { up: migration_20260809_000002_email_notifications.up, down: migration_20260809_000002_email_notifications.down, name: '20260809_000002_email_notifications' },
+  { up: migration_20260818_000001_cancelled_at.up, down: migration_20260818_000001_cancelled_at.down, name: '20260818_000001_cancelled_at' },
 ];

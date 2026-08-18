@@ -161,13 +161,21 @@ export function validatePaymentIntentForOrder(
  *
  * Usa idempotency key estável derivada do paymentIntentId para
  * que webhooks repetidos não criem refunds duplicados.
+ *
+ * Aceita um parâmetro opcional `idempotencyKeyPrefix` para que
+ * o cancelamento admin use chave diferente do late-payment refund.
+ *
+ * @param paymentIntentId - ID do PaymentIntent a reembolsar
+ * @param idempotencyKeyPrefix - Prefixo da idempotency key. Default: 'late-stock-refund'
  */
 export async function createFullRefund(
   paymentIntentId: string,
+  idempotencyKeyPrefix?: string,
 ): Promise<Stripe.Refund> {
   const stripe = getStripe()
 
-  const idempotencyKey = `late-stock-refund:${paymentIntentId}`
+  const prefix = idempotencyKeyPrefix ?? 'late-stock-refund'
+  const idempotencyKey = `${prefix}:${paymentIntentId}`
 
   return stripe.refunds.create(
     {
