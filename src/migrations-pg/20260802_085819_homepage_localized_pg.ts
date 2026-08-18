@@ -75,7 +75,11 @@ export async function up({ db, payload, req }: MigrateArgs): Promise<void> {
 
   const countResult = await db.execute(sql`SELECT COUNT(*)::int AS cnt FROM "homepage_locales";`)
   const count = countResult?.rows?.[0]?.cnt ?? 0
-  if (count < 1) throw new Error('[UP] Backfill inserted 0 rows.')
+
+  // Guard: only throw if source had data that should have been migrated
+  const srcCheck = await db.execute(sql`SELECT COUNT(*)::int AS cnt FROM "homepage" WHERE "hero_hero_title" IS NOT NULL AND "hero_hero_title" != '';`)
+  const srcCount = srcCheck?.rows?.[0]?.cnt ?? 0
+  if (count < 1 && srcCount > 0) throw new Error(`[UP] Backfill inserted 0 rows — ${srcCount} source row(s) had non-empty hero_hero_title. Possible data loss.`)
 
     await db.execute(sql`ALTER TABLE "homepage" DROP COLUMN "hero_hero_title";`);
   await db.execute(sql`ALTER TABLE "homepage" DROP COLUMN "hero_hero_subtitle";`);

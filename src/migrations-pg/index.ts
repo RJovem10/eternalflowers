@@ -9,8 +9,10 @@ import * as migration_20260808_000000_orders_model_pg from './20260808_000000_or
 import * as migration_20260808_000001_checkout_fields_pg from './20260808_000001_checkout_fields';
 import * as migration_20260808_000002_payment_fields_pg from './20260808_000002_payment_fields';
 import * as migration_20260808_000003_refund_fields_pg from './20260808_000003_refund_fields';
+import * as migration_20260808_160000_shipping_class from './20260808_160000_shipping_class';
 import * as migration_20260809_000001_fulfillment_fields from './20260809_000001_fulfillment_fields';
 import * as migration_20260809_000002_email_notifications from './20260809_000002_email_notifications';
+import * as migration_20260809_000003_email_notifications_provider from './20260809_000003_email_notifications_provider';
 import * as migration_20260818_000001_cancelled_at from './20260818_000001_cancelled_at';
 import * as migration_20260818_000002_coupon_redeemed_at from './20260818_000002_coupon_redeemed_at';
 
@@ -27,8 +29,10 @@ export const migrations = [
   { up: migration_20260808_000001_checkout_fields_pg.up, down: migration_20260808_000001_checkout_fields_pg.down, name: '20260808_000001_checkout_fields' },
   { up: migration_20260808_000002_payment_fields_pg.up, down: migration_20260808_000002_payment_fields_pg.down, name: '20260808_000002_payment_fields' },
   { up: migration_20260808_000003_refund_fields_pg.up, down: migration_20260808_000003_refund_fields_pg.down, name: '20260808_000003_refund_fields' },
+  { up: migration_20260808_160000_shipping_class.up, down: migration_20260808_160000_shipping_class.down, name: '20260808_160000_shipping_class' },
   { up: migration_20260809_000001_fulfillment_fields.up, down: migration_20260809_000001_fulfillment_fields.down, name: '20260809_000001_fulfillment_fields' },
   { up: migration_20260809_000002_email_notifications.up, down: migration_20260809_000002_email_notifications.down, name: '20260809_000002_email_notifications' },
+  { up: migration_20260809_000003_email_notifications_provider.up, down: migration_20260809_000003_email_notifications_provider.down, name: '20260809_000003_email_notifications_provider' },
   { up: migration_20260818_000001_cancelled_at.up, down: migration_20260818_000001_cancelled_at.down, name: '20260818_000001_cancelled_at' },
   { up: migration_20260818_000002_coupon_redeemed_at.up, down: migration_20260818_000002_coupon_redeemed_at.down, name: '20260818_000002_coupon_redeemed_at' },
 ];
