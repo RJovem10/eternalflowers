@@ -40,6 +40,7 @@ import { confirmReservation } from '../stock'
 import type { ConfirmReservationOutcome } from '../stock-types'
 import type { CreatePaymentInput, CreatePaymentOutcome } from './payment-types'
 import { enqueueEmailNotification, dedupKeyConfirmed } from '../email/email-notifications'
+import { lockCouponForUpdate } from '../db-adapter'
 
 // ─── Helpers ─────────────────────────────────────────────────
 
@@ -355,6 +356,65 @@ async function executePaymentSucceeded(
 
   // ─── Se chegámos aqui, stock está confirmado ───────────────
 
+  // ─── Coupon redemption (ISSUE-1S) ─────────────────────────
+  // Regras:
+  // - Apenas consumido quando payment é confirmado (nunca antes)
+  // - Idempotente: se couponRedeemedAt já está preenchido, skip
+  // - Uso do cupão atómico dentro da mesma transacção
+  // - SEMPRE incrementa usesCount quando uma Order paga tem coupon
+  //   sem couponRedeemedAt — grandfathering permite exceder maxUses
+  //   (a validação de maxUses é feita na aplicação inicial do coupon,
+  //   não no momento do pagamento)
+  // - couponRedeemedAt apenas é marcado se a utilização foi realmente
+  //   contabilizada (coupon encontrado e actualizado)
+  // - Cancelamento/refund posterior NÃO devolve a utilização
+  let couponRedeemed = false
+  const couponCode = (order.coupon as string | undefined)?.trim()
+  const existingRedeemedAt = (order.couponRedeemedAt as string | undefined)
+  if (couponCode && !existingRedeemedAt) {
+    // Procurar coupon activo pelo código
+    const couponResult = await payload.find({
+      collection: 'coupons',
+      where: { code: { equals: couponCode } },
+      limit: 1,
+      depth: 0,
+      req: ctx.req,
+      overrideAccess: true,
+    })
+
+    const coupon = couponResult.docs[0] as any
+    if (coupon && coupon.id) {
+      // Lock coupon row para PG (FOR UPDATE) — previne race
+      await lockCouponForUpdate(ctx, coupon.id)
+
+      // Re-read usesCount dentro da transacção (após lock)
+      const freshCoupon = await payload.findByID({
+        collection: 'coupons',
+        id: coupon.id,
+        depth: 0,
+        req: ctx.req,
+        overrideAccess: true,
+      }) as any
+
+      if (freshCoupon) {
+        const currentUses = Number(freshCoupon.usesCount) || 0
+
+        // Incrementa SEMPRE — grandfathering permite usesCount > maxUses
+        // A validação de maxUses já foi feita aquando da aplicação do coupon
+        await payload.update({
+          collection: 'coupons',
+          id: coupon.id,
+          data: { usesCount: currentUses + 1 } as any,
+          req: ctx.req,
+          overrideAccess: true,
+        })
+        couponRedeemed = true
+      }
+      // Se coupon não existe mais (apagado entre criação e pagamento):
+      // não bloqueia — o snapshot do desconto está na Order
+    }
+  }
+
   // ─── Obter payment method type ──────────────────────────────
   let paymentMethodType: string | null = null
   try {
@@ -374,15 +434,22 @@ async function executePaymentSucceeded(
   }
 
   // ─── Actualizar Order: paid + confirmed ─────────────────────
+  const updateData: Record<string, unknown> = {
+    paymentStatus: 'paid',
+    orderStatus: 'confirmed',
+    paymentMethodType,
+    paidAt: now,
+  }
+
+  // Se a Order tem cupão e foi realmente contabilizado, marcar couponRedeemedAt
+  if (couponRedeemed) {
+    updateData.couponRedeemedAt = now
+  }
+
   await payload.update({
     collection: 'orders',
     id: order.id,
-    data: {
-      paymentStatus: 'paid',
-      orderStatus: 'confirmed',
-      paymentMethodType,
-      paidAt: now,
-    } as any,
+    data: updateData as any,
     req: ctx.req,
     overrideAccess: true,
   })
