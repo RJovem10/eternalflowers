@@ -79,6 +79,9 @@ COPY --from=build /app/tailwind.config.mjs ./
 COPY --from=build /app/src/migrations     ./src/migrations
 COPY --from=build /app/src/migrations-pg  ./src/migrations-pg
 
+# Copy translations (needed at runtime for bootstrap-canonical.mjs locale data)
+COPY --from=build /app/translations ./translations
+
 # Ensure media directory exists and has correct ownership
 RUN mkdir -p /app/media && chown -R appuser:appgroup /app
 
