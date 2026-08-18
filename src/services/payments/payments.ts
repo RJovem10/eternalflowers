@@ -361,11 +361,14 @@ async function executePaymentSucceeded(
   // - Apenas consumido quando payment é confirmado (nunca antes)
   // - Idempotente: se couponRedeemedAt já está preenchido, skip
   // - Uso do cupão atómico dentro da mesma transacção
-  // - Se usageLimit foi atingido entretanto, não incrementa
-  //   (mas não bloqueia o pagamento — o desconto já foi aplicado
-  //    na criação da Order)
-  // - Se o coupon já não existir, não bloqueia o pagamento
+  // - SEMPRE incrementa usesCount quando uma Order paga tem coupon
+  //   sem couponRedeemedAt — grandfathering permite exceder maxUses
+  //   (a validação de maxUses é feita na aplicação inicial do coupon,
+  //   não no momento do pagamento)
+  // - couponRedeemedAt apenas é marcado se a utilização foi realmente
+  //   contabilizada (coupon encontrado e actualizado)
   // - Cancelamento/refund posterior NÃO devolve a utilização
+  let couponRedeemed = false
   const couponCode = (order.coupon as string | undefined)?.trim()
   const existingRedeemedAt = (order.couponRedeemedAt as string | undefined)
   if (couponCode && !existingRedeemedAt) {
@@ -394,22 +397,18 @@ async function executePaymentSucceeded(
       }) as any
 
       if (freshCoupon) {
-        const maxUses = Number(freshCoupon.maxUses) || 0
         const currentUses = Number(freshCoupon.usesCount) || 0
 
-        // Só incrementa se maxUses=0 (ilimitado) ou usesCount < maxUses
-        if (maxUses === 0 || currentUses < maxUses) {
-          await payload.update({
-            collection: 'coupons',
-            id: coupon.id,
-            data: { usesCount: currentUses + 1 } as any,
-            req: ctx.req,
-            overrideAccess: true,
-          })
-        }
-        // Se maxUses>0 e usesCount >= maxUses: não incrementa,
-        // mas não bloqueia o pagamento (o desconto já foi aplicado
-        // na criação da Order)
+        // Incrementa SEMPRE — grandfathering permite usesCount > maxUses
+        // A validação de maxUses já foi feita aquando da aplicação do coupon
+        await payload.update({
+          collection: 'coupons',
+          id: coupon.id,
+          data: { usesCount: currentUses + 1 } as any,
+          req: ctx.req,
+          overrideAccess: true,
+        })
+        couponRedeemed = true
       }
       // Se coupon não existe mais (apagado entre criação e pagamento):
       // não bloqueia — o snapshot do desconto está na Order
@@ -442,8 +441,8 @@ async function executePaymentSucceeded(
     paidAt: now,
   }
 
-  // Se a Order tem cupão, marcar couponRedeemedAt
-  if ((order.coupon as string | undefined)?.trim()) {
+  // Se a Order tem cupão e foi realmente contabilizado, marcar couponRedeemedAt
+  if (couponRedeemed) {
     updateData.couponRedeemedAt = now
   }
 
