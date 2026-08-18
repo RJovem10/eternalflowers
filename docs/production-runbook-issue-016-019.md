@@ -59,7 +59,8 @@
 | **PostgreSQL 16** | Base de dados | Sim (Docker) | ❌ Rede interna |
 | **Volume `postgres_data`** | Dados persistentes da BD | — | ❌ |
 | **Volume `media_data`** | Ficheiros de upload (imagens) | — | ❌ |
-| **Volume `caddy_data`** | Certificados TLS | — | ❌ |
+| **Volume `caddy_data`** | Certificados TLS (Let's Encrypt) | — | ❌ |
+| **Volume `caddy_config`** | Configuração interna do Caddy | — | ❌ |
 
 ### 1.3 Reverse Proxy Recomendado: Caddy
 
@@ -93,9 +94,10 @@
 
 | Ficheiro | Propósito |
 |----------|-----------|
-| `docker-compose.production.yml` | Compose para VPS (3 serviços: postgres, app) |
+| `docker-compose.production.yml` | Compose para VPS (4 serviços: postgres, app, caddy) |
+| `Caddyfile` | Reverse proxy com TLS automático, encoding, redirecionamento www |
 | `.env.production.example` | Variáveis de ambiente (placeholders apenas) |
-| `configs/production/Caddyfile.example` | Reverse proxy com TLS, headers de segurança, caching |
+| `configs/production/Caddyfile.example` | Reverse proxy template (obsoleto — usar Caddyfile root) |
 | `scripts/production/preflight.sh` | Validação read-only antes do cutover |
 | `scripts/production/backup.sh` | Backup PostgreSQL + Media com manifesto SHA-256 |
 | `scripts/production/restore.sh` | Restore com confirmação explícita |
@@ -105,21 +107,32 @@
 
 ```bash
 # 1. Copiar templates
-# docker-compose.production.yml já está versionado no repositório
+# docker-compose.production.yml e Caddyfile já estão versionados no repositório
 cp .env.production.example .env.production
-cp configs/production/Caddyfile.example configs/production/Caddyfile
 
 # 2. Preencher .env.production (NUNCA versionar)
 #    Gerar PAYLOAD_SECRET: openssl rand -hex 32
 #    Gerar POSTGRES_PASSWORD: openssl rand -hex 16
 
-# 3. Preflight
+# 3. Garantir que DNS aponta para o VPS antes de arrancar
+#    Digite os seus registos A:
+#    eternalflowers.pt  →  <IP_VPS>
+#    www.eternalflowers.pt  →  <IP_VPS>
+#    Verificar: dig eternalflowers.pt +short
+
+# 4. Garantir que as portas 80 e 443 estão abertas no firewall do VPS
+#    (ufw allow 80/tcp && ufw allow 443/tcp && ufw allow 443/udp)
+
+# 5. Preflight
 ./scripts/production/preflight.sh
 
-# 4. Arrancar
+# 6. Arrancar
 docker compose -f docker-compose.production.yml --env-file .env.production up -d
 
-# 5. Smoke tests
+# 7. Verificar certificados TLS (Caddy obtém Let's Encrypt automaticamente)
+docker compose -f docker-compose.production.yml logs caddy
+
+# 8. Smoke tests
 BASE_URL=https://<DOMINIO> ./scripts/production/smoke-test.sh
 ```
 

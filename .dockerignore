@@ -7,7 +7,7 @@
 node_modules
 
 # Build artifacts
-.next
+.next/
 out/
 
 # Environment files (real secrets)
@@ -17,6 +17,9 @@ out/
 .env.staging.local
 .env.test
 *.env.*.local
+
+# Caddyfile (não necessário no build da app Docker)
+Caddyfile
 
 # SQLite (dev only — not in production image)
 *.sqlite

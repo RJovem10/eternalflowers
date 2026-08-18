@@ -8,6 +8,10 @@
 #   docker compose -f docker-compose.production.yml --env-file .env.production up -d
 #
 # .env.production está em .gitignore — NUNCA versionar com secrets reais.
+#
+# Arquitetura de rede:
+#   Internet → Caddy (:80/:443) → App (:3000) → PostgreSQL (:5432)
+#   Apenas Caddy expõe portas ao host. App e Postgres são rede interna.
 # =============================================================================
 
 services:
@@ -90,6 +94,30 @@ services:
         reservations:
           memory: 512M
 
+  caddy:
+    image: caddy:2-alpine
+    container_name: eternal-flowers-caddy
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_started
+    networks:
+      - eternal-flowers-net
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+
 volumes:
   postgres_data:
     name: eternal-flowers-postgres-data
@@ -97,6 +125,13 @@ volumes:
   media_data:
     name: eternal-flowers-media-data
     # Ficheiros de upload (imagens dos produtos).
+  caddy_data:
+    name: eternal-flowers-caddy-data
+    # Certificados TLS (Let's Encrypt). Persistente — sem isto, Caddy re-emite
+    # certificados a cada arranque, atingindo rápidos limites de rate da ACME.
+  caddy_config:
+    name: eternal-flowers-caddy-config
+    # Configuração interna do Caddy (OCSP stapling, etc.).
 
 networks:
   eternal-flowers-net:
