@@ -93,7 +93,7 @@
 
 | Ficheiro | Propósito |
 |----------|-----------|
-| `docker-compose.production.example.yml` | Compose para VPS (3 serviços: postgres, app, caddy) |
+| `docker-compose.production.yml` | Compose para VPS (3 serviços: postgres, app) |
 | `.env.production.example` | Variáveis de ambiente (placeholders apenas) |
 | `configs/production/Caddyfile.example` | Reverse proxy com TLS, headers de segurança, caching |
 | `scripts/production/preflight.sh` | Validação read-only antes do cutover |
@@ -105,7 +105,7 @@
 
 ```bash
 # 1. Copiar templates
-cp docker-compose.production.example.yml docker-compose.production.yml
+# docker-compose.production.yml já está versionado no repositório
 cp .env.production.example .env.production
 cp configs/production/Caddyfile.example configs/production/Caddyfile
 
@@ -531,7 +531,7 @@ As seguintes decisões precisam de si antes de qualquer acesso ao VPS:
 | `docs/release-audit-issue-016-019.md` | Auditoria completa da release (secrets, media, CI, risks) |
 | `docs/postgresql-migration-and-deployment-runbook-issue-018.md` | Migração SQLite → PostgreSQL detalhada |
 | `docs/staging-guide-issue-019.md` | Ambiente de staging isolado |
-| `docker-compose.production.example.yml` | Compose template para produção |
+| `docker-compose.production.yml` | Compose versionado para produção |
 | `.env.production.example` | Env template (placeholders) |
 | `configs/production/Caddyfile.example` | Reverse proxy template |
 | `scripts/production/preflight.sh` | Preflight checklist |

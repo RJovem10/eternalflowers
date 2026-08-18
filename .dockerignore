@@ -1,0 +1,67 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Dependencies
+node_modules
+
+# Build artifacts
+.next
+out/
+
+# Environment files (real secrets)
+.env
+.env.local
+.env.production
+.env.staging.local
+.env.test
+*.env.*.local
+
+# SQLite (dev only — not in production image)
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
+*.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Coverage
+coverage/
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Media uploads (local — not in image)
+media/
+public/media/
+
+# TypeScript
+tsconfig.tsbuildinfo
+
+# Hermes
+.hermes/
+
+# Staging
+media-staging/
+backups/
+
+# Docker compose secrets
+docker-compose.production.yml

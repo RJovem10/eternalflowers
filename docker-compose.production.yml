@@ -1,11 +1,13 @@
-# docker-compose.production.example.yml
-# Template para produção — copiar para docker-compose.production.yml e preencher
-# .env.production com os valores reais.
+# =============================================================================
+# docker-compose.production.yml
+# Configuração de deployment production versionada.
+# NÃO contém secrets — todas as variáveis vêm de .env.production em runtime.
 #
 # Uso:
+#   cp .env.production.example .env.production
 #   docker compose -f docker-compose.production.yml --env-file .env.production up -d
 #
-# NUNCA versionar .env.production nem este ficheiro com secrets reais.
+# .env.production está em .gitignore — NUNCA versionar com secrets reais.
 # =============================================================================
 
 services:
@@ -16,7 +18,7 @@ services:
     env_file:
       - .env.production
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-<DEFINIR>}
+      POSTGRES_USER: ${POSTGRES_USER:-loja}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-loja_flores}
     healthcheck:
@@ -60,11 +62,16 @@ services:
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-resend}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      EMAIL_REPLY_TO: ${EMAIL_REPLY_TO:-}
+      MAINTENANCE_SECRET: ${MAINTENANCE_SECRET}
       INSTAGRAM_BUSINESS_ID: ${INSTAGRAM_BUSINESS_ID:-}
       INSTAGRAM_ACCESS_TOKEN: ${INSTAGRAM_ACCESS_TOKEN:-}
     expose:
       - "3000"
-    # A app NÃO tem porta pública. O reverse proxy faz o front-end.
+    # A app NÃO tem porta pública. O reverse proxy (futuro) faz o front-end.
     ports: []
     volumes:
       - media_data:/app/media
@@ -77,29 +84,6 @@ services:
         reservations:
           memory: 512M
 
-  caddy:
-    image: caddy:2-alpine
-    container_name: eternal-flowers-caddy
-    restart: unless-stopped
-    depends_on:
-      app:
-        condition: service_started
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./configs/production/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    networks:
-      - eternal-flowers-net
-    deploy:
-      resources:
-        limits:
-          memory: 128M
-        reservations:
-          memory: 64M
-
 volumes:
   postgres_data:
     name: eternal-flowers-postgres-data
@@ -107,11 +91,6 @@ volumes:
   media_data:
     name: eternal-flowers-media-data
     # Ficheiros de upload (imagens dos produtos).
-  caddy_data:
-    name: eternal-flowers-caddy-data
-    # Certificados TLS geridos pelo Caddy (Let's Encrypt).
-  caddy_config:
-    name: eternal-flowers-caddy-config
 
 networks:
   eternal-flowers-net:

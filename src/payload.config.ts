@@ -2,10 +2,23 @@ import { buildConfig, type CollectionConfig, type GlobalConfig, type PayloadHand
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { sqliteAdapter } from '@payloadcms/db-sqlite'
 
-// Postgres (VPS) só quando DATABASE_URI começa por "postgres".
-// Dev local: SQLite (ficheiro, sem servidor).
+// ─── Database selection ─────────────────────────────────────────
+// Local dev:     DATABASE_URI vazio ou 'file:./loja.sqlite' → SQLite
+// Production:    DATABASE_URI deve começar por 'postgres'    → PostgreSQL
+// NÃO permitir fallback silencioso para SQLite em production.
+// Exclui build phase (next build) porque o build faz collect de page data
+// e precisa de carregar o config, mas não é runtime production.
+const isBuilding = process.env.NEXT_PHASE === 'phase-production-build'
 const uri = process.env.DATABASE_URI || ''
 const usePostgres = uri.startsWith('postgres')
+
+if (process.env.NODE_ENV === 'production' && !isBuilding && !usePostgres) {
+  throw new Error(
+    'Em produção é obrigatório usar PostgreSQL. ' +
+    'Define DATABASE_URI com uma connection string válida que comece por "postgres".'
+  )
+}
+
 const db = usePostgres
   ? postgresAdapter({ pool: { connectionString: uri }, migrationDir: './src/migrations-pg', push: process.env.PAYLOAD_PG_PUSH === 'true' })
   : sqliteAdapter({ client: { url: uri.startsWith('file:') ? uri : 'file:./loja.sqlite' }, push: process.env.PAYLOAD_SQLITE_PUSH !== 'false', transactionOptions: {}})
@@ -813,6 +826,11 @@ export default buildConfig({
       baseDir: __dirname,
     },
   },
-  secret: process.env.PAYLOAD_SECRET || 'dev-secret-local-mudar-em-prod',
+  secret: (() => {
+    if (process.env.NODE_ENV === 'production' && !isBuilding && !process.env.PAYLOAD_SECRET) {
+      throw new Error('PAYLOAD_SECRET é obrigatório em produção.')
+    }
+    return process.env.PAYLOAD_SECRET || 'dev-secret-local-mudar-em-prod'
+  })(),
   typescript: { outputFile: 'src/payload-types.ts' },
 })
