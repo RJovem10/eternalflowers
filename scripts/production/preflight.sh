@@ -137,10 +137,10 @@ if [ "$MODE" = "cutover" ]; then
     else
         check ".env.production existe" "fail" "Criar a partir de .example antes do cutover"
     fi
-    if [ -f "configs/production/Caddyfile" ]; then
-        check "Caddyfile existe" "pass"
+    if [ -f "./Caddyfile" ]; then
+        check "Caddyfile root existe" "pass"
     else
-        check "Caddyfile existe" "fail" "Criar a partir de .example antes do cutover"
+        check "Caddyfile root existe" "fail" "Criar Caddyfile no root antes do cutover"
     fi
 else
     # Modo preparation: templates exemplo são suficientes
@@ -149,7 +149,9 @@ else
     else
         check "Compose production versionado existe" "warn" "Ainda não criado"
     fi
-    if [ -f "configs/production/Caddyfile.example" ]; then
+    if [ -f "./Caddyfile" ]; then
+        check "Caddyfile versionado existe" "pass"
+    elif [ -f "configs/production/Caddyfile.example" ]; then
         check "Template Caddyfile existe" "pass"
     fi
 fi

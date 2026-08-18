@@ -1,0 +1,17 @@
+# =============================================================================
+# Caddyfile — Eternal Flowers
+# Reverse proxy de produção com HTTPS automático (Let's Encrypt).
+# Versionado no repositório — contém APENAS configuração pública.
+# Nenhum secret, token, ou API key está presente neste ficheiro.
+# =============================================================================
+
+# Redirecionar www para o domínio canónico (sem www)
+www.eternalflowers.pt {
+	redir https://eternalflowers.pt{uri} permanent
+}
+
+# Domínio principal — reverse proxy para a app Next.js/Payload
+eternalflowers.pt {
+	encode zstd gzip
+	reverse_proxy app:3000
+}
