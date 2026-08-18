@@ -357,8 +357,7 @@ try {
       `SELECT to_regclass('public.${t}') AS exists`
     )
     if (!tableExists.rows[0].exists) {
-      console.log(`  ⚠️  Tabela não existe (pode ser normal se migration não a criou): ${t}`)
-      continue
+      abort(`Tabela obrigatória "${t}" não existe no target — com 17 migrations todas as tabelas de negócio devem existir. Schema incompleto.`)
     }
     const result = await client.query(`SELECT COUNT(*)::int AS c FROM "${t}"`)
     const count = result.rows[0].c
@@ -510,7 +509,98 @@ try {
 
   console.log(`  ✅ Todos os sourceHashes validados contra PT canónico da SQLite`)
 
-  // ─── 8. PLAN ────────────────────────────────────────
+  // ─── 7c. VALIDATE ALL 272 NON-PT TRANSLATIONS EXIST ────
+
+  const translationErrors = []
+  const NON_PT = ['en', 'es', 'it', 'de']
+
+  console.log(`\n═══ VALIDAÇÃO DE TRADUÇÕES OBRIGATÓRIAS ═══`)
+
+  // Homepage: 16 fields × 4 locales = 64
+  let hpCount = 0
+  for (const [manifestKey] of Object.entries(HP_MANIFEST_MAP)) {
+    const field = tHomepage.fields[manifestKey]
+    if (!field) {
+      translationErrors.push(`Manifest homepage: field '${manifestKey}' not found for translation validation`)
+      continue
+    }
+    for (const loc of NON_PT) {
+      if (field.translations?.[loc]?.value == null) {
+        translationErrors.push(`Homepage translation missing: ${manifestKey}[${loc}] — obrigatória, não pode ser null/undefined`)
+      }
+      hpCount++
+    }
+  }
+
+  // Categories: 5 slugs × name+description × 4 = 40
+  let catCount = 0
+  for (const [slug] of Object.entries(CATEGORY_SLUG_TO_ID)) {
+    for (const suffix of ['name', 'description']) {
+      const field = tCategories.fields[`${slug}.${suffix}`]
+      if (!field) {
+        translationErrors.push(`Categories manifest: ${slug}.${suffix} not found`)
+        continue
+      }
+      for (const loc of NON_PT) {
+        if (field.translations?.[loc]?.value == null) {
+          translationErrors.push(`Categories translation missing: ${slug}.${suffix}[${loc}] — obrigatória, não pode ser null/undefined`)
+        }
+        catCount++
+      }
+    }
+  }
+
+  // Collections: 6 slugs × name+description × 4 = 48
+  let colCount = 0
+  for (const [slug] of Object.entries(COLLECTION_SLUG_TO_ID)) {
+    for (const suffix of ['name', 'description']) {
+      const field = tCollections.fields[`${slug}.${suffix}`]
+      if (!field) {
+        translationErrors.push(`Collections manifest: ${slug}.${suffix} not found`)
+        continue
+      }
+      for (const loc of NON_PT) {
+        if (field.translations?.[loc]?.value == null) {
+          translationErrors.push(`Collections translation missing: ${slug}.${suffix}[${loc}] — obrigatória, não pode ser null/undefined`)
+        }
+        colCount++
+      }
+    }
+  }
+
+  // Flowers: 10 flowers × story+name+description × 4 = 120
+  let flCount = 0
+  for (const flower of flRows) {
+    for (const suffix of ['story', 'name', 'description']) {
+      const field = tFlowers.fields[`flower-${flower.id}.${suffix}`]
+      if (!field) {
+        translationErrors.push(`Flowers manifest: flower-${flower.id}.${suffix} not found`)
+        continue
+      }
+      for (const loc of NON_PT) {
+        if (field.translations?.[loc]?.value == null) {
+          translationErrors.push(`Flowers translation missing: flower-${flower.id}.${suffix}[${loc}] — obrigatória, não pode ser null/undefined`)
+        }
+        flCount++
+      }
+    }
+  }
+
+  const expectedTotal = 64 + 40 + 48 + 120
+  const actualTotal = hpCount + catCount + colCount + flCount
+
+  if (translationErrors.length > 0) {
+    console.error(`\n❌ ${translationErrors.length} tradução(ões) obrigatória(s) em falta:`)
+    for (const e of translationErrors) console.error(`  - ${e}`)
+    await client.end()
+    process.exit(1)
+  }
+
+  console.log(`  ✅ homepage: ${hpCount}/64 traduções obrigatórias presentes`)
+  console.log(`  ✅ categories: ${catCount}/40 traduções obrigatórias presentes`)
+  console.log(`  ✅ collections: ${colCount}/48 traduções obrigatórias presentes`)
+  console.log(`  ✅ flowers: ${flCount}/120 traduções obrigatórias presentes`)
+  console.log(`  ✅ Total ${actualTotal}/${expectedTotal} traduções obrigatórias (4 locales × 68 campos) — todas presentes, nenhum null`)
 
   const plan = {
     'media': mediaRows.length,
