@@ -7,28 +7,30 @@
  * e importa os 52 registos base + 340 valores de localização para PostgreSQL
  * numa ÚNICA transação.
  *
- * NÃO copia media — apenas valida os ficheiros.
+ * NÃO copia media — apenas valida os ficheiros (nomes + SHA-256).
  * NÃO usa ON CONFLICT — aborta se target não estiver vazio.
  * NÃO depende de tsx/devDependencies — JavaScript ESM puro.
  *
  * Uso:
- *   DATABASE_URI=postgres://... node scripts/production/bootstrap-canonical.mjs \\
- *     --source=/path/e2-validation.sqlite --media-dir=/path/media \\
+ *   DATABASE_URI=postgres://... node scripts/production/bootstrap-canonical.mjs \
+ *     --source=/path/e2-validation.sqlite --media-dir=/path/media \
  *     --dry-run
  *
- *   DATABASE_URI=postgres://... node scripts/production/bootstrap-canonical.mjs \\
- *     --source=/path/e2-validation.sqlite --media-dir=/path/media \\
+ *   DATABASE_URI=postgres://... node scripts/production/bootstrap-canonical.mjs \
+ *     --source=/path/e2-validation.sqlite --media-dir=/path/media \
  *     --apply --confirm=BOOTSTRAP_ETERNAL_FLOWERS_PRODUCTION
  *
  * Proteções:
  *   - SHA-256 da SQLite verificado contra hash canónico
  *   - Counts exactos da origem validados
  *   - Media-dir: 11 ficheiros, nomes, hashes
- *   - Target PG: 17 migrations, tabelas vazias
+ *   - Target PG: 17 migrations, tabelas vazias (dry-run + apply)
+ *   - SourceHash de cada valor PT contra manifest em dry-run + apply
  *   - Transação única com BEGIN/COMMIT/ROLLBACK
  *   - Verificação completa antes de COMMIT
  *   - NENHUMA execução se target não estiver vazio
  *   - NUNCA imprimir password no log
+ *   - NENHUM fallback silencioso para PT em traduções obrigatórias
  */
 
 import fs from 'fs'
@@ -133,6 +135,10 @@ function esc(s) {
 function escBool(v) { return v ? 'true' : 'false' }
 
 function sqlNow() { return "now()" }
+
+function sha256Short(s) {
+  return crypto.createHash('sha256').update(String(s ?? '')).digest('hex').slice(0, 12)
+}
 
 // ─── PARSE ARGS ───────────────────────────────────────
 
@@ -261,6 +267,13 @@ const flRows = src.prepare('SELECT * FROM flowers ORDER BY id').all()
 const relRows = src.prepare('SELECT * FROM flowers_rels ORDER BY id').all()
 const hpRow = src.prepare('SELECT * FROM homepage LIMIT 1').get()
 
+// Build lookup maps for sourceHash validation
+const catBySlug = {}
+for (const r of catRows) catBySlug[r.slug] = r
+
+const colBySlug = {}
+for (const r of colRows) colBySlug[r.slug] = r
+
 src.close()
 
 // ─── 6. LOAD TRANSLATION MANIFESTS ────────────────────
@@ -298,71 +311,17 @@ for (const loc of TARGET_LOCALES) {
   tFlowersLocales[loc] = loadTranslationLocale('flowers', loc)
 }
 
-// ─── 7. DRY-RUN REPORT ────────────────────────────────
+// ─── 7. CONNECT & VALIDATE TARGET PG ──────────────────
 
-const plan = {
-  'media': mediaRows.length,
-  'homepage': hpRow ? 1 : 0,
-  'categories': catRows.length,
-  'collections': colRows.length,
-  'flowers': flRows.length,
-  'flowers_rels': relRows.length,
-}
-
-const planLocales = {
-  'homepage_locales': 5,
-  'categories_locales': 25,
-  'collections_locales': 30,
-  'flowers_locales': 50,
-}
-
-console.log(`\n=== PLANO DE IMPORTAÇÃO ===`)
-console.log(`\nBase (52 registos):`)
-let totalBase = 0
-for (const [t, c] of Object.entries(plan)) {
-  console.log(`  ${t}: ${c}`)
-  totalBase += c
-}
-console.log(`  Total base: ${totalBase}`)
-
-console.log(`\nLocales (240 registos):`)
-let totalLocales = 0
-for (const [t, c] of Object.entries(planLocales)) {
-  console.log(`  ${t}: ${c}`)
-  totalLocales += c
-}
-console.log(`  Total locales: ${totalLocales}`)
-
-console.log(`\nName/description suffix fields (100):`)
-console.log(`  flowers.name_{pt,en,es,it,de}: 50`)
-console.log(`  flowers.description_{pt,en,es,it,de}: 50`)
-console.log(`  Total suffix: 100`)
-
-const grandTotal = totalBase + totalLocales + 100
-console.log(`\nGrand total valores de negócio: ${grandTotal}`)
-console.log(`  240 localized + 100 suffix = 340/340 valores de idioma`)
-
-console.log(`\nSequences a repor:`)
-console.log(`  media_id_seq, categories_id_seq, collections_id_seq, flowers_id_seq`)
-
-if (mode !== 'apply') {
-  console.log(`\n✅ dry-run — zero writes.`)
-  process.exit(0)
-}
-
-// ══════════════════════════════════════════════════════
-// ─── APPLY PHASE ─────────────────────────────────────
-// ══════════════════════════════════════════════════════
-
-console.log(`\n═══ APPLY: VALIDAÇÃO PRÉVIA ═══`)
+console.log(`\n═══ VALIDAÇÃO TARGET POSTGRESQL ═══`)
 
 const client = new pg.Client({ connectionString: dbUri })
+let skipPublishSequence = false
 
 try {
   await client.connect()
 
-  // ─── 5a. Verify 17 migrations ─────────────────────
-
+  // Verify 17 migrations
   const migCount = await client.query(`SELECT COUNT(*)::int AS c FROM payload_migrations`)
   const actualMigCount = migCount.rows[0].c
   console.log(`\npayload_migrations: ${actualMigCount} (expected 17)`)
@@ -376,7 +335,6 @@ try {
       abort(`Migration em falta no target: ${expected}`)
     }
   }
-  // Check for extra migrations
   for (const actual of actualNames) {
     if (!EXPECTED_MIGRATION_NAMES.includes(actual)) {
       abort(`Migration extra no target: ${actual}`)
@@ -384,8 +342,7 @@ try {
   }
   console.log(`  ✅ Todas as 17 migrations coincidem com src/migrations-pg/index.ts`)
 
-  // ─── 5b. Verify all business tables are empty ─────
-
+  // Verify all business tables are empty
   const EMPTY_CHECK_TABLES = [
     'homepage', 'categories', 'collections', 'flowers',
     'flowers_rels', 'flowers_images', 'media',
@@ -412,6 +369,205 @@ try {
   }
 
   console.log(`\n✅ Target PostgreSQL vazio — pronto para bootstrap`)
+
+  // ─── 7b. VALIDATE SOURCE HASHES ─────────────────
+
+  console.log(`\n═══ VALIDAÇÃO SOURCE HASH ═══`)
+  const sourceErrors = []
+
+  // Homepage: validate 16 PT fields against hpRow (SQLite)
+  const HP_MANIFEST_MAP = {
+    'hero.heroTitle': 'hero_hero_title',
+    'hero.heroSubtitle': 'hero_hero_subtitle',
+    'hero.primaryButtonText': 'hero_primary_button_text',
+    'hero.secondaryButtonText': 'hero_secondary_button_text',
+    'realFlowers.title': 'real_flowers_title',
+    'realFlowers.subtitle': 'real_flowers_subtitle',
+    'story.title': 'story_title',
+    'story.text': 'story_text',
+    'international.title': 'international_title',
+    'international.subtitle': 'international_subtitle',
+    'instagram.title': 'instagram_title',
+    'instagram.text': 'instagram_text',
+    'cta.title': 'cta_title',
+    'cta.subtitle': 'cta_subtitle',
+    'cta.buttonText': 'cta_button_text',
+    'footer.brandDescription': 'footer_brand_description',
+  }
+
+  for (const [manifestKey, colName] of Object.entries(HP_MANIFEST_MAP)) {
+    const field = tHomepage.fields[manifestKey]
+    if (!field) {
+      sourceErrors.push(`Manifest homepage: field '${manifestKey}' not found`)
+      continue
+    }
+    const ptValue = hpRow[colName]
+    const hash = sha256Short(ptValue)
+    const expected = sha256FromHashTag(field.sourceHash).slice(0, 12)
+    if (hash !== expected) {
+      sourceErrors.push(`Homepage PT sourceHash mismatch for ${manifestKey}: got ${hash}, expected ${expected}`)
+    }
+  }
+
+  // Categories: validate name/description against SQLite catRow by slug
+  for (const [slug, catId] of Object.entries(CATEGORY_SLUG_TO_ID)) {
+    const nameField = tCategories.fields[`${slug}.name`]
+    const descField = tCategories.fields[`${slug}.description`]
+    if (!nameField) { sourceErrors.push(`categories manifest: ${slug}.name not found`); continue }
+    if (!descField) { sourceErrors.push(`categories manifest: ${slug}.description not found`); continue }
+
+    const catRow = catBySlug[slug]
+    if (!catRow) { sourceErrors.push(`SQLite category row not found for slug: ${slug}`); continue }
+
+    // Validate name against SQLite PT value
+    const nameHash = sha256Short(catRow.name)
+    const expectedNameHash = sha256FromHashTag(nameField.sourceHash).slice(0, 12)
+    if (nameHash !== expectedNameHash) {
+      sourceErrors.push(`categories ${slug} name sourceHash mismatch: SQLite "${catRow.name}" → ${nameHash} vs manifest ${expectedNameHash}`)
+    }
+
+    // Validate description against SQLite PT value
+    const descHash = sha256Short(catRow.description)
+    const expectedDescHash = sha256FromHashTag(descField.sourceHash).slice(0, 12)
+    if (descHash !== expectedDescHash) {
+      sourceErrors.push(`categories ${slug} description sourceHash mismatch: SQLite desc → ${descHash} vs manifest ${expectedDescHash}`)
+    }
+  }
+
+  // Collections: validate name/description against SQLite colRow by slug
+  for (const [slug, colId] of Object.entries(COLLECTION_SLUG_TO_ID)) {
+    const nameField = tCollections.fields[`${slug}.name`]
+    const descField = tCollections.fields[`${slug}.description`]
+    if (!nameField) { sourceErrors.push(`collections manifest: ${slug}.name not found`); continue }
+    if (!descField) { sourceErrors.push(`collections manifest: ${slug}.description not found`); continue }
+
+    const colRow = colBySlug[slug]
+    if (!colRow) { sourceErrors.push(`SQLite collection row not found for slug: ${slug}`); continue }
+
+    // Validate name against SQLite PT value
+    const nameHash = sha256Short(colRow.name)
+    const expectedNameHash = sha256FromHashTag(nameField.sourceHash).slice(0, 12)
+    if (nameHash !== expectedNameHash) {
+      sourceErrors.push(`collections ${slug} name sourceHash mismatch: SQLite "${colRow.name}" → ${nameHash} vs manifest ${expectedNameHash}`)
+    }
+
+    // Validate description against SQLite PT value
+    const descHash = sha256Short(colRow.description)
+    const expectedDescHash = sha256FromHashTag(descField.sourceHash).slice(0, 12)
+    if (descHash !== expectedDescHash) {
+      sourceErrors.push(`collections ${slug} description sourceHash mismatch: SQLite desc → ${descHash} vs manifest ${expectedDescHash}`)
+    }
+  }
+
+  // Flowers: validate name, description, story against SQLite PT values
+  for (const flower of flRows) {
+    const fid = flower.id
+
+    // Name
+    const nameField = tFlowers.fields[`flower-${fid}.name`]
+    if (!nameField) {
+      sourceErrors.push(`flowers manifest: flower-${fid}.name not found`)
+    } else {
+      const nameHash = sha256Short(flower.name_pt)
+      const expectedNameHash = sha256FromHashTag(nameField.sourceHash).slice(0, 12)
+      if (nameHash !== expectedNameHash) {
+        sourceErrors.push(`flowers flower-${fid} name sourceHash mismatch: SQLite "${flower.name_pt}" → ${nameHash} vs manifest ${expectedNameHash}`)
+      }
+    }
+
+    // Description
+    const descField = tFlowers.fields[`flower-${fid}.description`]
+    if (!descField) {
+      sourceErrors.push(`flowers manifest: flower-${fid}.description not found`)
+    } else {
+      const descHash = sha256Short(flower.description_pt)
+      const expectedDescHash = sha256FromHashTag(descField.sourceHash).slice(0, 12)
+      if (descHash !== expectedDescHash) {
+        sourceErrors.push(`flowers flower-${fid} description sourceHash mismatch: SQLite desc → ${descHash} vs manifest ${expectedDescHash}`)
+      }
+    }
+
+    // Story
+    const storyField = tFlowers.fields[`flower-${fid}.story`]
+    if (!storyField) {
+      sourceErrors.push(`flowers manifest: flower-${fid}.story not found`)
+    } else if (flower.story) {
+      const storyHash = sha256Short(flower.story)
+      const expectedStoryHash = sha256FromHashTag(storyField.sourceHash).slice(0, 12)
+      if (storyHash !== expectedStoryHash) {
+        sourceErrors.push(`flowers flower-${fid} story sourceHash mismatch: SQLite story → ${storyHash} vs manifest ${expectedStoryHash}`)
+      }
+    }
+  }
+
+  // Report sourceHash errors
+  if (sourceErrors.length > 0) {
+    console.error(`\n❌ ${sourceErrors.length} erro(s) de validação de sourceHash:`)
+    for (const e of sourceErrors) console.error(`  - ${e}`)
+    await client.end()
+    process.exit(1)
+  }
+
+  console.log(`  ✅ Todos os sourceHashes validados contra PT canónico da SQLite`)
+
+  // ─── 8. PLAN ────────────────────────────────────────
+
+  const plan = {
+    'media': mediaRows.length,
+    'homepage': hpRow ? 1 : 0,
+    'categories': catRows.length,
+    'collections': colRows.length,
+    'flowers': flRows.length,
+    'flowers_rels': relRows.length,
+  }
+
+  const planLocales = {
+    'homepage_locales': 5,
+    'categories_locales': 25,
+    'collections_locales': 30,
+    'flowers_locales': 50,
+  }
+
+  console.log(`\n=== PLANO DE IMPORTAÇÃO ===`)
+  console.log(`\nBase (52 registos):`)
+  let totalBase = 0
+  for (const [t, c] of Object.entries(plan)) {
+    console.log(`  ${t}: ${c}`)
+    totalBase += c
+  }
+  console.log(`  Total base: ${totalBase}`)
+
+  console.log(`\nLocales (240 registos):`)
+  let totalLocales = 0
+  for (const [t, c] of Object.entries(planLocales)) {
+    console.log(`  ${t}: ${c}`)
+    totalLocales += c
+  }
+  console.log(`  Total locales: ${totalLocales}`)
+
+  console.log(`\nName/description suffix fields (100):`)
+  console.log(`  flowers.name_{pt,en,es,it,de}: 50`)
+  console.log(`  flowers.description_{pt,en,es,it,de}: 50`)
+  console.log(`  Total suffix: 100`)
+
+  const grandTotal = totalBase + totalLocales + 100
+  console.log(`\nGrand total valores de negócio: ${grandTotal}`)
+  console.log(`  240 localized + 100 suffix = 340/340 valores de idioma`)
+
+  console.log(`\nSequences a repor:`)
+  console.log(`  media_id_seq, categories_id_seq, collections_id_seq, flowers_id_seq`)
+
+  if (mode !== 'apply') {
+    await client.end()
+    console.log(`\n✅ dry-run — todas as validações passaram. Zero writes.`)
+    process.exit(0)
+  }
+
+  // ══════════════════════════════════════════════════════
+  // ─── APPLY PHASE ─────────────────────────────────────
+  // ══════════════════════════════════════════════════════
+
+  console.log(`\n═══ APPLY ═══`)
 
   // ─── BUILD INSERT STATEMENTS ─────────────────────
 
@@ -542,58 +698,28 @@ try {
     ['footer_brand_description', hpRow.footer_brand_description],
   ]
 
-  // Map translation manifest key to locale column name
-  const HP_MANIFEST_MAP = {
-    'hero.heroTitle': 'hero_hero_title',
-    'hero.heroSubtitle': 'hero_hero_subtitle',
-    'hero.primaryButtonText': 'hero_primary_button_text',
-    'hero.secondaryButtonText': 'hero_secondary_button_text',
-    'realFlowers.title': 'real_flowers_title',
-    'realFlowers.subtitle': 'real_flowers_subtitle',
-    'story.title': 'story_title',
-    'story.text': 'story_text',
-    'international.title': 'international_title',
-    'international.subtitle': 'international_subtitle',
-    'instagram.title': 'instagram_title',
-    'instagram.text': 'instagram_text',
-    'cta.title': 'cta_title',
-    'cta.subtitle': 'cta_subtitle',
-    'cta.buttonText': 'cta_button_text',
-    'footer.brandDescription': 'footer_brand_description',
-  }
-
-  // Validate source hashes for PT locale data
-  for (const [manifestKey, colName] of Object.entries(HP_MANIFEST_MAP)) {
-    const field = tHomepage.fields[manifestKey]
-    if (!field) {
-      errors.push(`Manifest homepage: field '${manifestKey}' not found`)
-      continue
-    }
-    const ptValue = hpRow[colName]
-    const sourceHash = crypto.createHash('sha256').update(String(ptValue ?? '')).digest('hex').slice(0, 12)
-    const expectedHash = sha256FromHashTag(field.sourceHash).slice(0, 12)
-    if (sourceHash !== expectedHash) {
-      errors.push(`Homepage PT sourceHash mismatch for ${manifestKey}: got ${sourceHash}, expected ${expectedHash}`)
-    }
-  }
-
   // Build locale rows for all 5 locales
+  // NOTE: No silent PT fallback — missing translation = ABORT
   for (const loc of ALL_LOCALES) {
     const colValues = {}
+    let hpMissing = false
     for (const [colName, ptVal] of hpLocaleFields) {
       if (loc === 'pt') {
         colValues[colName] = ptVal
       } else {
         // Find the translation from manifest
         const manifestKey = Object.entries(HP_MANIFEST_MAP).find(([, v]) => v === colName)?.[0]
-        if (manifestKey && tHomepage.fields[manifestKey]?.translations[loc]?.value) {
+        if (manifestKey && tHomepage.fields[manifestKey]?.translations[loc]?.value != null) {
           colValues[colName] = tHomepage.fields[manifestKey].translations[loc].value
         } else {
-          // Fallback to PT value (shouldn't happen for well-formed manifests)
-          colValues[colName] = ptVal
+          // Translation missing — abort, no PT fallback allowed
+          hpMissing = true
+          errors.push(`Homepage translation missing for ${colName} in locale ${loc} — ABORT (no PT fallback)`)
         }
       }
     }
+
+    if (hpMissing) continue
 
     const cols = Object.keys(colValues)
     const vals = cols.map(c => esc(colValues[c]))
@@ -614,19 +740,6 @@ try {
     const descField = tCategories.fields[`${slug}.description`]
     if (!nameField) { errors.push(`categories manifest: ${slug}.name not found`); continue }
     if (!descField) { errors.push(`categories manifest: ${slug}.description not found`); continue }
-
-    // Validate source hashes
-    const nameHash = crypto.createHash('sha256').update(String(nameField.source)).digest('hex').slice(0, 12)
-    const expectedNameHash = sha256FromHashTag(nameField.sourceHash).slice(0, 12)
-    if (nameHash !== expectedNameHash) {
-      errors.push(`categories ${slug} name sourceHash mismatch: ${nameHash} vs ${expectedNameHash}`)
-    }
-
-    const descHash = crypto.createHash('sha256').update(String(descField.source)).digest('hex').slice(0, 12)
-    const expectedDescHash = sha256FromHashTag(descField.sourceHash).slice(0, 12)
-    if (descHash !== expectedDescHash) {
-      errors.push(`categories ${slug} description sourceHash mismatch: ${descHash} vs ${expectedDescHash}`)
-    }
 
     for (const loc of ALL_LOCALES) {
       let nameVal, descVal
@@ -650,19 +763,6 @@ try {
     if (!nameField) { errors.push(`collections manifest: ${slug}.name not found`); continue }
     if (!descField) { errors.push(`collections manifest: ${slug}.description not found`); continue }
 
-    // Validate source hashes
-    const nameHash = crypto.createHash('sha256').update(String(nameField.source)).digest('hex').slice(0, 12)
-    const expectedNameHash = sha256FromHashTag(nameField.sourceHash).slice(0, 12)
-    if (nameHash !== expectedNameHash) {
-      errors.push(`collections ${slug} name sourceHash mismatch: ${nameHash} vs ${expectedNameHash}`)
-    }
-
-    const descHash = crypto.createHash('sha256').update(String(descField.source)).digest('hex').slice(0, 12)
-    const expectedDescHash = sha256FromHashTag(descField.sourceHash).slice(0, 12)
-    if (descHash !== expectedDescHash) {
-      errors.push(`collections ${slug} description sourceHash mismatch: ${descHash} vs ${expectedDescHash}`)
-    }
-
     for (const loc of ALL_LOCALES) {
       let nameVal, descVal
       if (loc === 'pt') {
@@ -683,20 +783,12 @@ try {
     const fid = flower.id
     const ptStory = flower.story
 
-    // Validate source hash for story
+    // Get story field (already validated in sourceHash section)
     const storyFieldKey = `flower-${fid}.story`
     const storyField = tFlowers.fields[storyFieldKey]
     if (!storyField) {
       errors.push(`flowers manifest: ${storyFieldKey} not found`)
       continue
-    }
-
-    if (ptStory) {
-      const storyHash = crypto.createHash('sha256').update(String(ptStory)).digest('hex').slice(0, 12)
-      const expectedStoryHash = sha256FromHashTag(storyField.sourceHash).slice(0, 12)
-      if (storyHash !== expectedStoryHash) {
-        errors.push(`flowers flower-${fid} story sourceHash mismatch: ${storyHash} vs ${expectedStoryHash}`)
-      }
     }
 
     // Build translation map for name/description suffix fields
@@ -774,7 +866,7 @@ try {
   // ─── ABORT ON VALIDATION ERRORS ─────────────────
 
   if (errors.length > 0) {
-    console.error(`\n❌ ${errors.length} erro(s) de validação de sourceHash:`)
+    console.error(`\n❌ ${errors.length} erro(s) de validação:`)
     for (const e of errors) console.error(`  - ${e}`)
     await client.query('ROLLBACK')
     await client.end()
@@ -961,11 +1053,12 @@ try {
         expected = ptVal
       } else {
         const manifestKey = Object.entries(HP_MANIFEST_MAP).find(([, v]) => v === colName)?.[0]
-        expected = tHomepage.fields[manifestKey]?.translations[loc]?.value ?? ptVal
+        // No PT fallback — if translation is missing, expected is null and will fail
+        expected = tHomepage.fields[manifestKey]?.translations[loc]?.value ?? null
       }
       const actual = row[colName]
       if (String(actual ?? '') !== String(expected ?? '')) {
-        console.log(`  ❌ homepage_locales[${loc}].${colName}: expected="${expected?.slice(0, 40)}", got="${actual?.slice(0, 40)}"`)
+        console.log(`  ❌ homepage_locales[${loc}].${colName}: expected="${(expected ?? '').slice(0, 40)}", got="${(actual ?? '').slice(0, 40)}"`)
         langOk = false
       }
     }
