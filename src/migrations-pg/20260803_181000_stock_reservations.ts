@@ -7,7 +7,10 @@ interface MigrateArgs {
 }
 
 export async function up({ db }: MigrateArgs): Promise<void> {
-  await db.execute(sql`CREATE TYPE IF NOT EXISTS "public"."enum_stock_reservations_status" AS ENUM('active', 'confirmed', 'expired', 'released');`)
+  await db.execute(sql`DO $$ BEGIN
+    CREATE TYPE "public"."enum_stock_reservations_status" AS ENUM('active', 'confirmed', 'expired', 'released');
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END $$;`)
 
   await db.execute(sql`
     CREATE TABLE "stock_reservations" (

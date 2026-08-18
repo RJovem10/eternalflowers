@@ -72,8 +72,12 @@ export async function up({ db, payload, req }: MigrateArgs): Promise<void> {
   // 9. Confirm backfill count
   const countResult = await db.execute(sql`SELECT COUNT(*)::int AS cnt FROM "categories_locales";`)
   const count = countResult?.rows?.[0]?.cnt ?? 0
-  if (count < 1) {
-    throw new Error('[UP] Backfill inserted 0 rows.')
+
+  // Guard: only throw if source had data that should have been migrated
+  const srcCheck = await db.execute(sql`SELECT COUNT(*)::int AS cnt FROM "categories" WHERE "name" IS NOT NULL AND "name" != '';`)
+  const srcCount = srcCheck?.rows?.[0]?.cnt ?? 0
+  if (count < 1 && srcCount > 0) {
+    throw new Error(`[UP] Backfill inserted 0 rows — ${srcCount} source row(s) had non-empty name. Possible data loss.`)
   }
 
   // Drop old localized columns from base table
