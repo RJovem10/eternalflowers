@@ -85,6 +85,8 @@ async function executeEnqueue(
     payloadData.data = input.snapshot.data
   } else if (input.snapshot.type === 'order_completed') {
     payloadData.data = input.snapshot.data
+  } else if (input.snapshot.type === 'order_cancelled') {
+    payloadData.data = input.snapshot.data
   }
 
   let doc: any
@@ -153,6 +155,10 @@ export function dedupKeyShipped(orderId: number): string {
 
 export function dedupKeyCompleted(orderId: number): string {
   return `order-completed:${orderId}`
+}
+
+export function dedupKeyCancelled(orderId: number): string {
+  return `order-cancelled:${orderId}`
 }
 
 // ═══════════════════════════════════════════════════════════════

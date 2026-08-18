@@ -12,6 +12,7 @@ import type {
   OrderConfirmedSnapshot,
   OrderShippedSnapshot,
   OrderCompletedSnapshot,
+  OrderCancelledSnapshot,
 } from './email-types'
 
 // ─── HTML escaping — prevenção de XSS ────────────────────────
@@ -84,6 +85,12 @@ interface EmailStrings {
   completedHeading: string
   completedGreeting: string
   completedBody: string
+  cancelledSubject: string
+  cancelledHeading: string
+  cancelledGreeting: string
+  cancelledBody: string
+  cancelledBodyRefunded: string
+  cancelledRefundNote: string
   orderNumberLabel: string
   itemLabel: string
   qtyLabel: string
@@ -111,6 +118,12 @@ const emailDict: Record<string, EmailStrings> = {
     completedHeading: 'Encomenda Concluída',
     completedGreeting: 'Olá, {{name}}!',
     completedBody: 'A sua encomenda foi concluída com sucesso. Esperamos que adore as suas joias botânicas!',
+    cancelledSubject: 'Encomenda Cancelada — Eternal Flowers',
+    cancelledHeading: 'Encomenda Cancelada',
+    cancelledGreeting: 'Olá, {{name}}!',
+    cancelledBody: 'A sua encomenda {orderNumber} foi cancelada.',
+    cancelledBodyRefunded: 'A sua encomenda {orderNumber} foi cancelada e o reembolso integral foi iniciado.',
+    cancelledRefundNote: 'O tempo até o valor aparecer na conta depende do método de pagamento/banco.',
     orderNumberLabel: 'Nº Encomenda',
     itemLabel: 'Artigo',
     qtyLabel: 'Qtd',
@@ -136,6 +149,12 @@ const emailDict: Record<string, EmailStrings> = {
     completedHeading: 'Order Completed',
     completedGreeting: 'Hello, {{name}}!',
     completedBody: 'Your order has been completed successfully. We hope you love your botanical jewels!',
+    cancelledSubject: 'Order Cancelled — Eternal Flowers',
+    cancelledHeading: 'Order Cancelled',
+    cancelledGreeting: 'Hello, {{name}}!',
+    cancelledBody: 'Your order {orderNumber} has been cancelled.',
+    cancelledBodyRefunded: 'Your order {orderNumber} has been cancelled and a full refund has been initiated.',
+    cancelledRefundNote: 'The time for the amount to appear in your account depends on the payment method/bank.',
     orderNumberLabel: 'Order No.',
     itemLabel: 'Item',
     qtyLabel: 'Qty',
@@ -161,6 +180,12 @@ const emailDict: Record<string, EmailStrings> = {
     completedHeading: 'Pedido Completado',
     completedGreeting: '¡Hola, {{name}}!',
     completedBody: 'Su pedido ha sido completado con éxito. ¡Esperamos que disfrute de sus joyas botánicas!',
+    cancelledSubject: 'Pedido Cancelado — Eternal Flowers',
+    cancelledHeading: 'Pedido Cancelado',
+    cancelledGreeting: '¡Hola, {{name}}!',
+    cancelledBody: 'Su pedido {orderNumber} ha sido cancelado.',
+    cancelledBodyRefunded: 'Su pedido {orderNumber} ha sido cancelado y se ha iniciado el reembolso íntegro.',
+    cancelledRefundNote: 'El tiempo hasta que el importe aparezca en su cuenta depende del método de pago/banco.',
     orderNumberLabel: 'Nº Pedido',
     itemLabel: 'Artículo',
     qtyLabel: 'Cant',
@@ -186,6 +211,12 @@ const emailDict: Record<string, EmailStrings> = {
     completedHeading: 'Ordine Completato',
     completedGreeting: 'Ciao, {{name}}!',
     completedBody: 'Il tuo ordine è stato completato con successo. Speriamo che tu ami i tuoi gioielli botanici!',
+    cancelledSubject: 'Ordine Annullato — Eternal Flowers',
+    cancelledHeading: 'Ordine Annullato',
+    cancelledGreeting: 'Ciao, {{name}}!',
+    cancelledBody: 'Il tuo ordine {orderNumber} è stato annullato.',
+    cancelledBodyRefunded: 'Il tuo ordine {orderNumber} è stato annullato e il rimborso totale è stato avviato.',
+    cancelledRefundNote: 'Il tempo necessario affinché l\'importo appaia sul conto dipende dal metodo di pagamento/banca.',
     orderNumberLabel: 'Nº Ordine',
     itemLabel: 'Articolo',
     qtyLabel: 'Qtà',
@@ -211,6 +242,12 @@ const emailDict: Record<string, EmailStrings> = {
     completedHeading: 'Bestellung Abgeschlossen',
     completedGreeting: 'Hallo, {{name}}!',
     completedBody: 'Ihre Bestellung wurde erfolgreich abgeschlossen. Wir hoffen, Sie lieben Ihre botanischen Schmuckstücke!',
+    cancelledSubject: 'Bestellung Storniert — Eternal Flowers',
+    cancelledHeading: 'Bestellung Storniert',
+    cancelledGreeting: 'Hallo, {{name}}!',
+    cancelledBody: 'Ihre Bestellung {orderNumber} wurde storniert.',
+    cancelledBodyRefunded: 'Ihre Bestellung {orderNumber} wurde storniert und die vollständige Rückerstattung wurde eingeleitet.',
+    cancelledRefundNote: 'Die Zeit bis der Betrag auf Ihrem Konto erscheint, hängt von der Zahlungsmethode/Bank ab.',
     orderNumberLabel: 'Bestell-Nr.',
     itemLabel: 'Artikel',
     qtyLabel: 'Menge',
@@ -228,8 +265,12 @@ function getDict(locale: string): EmailStrings {
   return emailDict[locale] || emailDict.en
 }
 
-function replacePlaceholders(template: string, name: string): string {
-  return template.replace(/\{\{name\}\}/g, esc(name))
+function replacePlaceholders(template: string, name: string, orderNumber?: string): string {
+  let result = template.replace(/\{\{name\}\}/g, esc(name))
+  if (orderNumber) {
+    result = result.replace(/\{orderNumber\}/g, esc(orderNumber))
+  }
+  return result
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -399,6 +440,58 @@ export function renderOrderCompleted(
 }
 
 // ═══════════════════════════════════════════════════════════════
+// Template: Order Cancelled
+// ═══════════════════════════════════════════════════════════════
+
+export function renderOrderCancelled(
+  snapshot: OrderCancelledSnapshot,
+  locale: Locale | string,
+): { subject: string; html: string; text: string } {
+  const d = getDict(locale)
+
+  const subject = replacePlaceholders(d.cancelledSubject, snapshot.customerName)
+
+  const bodyKey = snapshot.wasRefunded
+    ? replacePlaceholders(d.cancelledBodyRefunded, snapshot.customerName, snapshot.orderNumber)
+    : replacePlaceholders(d.cancelledBody, snapshot.customerName, snapshot.orderNumber)
+
+  const refundNoteHtml = snapshot.wasRefunded
+    ? `<p>${esc(d.cancelledRefundNote)}</p>`
+    : ''
+
+  const refundNoteText = snapshot.wasRefunded
+    ? `\n${d.cancelledRefundNote}`
+    : ''
+
+  const html = htmlWrapper(`
+<h1>${esc(d.cancelledHeading)}</h1>
+<p>${replacePlaceholders(d.cancelledGreeting, snapshot.customerName)}</p>
+<p>${bodyKey}</p>
+${refundNoteHtml}
+<dl class="details">
+  <dt>${esc(d.orderNumberLabel)}</dt>
+  <dd>${esc(snapshot.orderNumber)}</dd>
+</dl>
+<p>${esc(d.thankYou)}</p>
+  `)
+
+  const text = [
+    `${d.cancelledHeading}`,
+    '',
+    `${replacePlaceholders(d.cancelledGreeting, snapshot.customerName)}`,
+    '',
+    bodyKey,
+    refundNoteText,
+    '',
+    `${d.orderNumberLabel}: ${snapshot.orderNumber}`,
+    '',
+    d.thankYou,
+  ].filter(Boolean).join('\n')
+
+  return { subject, html, text }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // Render dispatcher
 // ═══════════════════════════════════════════════════════════════
 
@@ -419,6 +512,8 @@ export function renderEmail(
       return renderOrderShipped(snapshot.data as OrderShippedSnapshot, locale)
     case 'order_completed':
       return renderOrderCompleted(snapshot.data as OrderCompletedSnapshot, locale)
+    case 'order_cancelled':
+      return renderOrderCancelled(snapshot.data as OrderCancelledSnapshot, locale)
     default:
       throw new Error(`Unknown email type: ${snapshot.type}`)
   }

@@ -74,6 +74,8 @@ interface MockPayloadOptions {
 }
 
 let mockOptions: MockPayloadOptions = {}
+let mockEmailNotifs: any[] = []
+let mockEmailNotifIdSeq = 0
 
 function resetMockPayload() {
   mockOptions = {
@@ -82,6 +84,8 @@ function resetMockPayload() {
     reservations: [],
     flowers: {},
   }
+  mockEmailNotifs = []
+  mockEmailNotifIdSeq = 0
 }
 
 function createMockPayload(): any {
@@ -140,7 +144,20 @@ function createMockPayload(): any {
       }
       return null
     }),
-    create: vi.fn(),
+    create: vi.fn(async ({ collection, data }: any) => {
+      if (String(collection).includes('email-notification') || collection === 'email-notifications') {
+        mockEmailNotifIdSeq++
+        const doc = {
+          id: mockEmailNotifIdSeq,
+          ...data,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+        mockEmailNotifs.push(doc)
+        return doc
+      }
+      return undefined
+    }),
     db: { name: 'sqlite' },
   }
   return payload
@@ -237,7 +254,7 @@ describe('cancelOrder — pré-pagamento (pending_payment)', () => {
     resetStripeMocks()
   })
 
-  it('1. pending_payment sem PI → reservations released + cancelled', async () => {
+  it('1. pending_payment sem PI → reservations released + cancelled + order_cancelled email', async () => {
     mockOptions.order = createMockOrder({
       orderStatus: 'pending_payment',
       stripePaymentIntentId: null,
@@ -254,6 +271,11 @@ describe('cancelOrder — pré-pagamento (pending_payment)', () => {
     expect(mockOptions.order.cancelledAt).toBeTruthy()
     // Reserva deve ter sido libertada
     expect(mockOptions.reservations[0].status).toBe('released')
+    // Email notification criada
+    const emailNotif = mockEmailNotifs.find((n) => n.deduplicationKey === 'order-cancelled:1')
+    expect(emailNotif).toBeDefined()
+    expect(emailNotif.type).toBe('order_cancelled')
+    expect(emailNotif.payload.data.wasRefunded).toBe(false)
   })
 
   it('2. PI cancelável → Stripe cancel + cancelled', async () => {
@@ -314,7 +336,7 @@ describe('cancelOrder — pós-pagamento com reembolso (confirmed+paid)', () => 
     resetStripeMocks()
   })
 
-  it('6. confirmed+paid → full refund', async () => {
+  it('6. confirmed+paid → full refund + order_cancelled email with wasRefunded=true', async () => {
     const pi = addMockPaymentIntent({ id: 'pi_paid_refund', status: 'succeeded', amount: 15000, amount_received: 15000 })
     mockOptions.order = createMockOrder({
       orderStatus: 'confirmed',
@@ -341,6 +363,12 @@ describe('cancelOrder — pós-pagamento com reembolso (confirmed+paid)', () => 
     expect(mockOptions.order.paymentStatus).toBe('refunded')
     expect(mockOptions.order.stripeRefundId).toBeTruthy()
     expect(mockOptions.order.cancelledAt).toBeTruthy()
+
+    // Email notification criada com wasRefunded=true
+    const emailNotif = mockEmailNotifs.find((n) => n.deduplicationKey === 'order-cancelled:1')
+    expect(emailNotif).toBeDefined()
+    expect(emailNotif.type).toBe('order_cancelled')
+    expect(emailNotif.payload.data.wasRefunded).toBe(true)
 
     // Stock restaurado
     expect(mockOptions.flowers[10].stockQuantity).toBe(1)

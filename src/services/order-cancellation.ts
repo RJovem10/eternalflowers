@@ -19,6 +19,7 @@
  */
 import type { Payload } from 'payload'
 import { runInTransaction } from './transact'
+import { enqueueEmailNotification, dedupKeyCancelled } from './email/email-notifications'
 import { releaseReservation } from './stock'
 import { lockFlowerForUpdate, updateFlowerStock } from './db-adapter'
 import { retrievePaymentIntent, createFullRefund, cancelPaymentIntent, listRefundsForPaymentIntent } from './payments/stripe'
@@ -202,6 +203,28 @@ async function prePaymentCancel(
       overrideAccess: true,
     })
 
+    // ─── Enqueue order_cancelled email notification (mesma transacção) ──
+    // Falha ao persistir a notification faz rollback da transacção de domínio.
+    const customer = (freshOrder.customer || {}) as any
+    await enqueueEmailNotification(payload, {
+      type: 'order_cancelled',
+      orderId: orderId,
+      recipientEmail: customer.email || freshOrder.email || '',
+      locale: freshOrder.locale || 'pt',
+      deduplicationKey: dedupKeyCancelled(orderId),
+      snapshot: {
+        type: 'order_cancelled',
+        data: {
+          orderNumber: freshOrder.orderNumber || String(orderId),
+          customerName: customer.name || '',
+          wasRefunded: false,
+          total: Number(freshOrder.total) || 0,
+          currency: freshOrder.currency || 'EUR',
+        },
+      },
+      req: ctx.req,
+    })
+
     return {
       kind: 'pre_payment_cancelled',
       orderId,
@@ -282,6 +305,29 @@ async function paidRefundCancel(
       } as any,
       req: ctx.req,
       overrideAccess: true,
+    })
+
+    // ─── Enqueue order_cancelled email notification (mesma transacção) ──
+    // Falha ao persistir a notification faz rollback da transacção de domínio.
+    const customer = (freshOrder.customer || {}) as any
+    await enqueueEmailNotification(payload, {
+      type: 'order_cancelled',
+      orderId: orderId,
+      recipientEmail: customer.email || freshOrder.email || '',
+      locale: freshOrder.locale || 'pt',
+      deduplicationKey: dedupKeyCancelled(orderId),
+      snapshot: {
+        type: 'order_cancelled',
+        data: {
+          orderNumber: freshOrder.orderNumber || String(orderId),
+          customerName: customer.name || '',
+          wasRefunded: true,
+          total: Number(freshOrder.total) || 0,
+          currency: freshOrder.currency || 'EUR',
+          paymentMethodType: freshOrder.paymentMethodType || null,
+        },
+      },
+      req: ctx.req,
     })
 
     return {
