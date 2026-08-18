@@ -39,6 +39,12 @@ ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 ARG NEXT_PUBLIC_SERVER_URL
 ENV NEXT_PUBLIC_SERVER_URL=$NEXT_PUBLIC_SERVER_URL
 
+# Generate Payload types (not git-versioned) before building
+# NODE_ENV=development evita guards de DB/secret production
+# sem DATABASE_URI nem PAYLOAD_SECRET reais.
+ENV NODE_ENV=development
+RUN npm run generate:types
+
 # Build the Next.js + Payload application
 # NODE_ENV=production é definido por razões históricas (next build usa-o internamente)
 # mas o guard de DB em produção é desactivado durante build via NEXT_PHASE.
