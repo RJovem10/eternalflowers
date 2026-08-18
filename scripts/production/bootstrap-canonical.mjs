@@ -634,8 +634,8 @@ try {
         nameVal = nameField.source
         descVal = descField.source
       } else {
-        nameVal = nameField.translations[loc]?.value ?? nameField.source
-        descVal = descField.translations[loc]?.value ?? descField.source
+        nameVal = nameField.translations[loc]?.value ?? null
+        descVal = descField.translations[loc]?.value ?? null
       }
       statements.push(`INSERT INTO categories_locales (name, description, "_locale", "_parent_id")
         VALUES (${esc(nameVal)}, ${esc(descVal)}, ${esc(loc)}, ${catId})`)
@@ -669,8 +669,8 @@ try {
         nameVal = nameField.source
         descVal = descField.source
       } else {
-        nameVal = nameField.translations[loc]?.value ?? nameField.source
-        descVal = descField.translations[loc]?.value ?? descField.source
+        nameVal = nameField.translations[loc]?.value ?? null
+        descVal = descField.translations[loc]?.value ?? null
       }
       statements.push(`INSERT INTO collections_locales (name, description, "_locale", "_parent_id")
         VALUES (${esc(nameVal)}, ${esc(descVal)}, ${esc(loc)}, ${colId})`)
@@ -985,8 +985,8 @@ try {
       const row = res.rows[0]
       const nameField = tCategories.fields[`${slug}.name`]
       const descField = tCategories.fields[`${slug}.description`]
-      const expectedName = loc === 'pt' ? nameField.source : (nameField.translations[loc]?.value ?? nameField.source)
-      const expectedDesc = loc === 'pt' ? descField.source : (descField.translations[loc]?.value ?? descField.source)
+      const expectedName = loc === 'pt' ? nameField.source : (nameField.translations[loc]?.value ?? null)
+      const expectedDesc = loc === 'pt' ? descField.source : (descField.translations[loc]?.value ?? null)
       if (row.name !== expectedName) {
         console.log(`  ❌ categories_locales[${slug},${loc}].name: "${row.name}" vs "${expectedName}"`)
         langOk = false
@@ -1012,8 +1012,8 @@ try {
       const row = res.rows[0]
       const nameField = tCollections.fields[`${slug}.name`]
       const descField = tCollections.fields[`${slug}.description`]
-      const expectedName = loc === 'pt' ? nameField.source : (nameField.translations[loc]?.value ?? nameField.source)
-      const expectedDesc = loc === 'pt' ? descField.source : (descField.translations[loc]?.value ?? descField.source)
+      const expectedName = loc === 'pt' ? nameField.source : (nameField.translations[loc]?.value ?? null)
+      const expectedDesc = loc === 'pt' ? descField.source : (descField.translations[loc]?.value ?? null)
       if (row.name !== expectedName) {
         console.log(`  ❌ collections_locales[${slug},${loc}].name: "${row.name}" vs "${expectedName}"`)
         langOk = false
