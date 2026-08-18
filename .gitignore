@@ -22,4 +22,4 @@ tsconfig.tsbuildinfo
 .env.staging.local
 media-staging/
 backups/staging-*
-docker-compose.production.yml
+# docker-compose.production.yml está tracked — não esconder

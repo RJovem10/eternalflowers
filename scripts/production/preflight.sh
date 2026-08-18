@@ -144,10 +144,10 @@ if [ "$MODE" = "cutover" ]; then
     fi
 else
     # Modo preparation: templates exemplo são suficientes
-    if [ -f "docker-compose.production.example.yml" ]; then
-        check "Template compose production existe" "pass"
+    if [ -f "docker-compose.production.yml" ]; then
+        check "Compose production versionado existe" "pass"
     else
-        check "Template compose production existe" "warn" "Ainda não criado"
+        check "Compose production versionado existe" "warn" "Ainda não criado"
     fi
     if [ -f "configs/production/Caddyfile.example" ]; then
         check "Template Caddyfile existe" "pass"

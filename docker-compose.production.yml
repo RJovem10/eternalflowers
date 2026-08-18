@@ -1,11 +1,13 @@
+# =============================================================================
 # docker-compose.production.yml
-# Template para produção — copiar para docker-compose.production.yml e preencher
-# .env.production com os valores reais.
+# Configuração de deployment production versionada.
+# NÃO contém secrets — todas as variáveis vêm de .env.production em runtime.
 #
 # Uso:
+#   cp .env.production.example .env.production
 #   docker compose -f docker-compose.production.yml --env-file .env.production up -d
 #
-# NUNCA versionar .env.production nem este ficheiro com secrets reais.
+# .env.production está em .gitignore — NUNCA versionar com secrets reais.
 # =============================================================================
 
 services:
