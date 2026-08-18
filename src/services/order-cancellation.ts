@@ -21,7 +21,7 @@ import type { Payload } from 'payload'
 import { runInTransaction } from './transact'
 import { releaseReservation } from './stock'
 import { lockFlowerForUpdate, updateFlowerStock } from './db-adapter'
-import { retrievePaymentIntent, createFullRefund, cancelPaymentIntent } from './payments/stripe'
+import { retrievePaymentIntent, createFullRefund, cancelPaymentIntent, listRefundsForPaymentIntent } from './payments/stripe'
 import type {
   CancelOrderInput,
   CancelOrderResult,
@@ -233,7 +233,7 @@ async function paidRefundCancel(
   const refund = await createAdminCancelRefund(payload, paymentIntentId, orderId, order)
 
   const refundId = refund.id
-  const refundReason: RefundReason = 'stock_reservation_expired'
+  const refundReason: RefundReason = 'admin_order_cancelled'
 
   // ─── B. Transaction DB curta ────────────────────────────────
   return runInTransaction(payload, undefined, async (ctx) => {
@@ -303,15 +303,46 @@ async function createAdminCancelRefund(
   orderId: number,
   order: any,
 ): Promise<any> {
-  // Verificar se já existe refund para este cancelamento
+  // ─── 1. stripeRefundId já persistido da primeira tentativa ──
   const existingRefundId = order.stripeRefundId as string | undefined
   if (existingRefundId) {
-    // Já tem refund — verificar se corresponde ao PaymentIntent
-    // Se sim, reutilizar. Se não, criar novo (caso raro).
     return { id: existingRefundId }
   }
 
-  // Verificar se stripe já devolveu refund para este PI (race com webhook)
+  // ─── 2. Consultar Stripe directamente — recovery após DB failure ──
+  const refunds = await listRefundsForPaymentIntent(paymentIntentId)
+
+  // 2a. Match por metadata (post-fix — refunds com reason='admin_order_cancel')
+  const adminCancelRefund = refunds.find((r) =>
+    r.metadata?.reason === 'admin_order_cancel' &&
+    r.metadata?.orderId === String(orderId),
+  )
+  if (adminCancelRefund) {
+    return { id: adminCancelRefund.id }
+  }
+
+  // 2b. Se PI está totalmente reembolsado, encontrar refund que iguale
+  //     o amount recebido (backward compat para refunds criados antes
+  //     da metadata ser adicionada, ou recovery de qualquer origem).
+  //     Isto NÃO pode confundir late-payment porque:
+  //       - late-payment muda orderStatus para 'expired' (DB ok)
+  //       - se DB falhou, ambas as origens são igualmente válidas
+  //       - reutilizar o refund existente é correcto (não cria duplicado)
+  const pi = await retrievePaymentIntent(paymentIntentId)
+  const amountReceived = pi.amount_received ?? 0
+  const amountRefundable = (pi as any).amount_refundable ?? 0
+
+  if (amountRefundable <= 0 && amountReceived > 0) {
+    const fullRefund = refunds.find((r) =>
+      r.status === 'succeeded' && r.amount === amountReceived,
+    )
+    if (fullRefund) {
+      return { id: fullRefund.id }
+    }
+  }
+
+  // ─── 3. Fallback DB — outra Order com o mesmo PI já reembolsada ──
+  // (race rara: webhook já processou refund para outra instância)
   const existingOrderWithRefund = await payload.find({
     collection: 'orders',
     where: {
@@ -328,40 +359,19 @@ async function createAdminCancelRefund(
     return { id: refunded.stripeRefundId }
   }
 
-  // Novas verificação: o PI pode já ter sido parcialmente reembolsado
-  const pi = await retrievePaymentIntent(paymentIntentId)
-  const amountReceived = pi.amount_received ?? 0
-  const amountRefundable = (pi as any).amount_refundable ?? 0
-
-  // Se já foi totalmente reembolsado, reutilizar
-  if (amountRefundable <= 0 && amountReceived > 0) {
-    // Procurar o refund mais recente
-    const existingWithRefund = await payload.find({
-      collection: 'orders',
-      where: {
-        stripePaymentIntentId: { equals: paymentIntentId },
-      },
-      limit: 1,
-      depth: 0,
-      overrideAccess: true,
-    })
-    if (existingWithRefund.docs.length > 0) {
-      const r = existingWithRefund.docs[0] as any
-      if (r.stripeRefundId) {
-        return { id: r.stripeRefundId }
-      }
-    }
-  }
-
-  // Garantir que amount é exclusivamente do Stripe/Order, nunca do browser
+  // ─── 4. Garantir que amount é exclusivamente do Stripe/Order ──
   const total = Number(order.total) || 0
   if (total <= 0) {
     throw new CancelRefundError(`Order #${orderId} tem total inválido (${total}).`)
   }
 
-  // Criar refund com idempotency key estável para admin cancel
-  // Prefixo 'admin-cancel-refund' diferencia do 'late-stock-refund' usado pelo webhook
-  return createFullRefund(paymentIntentId, 'admin-cancel-refund')
+  // ─── 5. Criar refund com metadata + idempotency key ───────────
+  // Metadata permite identificar inequivocamente este refund no futuro
+  // Prefixo 'admin-cancel-refund' diferencia do 'late-stock-refund' do webhook
+  return createFullRefund(paymentIntentId, 'admin-cancel-refund', {
+    reason: 'admin_order_cancel',
+    orderId: String(orderId),
+  })
 }
 
 // ═══════════════════════════════════════════════════════════════

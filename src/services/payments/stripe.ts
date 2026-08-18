@@ -164,13 +164,16 @@ export function validatePaymentIntentForOrder(
  *
  * Aceita um parâmetro opcional `idempotencyKeyPrefix` para que
  * o cancelamento admin use chave diferente do late-payment refund.
+ * Aceita `metadata` opcional para identificar a origem do refund.
  *
  * @param paymentIntentId - ID do PaymentIntent a reembolsar
  * @param idempotencyKeyPrefix - Prefixo da idempotency key. Default: 'late-stock-refund'
+ * @param metadata - Metadados opcionais para identificar o refund (ex: reason, orderId)
  */
 export async function createFullRefund(
   paymentIntentId: string,
   idempotencyKeyPrefix?: string,
+  metadata?: Record<string, string>,
 ): Promise<Stripe.Refund> {
   const stripe = getStripe()
 
@@ -180,11 +183,34 @@ export async function createFullRefund(
   return stripe.refunds.create(
     {
       payment_intent: paymentIntentId,
+      ...(metadata ? { metadata } : {}),
     },
     {
       idempotencyKey,
     },
   )
+}
+
+// ─── Listar refunds de um PaymentIntent ─────────────────────
+
+/**
+ * Lista todos os refunds associados a um PaymentIntent no Stripe.
+ *
+ * Útil para recuperação após DB failure: se o stripeRefundId não foi
+ * persistido na Order, podemos consultar a Stripe directamente para
+ * encontrar o refund criado anteriormente.
+ *
+ * @param paymentIntentId - ID do PaymentIntent
+ */
+export async function listRefundsForPaymentIntent(
+  paymentIntentId: string,
+): Promise<Stripe.Refund[]> {
+  const stripe = getStripe()
+  const refunds = await stripe.refunds.list({
+    payment_intent: paymentIntentId,
+    limit: 100,
+  })
+  return refunds.data
 }
 
 // ─── Webhook signature verification ─────────────────────────

@@ -149,10 +149,12 @@ function createMockPayload(): any {
 // ─── Mock Stripe ──────────────────────────────────────────────
 
 let mockPaymentIntents: Record<string, any> = {}
-let mockRefundsCalled: Array<{ paymentIntentId: string; idempotencyKey: string }> = []
+let mockRefunds: Record<string, any[]> = {}
+let mockRefundsCalled: Array<{ paymentIntentId: string; idempotencyKey: string; metadata?: Record<string, string> }> = []
 
 function resetStripeMocks() {
   mockPaymentIntents = {}
+  mockRefunds = {}
   mockRefundsCalled = []
 }
 
@@ -195,19 +197,32 @@ vi.mock('./payments/stripe', async () => {
       }
       return { canceled: false, currentStatus: pi.status }
     }),
-    createFullRefund: vi.fn(async (paymentIntentId: string, idempotencyKeyPrefix?: string) => {
+    createFullRefund: vi.fn(async (paymentIntentId: string, idempotencyKeyPrefix?: string, metadata?: Record<string, string>) => {
       const prefix = idempotencyKeyPrefix ?? 'late-stock-refund'
       const key = `${prefix}:${paymentIntentId}`
-      mockRefundsCalled.push({ paymentIntentId, idempotencyKey: key })
+      mockRefundsCalled.push({ paymentIntentId, idempotencyKey: key, metadata })
       const pi = mockPaymentIntents[paymentIntentId]
       if (!pi) throw new Error(`PaymentIntent ${paymentIntentId} not found`)
-      return {
-        id: `re_mock_${Date.now()}`,
+
+      const refundId = `re_mock_${Date.now()}`
+      const refund = {
+        id: refundId,
         object: 'refund',
         amount: pi.amount_received || pi.amount,
         status: 'succeeded',
         payment_intent: paymentIntentId,
+        metadata: metadata || {},
+        created: Math.floor(Date.now() / 1000),
       }
+
+      // Track refunds per PI for listRefundsForPaymentIntent
+      if (!mockRefunds[paymentIntentId]) mockRefunds[paymentIntentId] = []
+      mockRefunds[paymentIntentId].push(refund)
+
+      return refund
+    }),
+    listRefundsForPaymentIntent: vi.fn(async (paymentIntentId: string) => {
+      return mockRefunds[paymentIntentId] || []
     }),
   }
 })
@@ -495,24 +510,173 @@ describe('cancelOrder — pós-pagamento com reembolso (confirmed+paid)', () => 
     expect(mockOptions.flowers[10].stockQuantity).toBe(1)
   })
 
-  it('15. DB failure após refund → retry reutiliza refund', async () => {
+  it('15. DB failure após refund → retry reutiliza refund via Stripe API', async () => {
     addMockPaymentIntent({ id: 'pi_db_fail', status: 'succeeded', amount: 15000, amount_received: 15000 })
     mockOptions.order = createMockOrder({
       orderStatus: 'confirmed',
       paymentStatus: 'paid',
       stripePaymentIntentId: 'pi_db_fail',
+      stripeRefundId: null,   // DB failure — não foi persistido
       total: 150.00,
     })
+    const payload = createMockPayload()
 
-    // Simular que o stripeRefundId já foi gravado (DB failure after refund, retry)
-    mockOptions.order.stripeRefundId = 're_existing_refund'
+    // Primeira chamada cria o refund (Stripe succeed, mas DB transaction falhou)
+    // Simulamos que o refund foi criado no Stripe ANTES de chamar cancelOrder
+    // para representar o cenário: Stripe refund succeeded, DB commit failed, retry
+    const existingRefund = {
+      id: 're_db_fail_persisted',
+      object: 'refund',
+      amount: 15000,
+      status: 'succeeded',
+      payment_intent: 'pi_db_fail',
+      metadata: { reason: 'admin_order_cancel', orderId: '1' },
+      created: Math.floor(Date.now() / 1000) - 60,
+    }
+    mockRefunds['pi_db_fail'] = [existingRefund]
 
+    // Act — retry
+    const result = await cancelOrder(payload, { orderId: 1 })
+
+    // Deve ter reutilizado o refund existente (não criou novo)
+    expect(result.kind).toBe('paid_refund_cancelled')
+    expect((result as any).refundId).toBe('re_db_fail_persisted')
+    // Stripe createFullRefund NÃO foi chamado
+    expect(mockRefundsCalled.length).toBe(0)
+    // Mas stripeRefundId foi actualizado na Order
+    expect(mockOptions.order.stripeRefundId).toBe('re_db_fail_persisted')
+  })
+
+  it('20. DB failure — retry com refund sem metadata (backward compat)', async () => {
+    addMockPaymentIntent({ id: 'pi_legacy', status: 'succeeded', amount: 15000, amount_received: 15000 })
+    mockOptions.order = createMockOrder({
+      orderStatus: 'confirmed',
+      paymentStatus: 'paid',
+      stripePaymentIntentId: 'pi_legacy',
+      stripeRefundId: null,   // DB failure — não foi persistido
+      total: 150.00,
+    })
+    mockOptions.flowers = {}
+    const payload = createMockPayload()
+
+    // Refund existente SEM metadata (criado antes da metadata ser adicionada)
+    const legacyRefund = {
+      id: 're_legacy_old',
+      object: 'refund',
+      amount: 15000,
+      status: 'succeeded',
+      payment_intent: 'pi_legacy',
+      metadata: {},
+      created: Math.floor(Date.now() / 1000) - 3600,
+    }
+    mockRefunds['pi_legacy'] = [legacyRefund]
+
+    // Act — retry
+    const result = await cancelOrder(payload, { orderId: 1 })
+
+    // Deve encontrar o refund pelo amount (PI totalmente reembolsado)
+    expect(result.kind).toBe('paid_refund_cancelled')
+    expect((result as any).refundId).toBe('re_legacy_old')
+    expect(mockRefundsCalled.length).toBe(0)
+  })
+
+  it('21. Late-payment refund não é confundido com admin cancel', async () => {
+    addMockPaymentIntent({ id: 'pi_late_vs_admin', status: 'succeeded', amount: 15000, amount_received: 15000 })
+    mockOptions.order = createMockOrder({
+      orderStatus: 'confirmed',
+      paymentStatus: 'paid',
+      stripePaymentIntentId: 'pi_late_vs_admin',
+      stripeRefundId: null,
+      total: 150.00,
+    })
+    mockOptions.flowers = {}
+    const payload = createMockPayload()
+
+    // Late-payment refund existente — SEM metadata (prefixo 'late-stock-refund')
+    const lateRefund = {
+      id: 're_late_payment',
+      object: 'refund',
+      amount: 15000,
+      status: 'succeeded',
+      payment_intent: 'pi_late_vs_admin',
+      metadata: {},
+      created: Math.floor(Date.now() / 1000) - 7200,
+    }
+    mockRefunds['pi_late_vs_admin'] = [lateRefund]
+
+    // Act — admin cancel retry
+    const result = await cancelOrder(payload, { orderId: 1 })
+
+    // Deve encontrar o refund pelo amount (PI está totalmente reembolsado)
+    // Mesmo sendo late-payment, reutilizar é correcto: não cria duplicado
+    expect(result.kind).toBe('paid_refund_cancelled')
+    expect((result as any).refundId).toBe('re_late_payment')
+    expect(mockRefundsCalled.length).toBe(0)
+    // refundReason é admin_order_cancelled (cancelamento admin)
+    expect(mockOptions.order.refundReason).toBe('admin_order_cancelled')
+  })
+
+  it('22. refundReason de admin cancellation é admin_order_cancelled', async () => {
+    addMockPaymentIntent({ id: 'pi_reason', status: 'succeeded', amount: 15000, amount_received: 15000 })
+    mockOptions.order = createMockOrder({
+      orderStatus: 'confirmed',
+      paymentStatus: 'paid',
+      stripePaymentIntentId: 'pi_reason',
+      total: 150.00,
+    })
     const payload = createMockPayload()
     const result = await cancelOrder(payload, { orderId: 1 })
 
     expect(result.kind).toBe('paid_refund_cancelled')
-    // Não deve ter chamado refund novamente
-    expect(mockRefundsCalled.length).toBe(0)
+    expect(mockOptions.order.refundReason).toBe('admin_order_cancelled')
+    expect(mockOptions.order.refundReason).not.toBe('stock_reservation_expired')
+  })
+
+  it('23. Stock restore ocorre exactamente uma vez após recovery', async () => {
+    addMockPaymentIntent({ id: 'pi_stock_once', status: 'succeeded', amount: 15000, amount_received: 15000 })
+    mockOptions.order = createMockOrder({
+      orderStatus: 'confirmed',
+      paymentStatus: 'paid',
+      stripePaymentIntentId: 'pi_stock_once',
+      stripeRefundId: null,
+      total: 150.00,
+    })
+    mockOptions.reservations = [
+      createMockReservation({ id: 601, status: 'confirmed', order: 1, flower: { id: 10 }, quantity: 1 }),
+    ]
+    mockOptions.flowers = {
+      10: { id: 10, productionMode: 'unique', stockQuantity: 0, availability: 'sold' },
+    }
+    const payload = createMockPayload()
+
+    // Refund existente no Stripe (DB failure scenario)
+    mockRefunds['pi_stock_once'] = [{
+      id: 're_stock_once',
+      object: 'refund',
+      amount: 15000,
+      status: 'succeeded',
+      payment_intent: 'pi_stock_once',
+      metadata: { reason: 'admin_order_cancel', orderId: '1' },
+      created: Math.floor(Date.now() / 1000) - 60,
+    }]
+
+    // Act — retry
+    const result = await cancelOrder(payload, { orderId: 1 })
+    expect(result.kind).toBe('paid_refund_cancelled')
+    expect((result as any).stockRestored).toBe(true)
+
+    // Stock restaurado exactamente uma vez
+    expect(mockOptions.flowers[10].stockQuantity).toBe(1)
+    expect(mockOptions.flowers[10].availability).toBe('available')
+
+    // Reserva libertada
+    expect(mockOptions.reservations[0].status).toBe('released')
+
+    // Segunda chamada — idempotente
+    mockOptions.order.orderStatus = 'cancelled'
+    const result2 = await cancelOrder(payload, { orderId: 1 })
+    expect(result2.kind).toBe('already_cancelled')
+    expect(mockOptions.flowers[10].stockQuantity).toBe(1)  // não duplicado
   })
 })
 
