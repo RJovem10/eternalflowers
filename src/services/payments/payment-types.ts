@@ -47,7 +47,7 @@ export type ReservationSettlementOutcome =
 
 // ─── Refund snapshot ───────────────────────────────────────
 
-export type RefundReason = 'stock_reservation_expired'
+export type RefundReason = 'stock_reservation_expired' | 'admin_order_cancelled'
 
 // ─── Erros tipados ──────────────────────────────────────────
 

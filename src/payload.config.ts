@@ -257,6 +257,21 @@ const completeHandler: PayloadHandler = async (req) => {
   }
 }
 
+// ─── Cancel endpoint handler ───────────────────────────────────
+const cancelHandler: PayloadHandler = async (req) => {
+  if (!(req as any).user) return fulfillmentError('Autenticação necessária.', 401)
+  const orderId = getFulfillmentId(req)
+  if (orderId === null) return fulfillmentError('ID de encomenda inválido.', 400)
+  try {
+    const { cancelOrder } = require('@/services/order-cancellation')
+    const result = await cancelOrder(req.payload, { orderId, req })
+    return fulfillmentJson(result)
+  } catch (err: any) {
+    const isKnown = err.code === 'CANCEL_NOT_ALLOWED' || err.code === 'CANCEL_ORDER_NOT_FOUND' || err.code === 'CANCEL_STRIPE_ERROR' || err.code === 'CANCEL_REFUND_ERROR'
+    return fulfillmentJson({ error: err.message, code: err.code }, isKnown ? 409 : 500)
+  }
+}
+
 const Orders: CollectionConfig = {
   slug: 'orders',
   admin: {
@@ -268,6 +283,9 @@ const Orders: CollectionConfig = {
         beforeDocumentControls: [
           {
             path: '@/components/admin/FulfillmentActions#FulfillmentActions',
+          },
+          {
+            path: '@/components/admin/CancelOrderActions#CancelOrderActions',
           },
         ],
       },
@@ -288,6 +306,11 @@ const Orders: CollectionConfig = {
       path: '/:id/complete',
       method: 'post',
       handler: completeHandler,
+    },
+    {
+      path: '/:id/cancel',
+      method: 'post',
+      handler: cancelHandler,
     },
   ],
   fields: [
@@ -418,6 +441,7 @@ const Orders: CollectionConfig = {
     { name: 'processingAt', type: 'date', label: 'Preparação iniciada em', admin: { readOnly: true } },
     { name: 'shippedAt', type: 'date', label: 'Expedida em', admin: { readOnly: true } },
     { name: 'completedAt', type: 'date', label: 'Concluída em', admin: { readOnly: true } },
+    { name: 'cancelledAt', type: 'date', label: 'Cancelada em', admin: { readOnly: true } },
     { name: 'trackingNumber', type: 'text', label: 'Código de Tracking', admin: { readOnly: true } },
 
     { name: 'stripeRefundId', type: 'text', unique: true, label: 'Stripe Refund ID', admin: { readOnly: true } },
