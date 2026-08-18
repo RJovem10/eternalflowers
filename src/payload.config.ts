@@ -422,6 +422,7 @@ const Orders: CollectionConfig = {
     { name: 'shippingCost', type: 'number', label: 'Portes (€)', admin: { readOnly: true } },
     { name: 'total', type: 'number', label: 'Total (€)', admin: { readOnly: true } },
     { name: 'coupon', type: 'text', label: 'Cupão usado', admin: { readOnly: true } },
+    { name: 'couponRedeemedAt', type: 'date', label: 'Cupão consumido em', admin: { readOnly: true, position: 'sidebar', description: 'System-managed. Preenchido automaticamente quando o pagamento é confirmado.' } },
     { name: 'currency', type: 'text', label: 'Moeda', defaultValue: 'EUR', admin: { readOnly: true } },
 
     // ── Envio (snapshot do checkout) ────────────────────────────

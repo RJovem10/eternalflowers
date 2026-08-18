@@ -156,6 +156,8 @@ let mockReservations: any[] = []
 let mockReservationIdSeq = 0
 let mockEmailNotifIdSeq = 0
 let mockEmailNotifications: any[] = []
+let mockCoupons: any[] = []
+let mockCouponIdSeq = 0
 
 function resetMocks() {
   mockOrders = []
@@ -164,6 +166,8 @@ function resetMocks() {
   mockReservationIdSeq = 0
   mockEmailNotifIdSeq = 0
   mockEmailNotifications = []
+  mockCoupons = []
+  mockCouponIdSeq = 0
   resetStripeMocks()
   vi.clearAllMocks()
 }
@@ -295,6 +299,26 @@ function addConfirmedReservation(orderId: number, flowerId: number, qty: number)
   return res
 }
 
+function addMockCoupon(overrides: Partial<any> = {}): any {
+  mockCouponIdSeq++
+  const coupon = {
+    id: mockCouponIdSeq,
+    code: 'TEST10',
+    type: 'percent',
+    value: 10,
+    maxUses: 0,
+    usesCount: 0,
+    active: true,
+    minOrder: 0,
+    firstOrderOnly: false,
+    validFrom: null,
+    validUntil: null,
+    ...overrides,
+  }
+  mockCoupons.push(coupon)
+  return coupon
+}
+
 function createMockPayload() {
   const mockFind = vi.fn(async ({ collection, where, limit }: any) => {
     if (collection === 'orders' || collection === 'orders') {
@@ -327,6 +351,13 @@ function createMockPayload() {
       }
       return { docs: [], totalDocs: 0 }
     }
+    if (collection === 'coupons') {
+      if (where?.code?.equals) {
+        const found = mockCoupons.filter((c: any) => c.code === where.code.equals)
+        return { docs: found.slice(0, limit || 10), totalDocs: found.length }
+      }
+      return { docs: [], totalDocs: 0 }
+    }
     return { docs: [], totalDocs: 0 }
   })
 
@@ -339,6 +370,9 @@ function createMockPayload() {
     }
     if (collection === 'stock-reservations' || collection === 'stock-reservations') {
       return mockReservations.find((r: any) => r.id === id) || null
+    }
+    if (collection === 'coupons') {
+      return mockCoupons.find((c: any) => c.id === id) || null
     }
     return null
   })
@@ -372,6 +406,13 @@ function createMockPayload() {
       if (idx >= 0) {
         mockReservations[idx] = { ...mockReservations[idx], ...data }
         return mockReservations[idx]
+      }
+    }
+    if (collection === 'coupons') {
+      const idx = mockCoupons.findIndex((c: any) => c.id === id)
+      if (idx >= 0) {
+        mockCoupons[idx] = { ...mockCoupons[idx], ...data }
+        return mockCoupons[idx]
       }
     }
     return null
@@ -970,6 +1011,141 @@ describe('handlePaymentProcessing', () => {
 
     const activeReserves = mockReservations.filter((r: any) => r.status === 'active')
     expect(activeReserves.length).toBe(1)
+  })
+})
+
+// ═══════════════════════════════════════════════════════════════
+// ISSUE-1S — Coupon Redemption Tests
+// ═══════════════════════════════════════════════════════════════
+
+describe('handlePaymentSucceeded — coupon redemption', () => {
+  beforeEach(() => {
+    resetMocks()
+  })
+
+  it('1S-1. Order sem coupon → nada incrementado', async () => {
+    const payload = createMockPayload()
+    const order = createPendingPaymentOrder({ coupon: null })
+    const paymentIntent = addMockPaymentIntent({
+      amount: toStripeAmount(order.total),
+      currency: 'eur',
+      status: 'succeeded',
+      metadata: { orderId: String(order.id) },
+    })
+    mockOrders[0].stripePaymentIntentId = paymentIntent.id
+    addActiveReservation(order.id, 1, 2)
+
+    // Criar um coupon que NÃO deve ser afectado
+    addMockCoupon({ code: 'TEST10', usesCount: 5 })
+
+    const result = await handlePaymentSucceeded(payload, paymentIntent)
+    expect(result.kind).toBe('processed')
+
+    // coupon não deve ter sido incrementado
+    const cpn = mockCoupons.find((c: any) => c.code === 'TEST10')
+    expect(cpn.usesCount).toBe(5)
+  })
+
+  it('1S-2. Order com coupon paga → usesCount +1, couponRedeemedAt persistido', async () => {
+    const payload = createMockPayload()
+    const order = createPendingPaymentOrder({ coupon: 'TEST10' })
+    const paymentIntent = addMockPaymentIntent({
+      amount: toStripeAmount(order.total),
+      currency: 'eur',
+      status: 'succeeded',
+      metadata: { orderId: String(order.id) },
+    })
+    mockOrders[0].stripePaymentIntentId = paymentIntent.id
+    addActiveReservation(order.id, 1, 2)
+    addMockCoupon({ code: 'TEST10', usesCount: 5 })
+
+    const result = await handlePaymentSucceeded(payload, paymentIntent)
+    expect(result.kind).toBe('processed')
+
+    // usesCount incrementado
+    const cpn = mockCoupons.find((c: any) => c.code === 'TEST10')
+    expect(cpn.usesCount).toBe(6)
+
+    // couponRedeemedAt preenchido na Order
+    const updatedOrder = mockOrders.find((o: any) => o.id === order.id)
+    expect(updatedOrder.couponRedeemedAt).toBeDefined()
+    expect(typeof updatedOrder.couponRedeemedAt).toBe('string')
+  })
+
+  it('1S-3. Webhook retry → usesCount não duplica', async () => {
+    const payload = createMockPayload()
+    const order = createPendingPaymentOrder({ coupon: 'TEST10' })
+    const paymentIntent = addMockPaymentIntent({
+      amount: toStripeAmount(order.total),
+      currency: 'eur',
+      status: 'succeeded',
+      metadata: { orderId: String(order.id) },
+    })
+    mockOrders[0].stripePaymentIntentId = paymentIntent.id
+    addActiveReservation(order.id, 1, 2)
+    addMockCoupon({ code: 'TEST10', usesCount: 5 })
+
+    // Primeira chamada
+    const r1 = await handlePaymentSucceeded(payload, paymentIntent)
+    expect(r1.kind).toBe('processed')
+
+    // Simular que a Order ficou paid/confirmed (como na realidade)
+    // A segunda chamada deve encontrar already_processed pela
+    // idempotência existente (paymentStatus=paid + orderStatus=confirmed)
+    // Isto testa o guard de idempotência EXISTENTE (não o couponRedeemedAt)
+    const r2 = await handlePaymentSucceeded(payload, paymentIntent)
+    expect(r2.kind).toBe('already_processed')
+
+    // usesCount continua +1
+    const cpn = mockCoupons.find((c: any) => c.code === 'TEST10')
+    expect(cpn.usesCount).toBe(6)
+  })
+
+  it('1S-4. Coupon maxUses exausto → não incrementa mas pagamento OK', async () => {
+    const payload = createMockPayload()
+    const order = createPendingPaymentOrder({ coupon: 'TEST10' })
+    const paymentIntent = addMockPaymentIntent({
+      amount: toStripeAmount(order.total),
+      currency: 'eur',
+      status: 'succeeded',
+      metadata: { orderId: String(order.id) },
+    })
+    mockOrders[0].stripePaymentIntentId = paymentIntent.id
+    addActiveReservation(order.id, 1, 2)
+    // Coupon já esgotado: usesCount=10, maxUses=10
+    addMockCoupon({ code: 'TEST10', usesCount: 10, maxUses: 10 })
+
+    const result = await handlePaymentSucceeded(payload, paymentIntent)
+    expect(result.kind).toBe('processed')
+
+    // usesCount NÃO foi incrementado
+    const cpn = mockCoupons.find((c: any) => c.code === 'TEST10')
+    expect(cpn.usesCount).toBe(10)
+
+    // Mas Order foi paga normalmente
+    const updatedOrder = mockOrders.find((o: any) => o.id === order.id)
+    expect(updatedOrder.paymentStatus).toBe('paid')
+    expect(updatedOrder.orderStatus).toBe('confirmed')
+  })
+
+  it('1S-5. Coupon com maxUses ilimitado (0) → incrementa sempre', async () => {
+    const payload = createMockPayload()
+    const order = createPendingPaymentOrder({ coupon: 'TEST10' })
+    const paymentIntent = addMockPaymentIntent({
+      amount: toStripeAmount(order.total),
+      currency: 'eur',
+      status: 'succeeded',
+      metadata: { orderId: String(order.id) },
+    })
+    mockOrders[0].stripePaymentIntentId = paymentIntent.id
+    addActiveReservation(order.id, 1, 2)
+    addMockCoupon({ code: 'TEST10', usesCount: 100, maxUses: 0 })
+
+    const result = await handlePaymentSucceeded(payload, paymentIntent)
+    expect(result.kind).toBe('processed')
+
+    const cpn = mockCoupons.find((c: any) => c.code === 'TEST10')
+    expect(cpn.usesCount).toBe(101)
   })
 })
 

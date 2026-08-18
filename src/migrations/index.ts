@@ -11,6 +11,7 @@ import * as migration_20260808_000003_refund_fields from './20260808_000003_refu
 import * as migration_20260809_000001_fulfillment_fields from './20260809_000001_fulfillment_fields';
 import * as migration_20260809_000002_email_notifications from './20260809_000002_email_notifications';
 import * as migration_20260818_000001_cancelled_at from './20260818_000001_cancelled_at';
+import * as migration_20260818_000002_coupon_redeemed_at from './20260818_000002_coupon_redeemed_at';
 
 export const migrations = [
   {
@@ -77,5 +78,10 @@ export const migrations = [
     up: migration_20260818_000001_cancelled_at.up,
     down: migration_20260818_000001_cancelled_at.down,
     name: '20260818_000001_cancelled_at'
+  },
+  {
+    up: migration_20260818_000002_coupon_redeemed_at.up,
+    down: migration_20260818_000002_coupon_redeemed_at.down,
+    name: '20260818_000002_coupon_redeemed_at'
   },
 ];

@@ -168,3 +168,18 @@ export async function updateFlowerStock(
     })
   }
 }
+
+/**
+ * Bloqueia a linha do coupon para escrita.
+ * PostgreSQL: SELECT ... FOR UPDATE na sessão drizzle.
+ * SQLite: lock implícito na transacção — nenhuma acção adicional.
+ */
+export async function lockCouponForUpdate(ctx: TransactionCtx, couponId: number): Promise<void> {
+  if (getAdapterName(ctx) === 'postgres') {
+    const sessionDb = getTransactionalSession(ctx)
+    if (typeof sessionDb.execute !== 'function') {
+      throw new Error('STOCK_BUSY_RETRY: sessão PG sem método execute')
+    }
+    await sessionDb.execute(sql`SELECT id FROM coupons WHERE id = ${couponId} FOR UPDATE`)
+  }
+}
