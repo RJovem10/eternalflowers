@@ -26,6 +26,19 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy source code
 COPY . .
 
+# NEXT_PUBLIC_* variáveis públicas: necessárias DURANTE o build porque
+# são incorporadas no bundle JavaScript (client components) e usadas
+# em server components durante pré-renderização (metadata, etc.).
+# Apenas variáveis públicas (pk_*) — NUNCA secrets server-side.
+ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+
+ARG NEXT_PUBLIC_SITE_URL
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+
+ARG NEXT_PUBLIC_SERVER_URL
+ENV NEXT_PUBLIC_SERVER_URL=$NEXT_PUBLIC_SERVER_URL
+
 # Build the Next.js + Payload application
 # NODE_ENV=production é definido por razões históricas (next build usa-o internamente)
 # mas o guard de DB em produção é desactivado durante build via NEXT_PHASE.
