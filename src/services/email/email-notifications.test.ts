@@ -14,6 +14,7 @@ import {
   dedupKeyConfirmed,
   dedupKeyShipped,
   dedupKeyCompleted,
+  dedupKeyCancelled,
   requeueFailedEmailNotifications,
 } from './email-notifications'
 import { fakeEmailProvider, failingEmailProvider } from './providers/fake'
@@ -21,6 +22,7 @@ import {
   renderOrderConfirmed,
   renderOrderShipped,
   renderOrderCompleted,
+  renderOrderCancelled,
   renderEmail,
 } from './email-templates'
 import type { EmailNotificationDB } from './email-types'
@@ -338,6 +340,127 @@ describe('enqueueEmailNotification — outbox', () => {
 
     expect(second.kind).toBe('already_queued')
     expect(mockNotifications.length).toBe(1)
+  })
+
+  it('7c. cancelled cria order_cancelled', async () => {
+    const payload = createMockPayload()
+
+    const result = await enqueueEmailNotification(payload, {
+      type: 'order_cancelled',
+      orderId: 1,
+      recipientEmail: 'maria@example.com',
+      locale: 'pt',
+      deduplicationKey: dedupKeyCancelled(1),
+      snapshot: {
+        type: 'order_cancelled',
+        data: {
+          orderNumber: 'EF-0001',
+          customerName: 'Maria',
+          wasRefunded: false,
+          total: 30,
+          currency: 'EUR',
+        },
+      },
+    })
+
+    expect(result.kind).toBe('created')
+    const notif = mockNotifications.find((n) => n.deduplicationKey === 'order-cancelled:1')
+    expect(notif).toBeDefined()
+    expect(notif.type).toBe('order_cancelled')
+    expect(notif.payload.data.wasRefunded).toBe(false)
+    expect(notif.payload.data.total).toBe(30)
+    expect(notif.payload.data.currency).toBe('EUR')
+  })
+
+  it('7d. cancelled retry não duplica', async () => {
+    const payload = createMockPayload()
+
+    const first = await enqueueEmailNotification(payload, {
+      type: 'order_cancelled',
+      orderId: 1,
+      recipientEmail: 'maria@example.com',
+      locale: 'pt',
+      deduplicationKey: dedupKeyCancelled(1),
+      snapshot: {
+        type: 'order_cancelled',
+        data: {
+          orderNumber: 'EF-0001', customerName: 'Maria',
+          wasRefunded: false, total: 30, currency: 'EUR',
+        },
+      },
+    })
+
+    expect(first.kind).toBe('created')
+
+    const second = await enqueueEmailNotification(payload, {
+      type: 'order_cancelled',
+      orderId: 1,
+      recipientEmail: 'maria@example.com',
+      locale: 'pt',
+      deduplicationKey: dedupKeyCancelled(1),
+      snapshot: {
+        type: 'order_cancelled',
+        data: {
+          orderNumber: 'EF-0001', customerName: 'Maria',
+          wasRefunded: false, total: 30, currency: 'EUR',
+        },
+      },
+    })
+
+    expect(second.kind).toBe('already_queued')
+    expect(mockNotifications.length).toBe(1)
+  })
+
+  it('7e. cancelled snapshot wasRefunded=true', async () => {
+    const payload = createMockPayload()
+
+    const result = await enqueueEmailNotification(payload, {
+      type: 'order_cancelled',
+      orderId: 5,
+      recipientEmail: 'refund@example.com',
+      locale: 'en',
+      deduplicationKey: dedupKeyCancelled(5),
+      snapshot: {
+        type: 'order_cancelled',
+        data: {
+          orderNumber: 'EF-0005',
+          customerName: 'Refunded Customer',
+          wasRefunded: true,
+          total: 150,
+          currency: 'EUR',
+          paymentMethodType: 'card',
+        },
+      },
+    })
+
+    expect(result.kind).toBe('created')
+    const notif = mockNotifications.find((n) => n.deduplicationKey === 'order-cancelled:5')
+    expect(notif).toBeDefined()
+    expect(notif.payload.data.wasRefunded).toBe(true)
+    expect(notif.payload.data.paymentMethodType).toBe('card')
+  })
+
+  it('7f. cancelled recipient vem da Order', async () => {
+    const payload = createMockPayload()
+
+    const result = await enqueueEmailNotification(payload, {
+      type: 'order_cancelled',
+      orderId: 6,
+      recipientEmail: 'order@eternalflowers.pt',
+      locale: 'pt',
+      deduplicationKey: dedupKeyCancelled(6),
+      snapshot: {
+        type: 'order_cancelled',
+        data: {
+          orderNumber: 'EF-0006', customerName: 'Order Customer',
+          wasRefunded: false, total: 50, currency: 'EUR',
+        },
+      },
+    })
+
+    expect(result.kind).toBe('created')
+    const notif = mockNotifications.find((n) => n.deduplicationKey === 'order-cancelled:6')
+    expect(notif.recipientEmail).toBe('order@eternalflowers.pt')
   })
 
   it('7b. unique constraint violation por race → already_queued sem rollback', async () => {
@@ -670,6 +793,57 @@ describe('processPendingEmailNotifications — processor', () => {
     const notif = mockNotifications.find((n) => n.status === 'sent')
     expect(notif).toBeDefined()
   })
+
+  it('20a. processor envia order_cancelled', async () => {
+    const payload = createMockPayload()
+    await seedNotification(payload, {
+      type: 'order_cancelled',
+      payload: {
+        type: 'order_cancelled',
+        data: {
+          orderNumber: 'EF-CAN',
+          customerName: 'Cancelled',
+          wasRefunded: false,
+          total: 30,
+          currency: 'EUR',
+        },
+      },
+    })
+
+    const summary = await processPendingEmailNotifications(payload, { provider: fakeEmailProvider })
+
+    expect(summary.processed).toBe(1)
+    expect(summary.sent).toBe(1)
+    const updated = mockNotifications.find((n) => n.status === 'sent')
+    expect(updated).toBeDefined()
+    expect(updated.type).toBe('order_cancelled')
+  })
+
+  it('20b. provider failure não altera order_cancelled estado', async () => {
+    const payload = createMockPayload()
+    await seedNotification(payload, {
+      type: 'order_cancelled',
+      payload: {
+        type: 'order_cancelled',
+        data: {
+          orderNumber: 'EF-CAN-FAIL',
+          customerName: 'Fail',
+          wasRefunded: true,
+          total: 100,
+          currency: 'EUR',
+        },
+      },
+    })
+
+    const summary = await processPendingEmailNotifications(payload, { provider: failingEmailProvider })
+
+    expect(summary.processed).toBe(1)
+    expect(summary.failed).toBe(1)
+    // Status da Order não é afectado — o processor só altera a notification
+    const failed = mockNotifications.find((n) => n.status === 'failed')
+    expect(failed).toBeDefined()
+    expect(failed.type).toBe('order_cancelled')
+  })
 })
 
 // ═══════════════════════════════════════════════════════════════
@@ -745,6 +919,109 @@ describe('email templates', () => {
     expect(result.html).toContain('Hallo, Hans')
   })
 
+  it('26. PT order_cancelled sem refund', () => {
+    const result = renderOrderCancelled(
+      {
+        orderNumber: 'EF-0001', customerName: 'Maria',
+        wasRefunded: false, total: 30, currency: 'EUR',
+      },
+      'pt',
+    )
+
+    expect(result.subject).toContain('Encomenda Cancelada')
+    expect(result.html).toContain('Olá, Maria')
+    expect(result.html).toContain('EF-0001 foi cancelada')
+    expect(result.html).not.toContain('reembolso')
+    expect(result.text).not.toContain('reembolso')
+  })
+
+  it('27. PT order_cancelled com refund', () => {
+    const result = renderOrderCancelled(
+      {
+        orderNumber: 'EF-0002', customerName: 'João',
+        wasRefunded: true, total: 150, currency: 'EUR',
+      },
+      'pt',
+    )
+
+    expect(result.subject).toContain('Encomenda Cancelada')
+    expect(result.html).toContain('Olá, João')
+    expect(result.html).toContain('EF-0002 foi cancelada e o reembolso integral foi iniciado')
+    expect(result.html).toContain('depende do método de pagamento')
+    expect(result.text).toContain('depende do método de pagamento')
+    expect(result.text).toContain('reembolso')
+  })
+
+  it('28. EN order_cancelled com refund', () => {
+    const result = renderOrderCancelled(
+      {
+        orderNumber: 'EF-0003', customerName: 'John',
+        wasRefunded: true, total: 100, currency: 'EUR',
+      },
+      'en',
+    )
+
+    expect(result.subject).toContain('Order Cancelled')
+    expect(result.html).toContain('Hello, John')
+    expect(result.html).toContain('full refund has been initiated')
+  })
+
+  it('29. ES order_cancelled com refund', () => {
+    const result = renderOrderCancelled(
+      {
+        orderNumber: 'EF-0004', customerName: 'Carlos',
+        wasRefunded: true, total: 200, currency: 'EUR',
+      },
+      'es',
+    )
+
+    expect(result.subject).toContain('Pedido Cancelado')
+    expect(result.html).toContain('¡Hola, Carlos')
+    expect(result.html).toContain('reembolso íntegro')
+  })
+
+  it('30. IT order_cancelled com refund', () => {
+    const result = renderOrderCancelled(
+      {
+        orderNumber: 'EF-0005', customerName: 'Marco',
+        wasRefunded: true, total: 75, currency: 'EUR',
+      },
+      'it',
+    )
+
+    expect(result.subject).toContain('Ordine Annullato')
+    expect(result.html).toContain('Ciao, Marco')
+    expect(result.html).toContain('rimborso totale')
+  })
+
+  it('31. DE order_cancelled com refund', () => {
+    const result = renderOrderCancelled(
+      {
+        orderNumber: 'EF-0006', customerName: 'Hans',
+        wasRefunded: true, total: 50, currency: 'EUR',
+      },
+      'de',
+    )
+
+    expect(result.subject).toContain('Bestellung Storniert')
+    expect(result.html).toContain('Hallo, Hans')
+    expect(result.html).toContain('vollständige Rückerstattung')
+  })
+
+  it('32. HTML escaping preservado em order_cancelled', () => {
+    const result = renderOrderCancelled(
+      {
+        orderNumber: 'EF-0001',
+        customerName: '<script>alert("xss")</script>',
+        wasRefunded: false, total: 30, currency: 'EUR',
+      },
+      'pt',
+    )
+
+    expect(result.html).not.toContain('<script>')
+    expect(result.html).toContain('&lt;script&gt;alert')
+  })
+
   it('renderEmail dispatcher funciona para todos os tipos', () => {
     const confirmed = renderEmail(
       { type: 'order_confirmed', data: { orderNumber: '1', customerName: 'A', items: [], subtotal: 0, discount: 0, shippingCost: 0, total: 0, currency: 'EUR' } },
@@ -763,6 +1040,12 @@ describe('email templates', () => {
       'pt',
     )
     expect(completed.subject).toContain('Concluída')
+
+    const cancelled = renderEmail(
+      { type: 'order_cancelled', data: { orderNumber: '1', customerName: 'A', wasRefunded: false, total: 10, currency: 'EUR' } },
+      'pt',
+    )
+    expect(cancelled.subject).toContain('Cancelada')
   })
 })
 

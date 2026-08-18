@@ -12,6 +12,7 @@ export type EmailNotificationType =
   | 'order_confirmed'
   | 'order_shipped'
   | 'order_completed'
+  | 'order_cancelled'
 
 // ─── Estados de envio ─────────────────────────────────────────
 
@@ -51,10 +52,20 @@ export interface OrderCompletedSnapshot {
   customerName: string
 }
 
+export interface OrderCancelledSnapshot {
+  orderNumber: string
+  customerName: string
+  wasRefunded: boolean
+  total: number
+  currency: string
+  paymentMethodType?: string | null
+}
+
 export type EmailSnapshot =
   | { type: 'order_confirmed'; data: OrderConfirmedSnapshot }
   | { type: 'order_shipped'; data: OrderShippedSnapshot }
   | { type: 'order_completed'; data: OrderCompletedSnapshot }
+  | { type: 'order_cancelled'; data: OrderCancelledSnapshot }
 
 // ─── EmailNotification DB shape ───────────────────────────────
 

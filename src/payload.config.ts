@@ -700,6 +700,7 @@ const EmailNotifications: CollectionConfig = {
         { label: 'Encomenda Confirmada', value: 'order_confirmed' },
         { label: 'Encomenda Expedida', value: 'order_shipped' },
         { label: 'Encomenda Concluída', value: 'order_completed' },
+        { label: 'Encomenda Cancelada', value: 'order_cancelled' },
       ],
       admin: { readOnly: true },
     },
