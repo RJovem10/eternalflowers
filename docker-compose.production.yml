@@ -46,6 +46,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # NEXT_PUBLIC_* são necessárias durante o build do Next.js
+        # (incorporadas no bundle). Apenas variáveis públicas — NUNCA secrets.
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+        NEXT_PUBLIC_SERVER_URL: ${NEXT_PUBLIC_SERVER_URL}
     container_name: eternal-flowers-app
     restart: unless-stopped
     depends_on:
