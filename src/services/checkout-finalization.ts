@@ -29,9 +29,8 @@
 
 import type { Payload } from 'payload'
 import crypto from 'crypto'
-import { getShippingQuotes } from './shipping/shipping'
-import { ShippingProviderNotConfiguredError } from './shipping/shipping-types'
-import { type ShippingQuote, type ShippingQuoteInput, type ShippingParcel } from './shipping/shipping-types'
+import { type ShippingParcel } from './shipping/shipping-types'
+import { calculateFixedShipping, type FixedShippingItem } from './shipping/fixed-shipping'
 import { reserveStock } from './stock'
 import { runInTransaction, type TransactionCtx } from './transact'
 import type {
@@ -41,10 +40,10 @@ import type {
 import {
   CheckoutFinalizationError,
   InvalidOrderStateError,
-  IncompatibleQuoteError,
   NegativeTotalError,
   ShippingParcelNotConfiguredError,
   InvalidShippingParcelError,
+  CupulaShippingNeedsConfirmationError,
 } from './checkout-finalization-types'
 
 // ─── UUID v4 generator ─────────────────────────────────────
@@ -97,52 +96,6 @@ function validateParcel(parcel: unknown): asserts parcel is ShippingParcel {
       'Parcel de envio inválido.',
       'parcel.height deve ser um número positivo ou omitido.',
     )
-  }
-}
-
-// ─── Construir ShippingQuoteInput a partir da Order ─────────
-
-function buildShippingQuoteInput(
-  order: any,
-  subtotal: number,
-  origin: PrepareOrderInput['origin'],
-  parcel: ShippingParcel,
-): ShippingQuoteInput {
-  const address = order.shippingAddress || {}
-
-  // Origin: fornecida pelo caller (server-side)
-  const safeOrigin = {
-    recipientName: origin.recipientName,
-    phone: origin.phone || undefined,
-    line1: origin.line1,
-    line2: origin.line2 || undefined,
-    city: origin.city,
-    region: origin.region || undefined,
-    postalCode: origin.postalCode || undefined,
-    country: origin.country,
-  }
-
-  // Destination: construída EXCLUSIVAMENTE a partir de Order.shippingAddress
-  const destination = {
-    recipientName: address.recipientName || '',
-    phone: address.phone || undefined,
-    line1: address.line1 || '',
-    line2: address.line2 || undefined,
-    city: address.city || '',
-    region: address.region || undefined,
-    postalCode: address.postalCode || undefined,
-    country: address.country || 'PT',
-  }
-
-  // Parcel único: fornecido server-side, sem inventar peso/dimensões
-  const parcels = [parcel]
-
-  return {
-    origin: safeOrigin,
-    destination,
-    parcels,
-    currency: order.currency || 'EUR',
-    orderValue: subtotal,
   }
 }
 
@@ -206,72 +159,80 @@ export async function prepareOrderForPayment(
   }
 
   // ════════════════════════════════════════════════════════
-  // B. Obter shipping quote FORA da transacção
-  // ════════════════════════════════════════════════════════
+    // B. Calcular portes fixos FORA da transacção
+    // ════════════════════════════════════════════════════════
 
-  const provider = input.provider
+    // Carregar dados de envio dos produtos (shippingClass + canShareShippingPackage)
+    const fixedItems: FixedShippingItem[] = []
+    for (const item of items) {
+      const flowerId = typeof item.flower === 'object' ? item.flower.id : item.flower
+      const flower = await payload.findByID({
+        collection: 'flowers',
+        id: flowerId,
+        depth: 0,
+        overrideAccess: true,
+      }) as any
 
-  const quoteInput = buildShippingQuoteInput(order, subtotal, input.origin, input.parcel)
-  let quotes: ShippingQuote[]
+      if (!flower || !flower.id) {
+        throw new CheckoutFinalizationError(
+          `Flor ${flowerId} (item da Order) não encontrada ao calcular portes.`,
+        )
+      }
 
-  try {
-    quotes = await getShippingQuotes(provider, quoteInput)
-  } catch (err) {
-    // Se provider não configurado, propaga — Order continua draft
-    if (err instanceof ShippingProviderNotConfiguredError) {
-      throw err
+      fixedItems.push({
+        shippingClass: flower.shippingClass || 'standard',
+        canShareShippingPackage: flower.canShareShippingPackage === true,
+        qty: Number(item.qty) || 1,
+      })
     }
-    // Outros erros de shipping
-    throw new CheckoutFinalizationError(
-      `Erro ao obter cotações: ${err instanceof Error ? err.message : 'erro desconhecido'}`,
-    )
+
+    const destinationCountry = (order.shippingAddress?.country as string) || 'PT'
+
+    const shippingResult = calculateFixedShipping({
+      items: fixedItems,
+      destinationCountry,
+      productSubtotal: subtotal,
+    })
+
+    // Se cúpula necessita de confirmação manual, não avança para pending_payment
+    if (shippingResult.cupulaNeedsConfirmation) {
+      throw new CupulaShippingNeedsConfirmationError(
+        'Encomenda com cúpula — portes de envio a confirmar após reserva manual.',
+      )
+    }
+
+    const shippingCost = shippingResult.shippingCost
+
+    // Calcular total
+    const originalSubtotal = Number(order.subtotal) || 0
+    const discount = Number(order.discount) || 0
+    const total = Number(((originalSubtotal - discount) + shippingCost).toFixed(2))
+
+    if (total < 0) {
+      throw new NegativeTotalError(
+        `Total calculado (${total}) é negativo. subtotal=${originalSubtotal}, discount=${discount}, shippingCost=${shippingCost}.`,
+      )
+    }
+
+    // ════════════════════════════════════════════════════════
+    // C. Iniciar transacção (shipping já está resolvido)
+    // ════════════════════════════════════════════════════════
+
+    return runInTransaction(payload, input.req, async (ctx) => {
+      return executeFinalize(ctx, payload, order, input, shippingResult, shippingCost, total, items)
+    })
   }
 
-  // Encontrar a cotação escolhida pelo serviceCode
-  const selectedQuote = quotes.find((q) => q.serviceCode === input.shippingServiceCode)
-  if (!selectedQuote) {
-    throw new IncompatibleQuoteError(
-      `Serviço "${input.shippingServiceCode}" não encontrado nas cotações do provider "${provider.id}".`,
-    )
-  }
-
-  const shippingCost = selectedQuote.amount
-
-  // Validar shippingCost (segurança — rejeitar negativo/inválido)
-  if (typeof shippingCost !== 'number' || shippingCost < 0) {
-    throw new IncompatibleQuoteError('Cotação de envio inválida (valor negativo ou não numérico).')
-  }
-
-  // Calcular total
-  const originalSubtotal = Number(order.subtotal) || 0
-  const discount = Number(order.discount) || 0
-  const total = Number(((originalSubtotal - discount) + shippingCost).toFixed(2))
-
-  if (total < 0) {
-    throw new NegativeTotalError(
-      `Total calculado (${total}) é negativo. subtotal=${originalSubtotal}, discount=${discount}, shippingCost=${shippingCost}.`,
-    )
-  }
-
-  // ════════════════════════════════════════════════════════
-  // C. Iniciar transacção (shipping já está resolvido)
-  // ════════════════════════════════════════════════════════
-
-  return runInTransaction(payload, input.req, async (ctx) => {
-    return executeFinalize(ctx, payload, order, input, selectedQuote, shippingCost, total, items)
-  })
-}
-
-async function executeFinalize(
-  ctx: TransactionCtx,
-  payload: Payload,
-  order: any,
-  input: PrepareOrderInput,
-  selectedQuote: ShippingQuote,
-  shippingCost: number,
-  total: number,
-  items: any[],
-): Promise<PrepareOrderResult> {
+  async function executeFinalize(
+    ctx: TransactionCtx,
+    payload: Payload,
+    order: any,
+    input: PrepareOrderInput,
+    shippingResult: import('./shipping/fixed-shipping').FixedShippingResult,
+    shippingCost: number,
+    total: number,
+    items: any[],
+  ): Promise<PrepareOrderResult> {
   // ════════════════════════════════════════════════════════
   // D. Revalidar estado da Order (dentro da transacção)
   // ════════════════════════════════════════════════════════
@@ -377,11 +338,13 @@ async function executeFinalize(
       checkoutAttemptId,
       shippingCost,
       total,
-      shippingProvider: selectedQuote.provider,
-      shippingServiceCode: selectedQuote.serviceCode,
-      shippingServiceName: selectedQuote.serviceName,
-      shippingEstimatedMinDays: selectedQuote.estimatedMinDays ?? null,
-      shippingEstimatedMaxDays: selectedQuote.estimatedMaxDays ?? null,
+      shippingProvider: 'fixed',
+      shippingServiceCode: shippingResult.isFree ? 'FREE' : 'FIXED_STANDARD',
+      shippingServiceName: shippingResult.isFree
+        ? 'Portes Grátis'
+        : 'Portes Fixos Standard',
+      shippingEstimatedMinDays: null,
+      shippingEstimatedMaxDays: null,
       orderStatus: 'pending_payment',
       // paymentStatus stays 'unpaid'
     } as any,

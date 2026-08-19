@@ -86,3 +86,11 @@ export class InvalidShippingParcelError extends Error {
     this.details = details
   }
 }
+
+export class CupulaShippingNeedsConfirmationError extends Error {
+  code = 'CUPULA_SHIPPING_NEEDS_CONFIRMATION' as const
+  constructor(msg = 'Encomenda com cúpula necessita de confirmação manual de portes de envio.') {
+    super(msg)
+    this.name = 'CupulaShippingNeedsConfirmationError'
+  }
+}

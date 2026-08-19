@@ -151,6 +151,9 @@ type Dict = {
   noCode: string
   leadTimeSingular: string
   leadTimePlural: string
+  shippingLabel: string
+  shippingFree: string
+  shippingToConfirm: string
   internationalPresence: CountryData[]
 }
 
@@ -303,6 +306,9 @@ export const dictionaries: Record<Locale, Dict> = {
         amount: 'Valor',
         leadTimeSingular: 'Produzido em 1 dia útil',
         leadTimePlural: 'Produzido em {days} dias úteis',
+        shippingLabel: 'Envio',
+        shippingFree: 'Envio grátis',
+        shippingToConfirm: 'Portes de envio a confirmar',
         internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lisboa', description: 'Atelier e loja física' },
       { code: 'ES', country: 'Espanha', cities: 'Exposições', description: 'Feiras de orquídeas' },
@@ -450,6 +456,9 @@ export const dictionaries: Record<Locale, Dict> = {
     amount: 'Amount',
     leadTimeSingular: 'Produced in 1 business day',
     leadTimePlural: 'Produced in {days} business days',
+    shippingLabel: 'Shipping',
+    shippingFree: 'Free shipping',
+    shippingToConfirm: 'Shipping cost to be confirmed',
     internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lisbon', description: 'Workshop and physical store' },
       { code: 'ES', country: 'Spain', cities: 'Exhibitions', description: 'Orchid fairs' },
@@ -597,6 +606,9 @@ export const dictionaries: Record<Locale, Dict> = {
     amount: 'Importe',
     leadTimeSingular: 'Producido en 1 día laborable',
     leadTimePlural: 'Producido en {days} días laborables',
+    shippingLabel: 'Envío',
+    shippingFree: 'Envío gratis',
+    shippingToConfirm: 'Gastos de envío a confirmar',
     internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lisboa', description: 'Taller y tienda física' },
       { code: 'ES', country: 'España', cities: 'Exposiciones', description: 'Ferias de orquídeas' },
@@ -744,6 +756,9 @@ export const dictionaries: Record<Locale, Dict> = {
     amount: 'Importo',
     leadTimeSingular: 'Prodotto in 1 giorno lavorativo',
     leadTimePlural: 'Prodotto in {days} giorni lavorativi',
+    shippingLabel: 'Spedizione',
+    shippingFree: 'Spedizione gratuita',
+    shippingToConfirm: 'Costi di spedizione da confermare',
     internationalPresence: [
       { code: 'PT', country: 'Portogallo', cities: 'Braga · Lisbona', description: 'Laboratorio e negozio fisico' },
       { code: 'ES', country: 'Spagna', cities: 'Esposizioni', description: 'Fiere di orchidee' },
@@ -891,6 +906,9 @@ export const dictionaries: Record<Locale, Dict> = {
     amount: 'Betrag',
     leadTimeSingular: 'Hergestellt in 1 Werktag',
     leadTimePlural: 'Hergestellt in {days} Werktagen',
+    shippingLabel: 'Versand',
+    shippingFree: 'Kostenloser Versand',
+    shippingToConfirm: 'Versandkosten müssen bestätigt werden',
     internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lissabon', description: 'Atelier und Ladengeschäft' },
       { code: 'ES', country: 'Spanien', cities: 'Ausstellungen', description: 'Orchideenmessen' },

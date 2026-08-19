@@ -134,6 +134,18 @@ const Flowers: CollectionConfig = {
         description: 'Standard: embalagem plana. Cúpula: proteção especial (maior peso).',
       },
     },
+    {
+      name: 'canShareShippingPackage',
+      type: 'checkbox',
+      defaultValue: false,
+      label: 'Pode partilhar embalagem de envio',
+      admin: {
+        position: 'sidebar',
+        condition: (_data: any, siblingData: any) =>
+          siblingData?.shippingClass === 'standard',
+        description: 'Standard com esta opção ativa pode partilhar embalagem (máx 3 peças por envio).',
+      },
+    },
     { name: 'story', type: 'textarea', label: 'História da Peça', localized: true },
     {
       name: 'category',

@@ -15,6 +15,7 @@ import * as migration_20260809_000002_email_notifications from './20260809_00000
 import * as migration_20260809_000003_email_notifications_provider from './20260809_000003_email_notifications_provider';
 import * as migration_20260818_000001_cancelled_at from './20260818_000001_cancelled_at';
 import * as migration_20260818_000002_coupon_redeemed_at from './20260818_000002_coupon_redeemed_at';
+import * as migration_20260819_180000_can_share_shipping_package from './20260819_180000_can_share_shipping_package';
 
 export const migrations = [
   { up: migration_20260731_000000_baseline.up, down: migration_20260731_000000_baseline.down, name: '20260731_000000_baseline' },
@@ -35,4 +36,5 @@ export const migrations = [
   { up: migration_20260809_000003_email_notifications_provider.up, down: migration_20260809_000003_email_notifications_provider.down, name: '20260809_000003_email_notifications_provider' },
   { up: migration_20260818_000001_cancelled_at.up, down: migration_20260818_000001_cancelled_at.down, name: '20260818_000001_cancelled_at' },
   { up: migration_20260818_000002_coupon_redeemed_at.up, down: migration_20260818_000002_coupon_redeemed_at.down, name: '20260818_000002_coupon_redeemed_at' },
+  { up: migration_20260819_180000_can_share_shipping_package.up, down: migration_20260819_180000_can_share_shipping_package.down, name: '20260819_180000_can_share_shipping_package' },
 ];
