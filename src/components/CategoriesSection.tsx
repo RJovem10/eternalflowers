@@ -39,7 +39,7 @@ export default function CategoriesSection({ categories, locale, dict }: Categori
         {categories.map((cat) => (
           <Link
             key={cat.id}
-            href={`/${locale}/catalog?category=${cat.slug}`}
+            href={`/${locale}/category/${cat.slug}`}
             className="group relative bg-white px-5 py-8 text-center transition-all duration-300 border border-brand-wood/8 hover:border-brand-gold/25 hover:bg-white/80"
           >
             <div className="text-2xl mb-3 opacity-50 group-hover:opacity-100 group-hover:scale-110 transition-all duration-400">

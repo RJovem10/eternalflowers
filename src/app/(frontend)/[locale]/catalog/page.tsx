@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { getDictionary, locales, defaultLocale } from '@/i18n/dictionaries'
 import type { Locale } from '@/i18n/dictionaries'
 import type { Metadata } from 'next'
@@ -39,8 +40,51 @@ export async function generateMetadata({
   }
 }
 
-export default async function Catalog({ params }: { params: Promise<{ locale: string }> }) {
+export default async function Catalog({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>
+  searchParams: Promise<{ category?: string; collection?: string }>
+}) {
   const { locale } = await params
+  const sp = await searchParams
+
+  // ── Legacy query-parameter redirects ──────────────────────
+  // Old URLs: /{locale}/catalog?category={slug} or ?collection={slug}
+  // Redirect to the new crawlable canonical routes.
+  if (sp.category) {
+    const payload = await getPayload({ config })
+    const catCheck = await payload.find({
+      collection: 'categories',
+      where: { slug: { equals: sp.category } },
+      limit: 1,
+      depth: 0,
+      ...payloadLocaleOptions(locale as Locale),
+    })
+    if (catCheck.docs.length > 0) {
+      redirect(`/${locale}/category/${sp.category}`)
+    }
+  }
+
+  if (sp.collection) {
+    const payload = await getPayload({ config })
+    const colCheck = await payload.find({
+      collection: 'collections',
+      where: {
+        slug: { equals: sp.collection },
+        isActive: { equals: true },
+      },
+      limit: 1,
+      depth: 0,
+      ...payloadLocaleOptions(locale as Locale),
+    })
+    if (colCheck.docs.length > 0) {
+      redirect(`/${locale}/collection/${sp.collection}`)
+    }
+  }
+
+  // ── Normal catalog render ─────────────────────────────────
   const dict = getDictionary(locale)
   const payload = await getPayload({ config })
 

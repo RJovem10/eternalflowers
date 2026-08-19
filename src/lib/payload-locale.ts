@@ -15,3 +15,17 @@ export function payloadLocaleOptions(locale: Locale) {
     fallbackLocale: 'pt' as const,
   }
 }
+
+/**
+ * Query sem fallback de locale — retorna apenas o conteúdo
+ * que existe EXACTAMENTE no locale pedido (null se não existir).
+ *
+ * Útil para verificar se um campo localizado (ex: description) tem
+ * realmente um valor no locale pedido, sem ficar com o fallback PT.
+ */
+export function payloadLocaleWithoutFallback(locale: Locale) {
+  return {
+    locale,
+    fallbackLocale: false as const,
+  }
+}
