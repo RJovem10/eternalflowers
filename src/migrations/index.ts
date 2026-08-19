@@ -14,6 +14,7 @@ import * as migration_20260818_000001_cancelled_at from './20260818_000001_cance
 import * as migration_20260818_000002_coupon_redeemed_at from './20260818_000002_coupon_redeemed_at';
 import * as migration_20260819_180000_can_share_shipping_package from './20260819_180000_can_share_shipping_package';
 import * as migration_20260819_183000_awaiting_shipping from './20260819_183000_awaiting_shipping';
+import * as migration_20260820_000000_is_public from './20260820_000000_is_public';
 
 export const migrations = [
   {
@@ -95,5 +96,10 @@ export const migrations = [
     up: migration_20260819_183000_awaiting_shipping.up,
     down: migration_20260819_183000_awaiting_shipping.down,
     name: '20260819_183000_awaiting_shipping'
+  },
+  {
+    up: migration_20260820_000000_is_public.up,
+    down: migration_20260820_000000_is_public.down,
+    name: '20260820_000000_is_public'
   },
 ];

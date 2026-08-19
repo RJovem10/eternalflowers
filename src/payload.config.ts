@@ -146,6 +146,17 @@ const Flowers: CollectionConfig = {
         description: 'Standard com esta opção ativa pode partilhar embalagem (máx 3 peças por envio).',
       },
     },
+    {
+      name: 'isPublic',
+      type: 'checkbox',
+      required: true,
+      defaultValue: true,
+      label: 'Visível na loja pública',
+      admin: {
+        position: 'sidebar',
+        description: 'Se ativo, o produto aparece na loja pública e é indexável por motores de busca. Desative para produtos internos/de teste.',
+      },
+    },
     { name: 'story', type: 'textarea', label: 'História da Peça', localized: true },
     {
       name: 'category',

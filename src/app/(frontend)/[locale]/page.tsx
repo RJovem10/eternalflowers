@@ -127,6 +127,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
       limit: 8,
       sort: '-createdAt',
       depth: 1,
+      where: { isPublic: { equals: true } },
       ...payloadLocaleOptions(locale as Locale),
     }),
   ])

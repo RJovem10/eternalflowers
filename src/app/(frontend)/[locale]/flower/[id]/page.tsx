@@ -41,6 +41,12 @@ export async function generateMetadata({ params }: FlowerPageParams): Promise<Me
       depth: 1,
       ...payloadLocaleOptions(locale as Locale),
     })
+
+    // Do not expose metadata for private products
+    if (flower.isPublic === false) {
+      return {}
+    }
+
     const localizedName = getLocaleField<string>(flower, 'name', locale, '')
     const creationName = flower.creationName
     const scientificName = flower.scientificName
@@ -107,6 +113,11 @@ export default async function FlowerDetail({ params }: FlowerPageParams) {
   }
   if (!flower) notFound()
 
+  // Private products must not have a public product page
+  if (flower.isPublic === false) {
+    notFound()
+  }
+
   const name: string = getLocaleField(flower, 'name', locale, '—')
   const description: string = getLocaleField(flower, 'description', locale, '')
 
@@ -141,7 +152,7 @@ export default async function FlowerDetail({ params }: FlowerPageParams) {
     typeof c !== 'number'
   ) as Collection[]) ?? []
 
-  // Related products from the same category
+  // Related products from the same category (only public)
   let related: Flower[] = []
   if (category) {
     try {
@@ -151,6 +162,7 @@ export default async function FlowerDetail({ params }: FlowerPageParams) {
         where: {
           category: { equals: category.id },
           id: { not_equals: Number(id) },
+          isPublic: { equals: true },
         },
         limit: 8,
         ...payloadLocaleOptions(locale as Locale),

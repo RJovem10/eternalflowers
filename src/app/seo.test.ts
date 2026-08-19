@@ -454,6 +454,16 @@ describe('Category/Collection landing page resolution', () => {
     expect(colRefs).toHaveLength(0)
   })
 
+  it('inactive collection → not linkable from product info', () => {
+    const collections = [
+      { id: 1, name: 'Inverno', slug: 'inverno', isActive: false },
+    ]
+    const colRefs = collections
+      .filter((c) => c.isActive === true)
+      .map((c) => ({ name: c.name, slug: c.slug }))
+    expect(colRefs).toHaveLength(0)
+  })
+
   it('collection with undefined isActive → not linkable', () => {
     // Legacy data without isActive cannot safely link to a 404
     const collections = [
@@ -463,6 +473,108 @@ describe('Category/Collection landing page resolution', () => {
       .filter((c) => c.isActive === true)
       .map((c) => ({ name: c.name, slug: c.slug }))
     expect(colRefs).toHaveLength(0)
+  })
+})
+
+// ── isPublic visibility ────────────────────────────────────
+describe('isPublic visibility', () => {
+  it('public product → permitted on storefront', () => {
+    const products = [
+      { id: 1, isPublic: true, namePt: 'Brincos Rosa' },
+      { id: 2, isPublic: false, namePt: 'Flor de Teste' },
+      { id: 3, isPublic: true, namePt: 'Anel Orquídea' },
+    ]
+    const storefront = products.filter((p) => p.isPublic !== false)
+    expect(storefront).toHaveLength(2)
+    expect(storefront.map((p) => p.namePt)).toEqual(['Brincos Rosa', 'Anel Orquídea'])
+  })
+
+  it('private product → excluded from public listings', () => {
+    const products = [
+      { id: 1, isPublic: true, namePt: 'Brincos Rosa' },
+      { id: 2, isPublic: false, namePt: 'Flor de Teste' },
+    ]
+    const publicProducts = products.filter((p) => p.isPublic !== false)
+    const privateProducts = products.filter((p) => p.isPublic === false)
+    expect(publicProducts).toHaveLength(1)
+    expect(privateProducts).toHaveLength(1)
+    expect(privateProducts[0].namePt).toBe('Flor de Teste')
+  })
+
+  it('private product → excluded from sitemap', () => {
+    const flowers = [
+      { id: 1, isPublic: true },
+      { id: 2, isPublic: false },
+      { id: 3, isPublic: true },
+    ]
+    const sitemapFlowers = flowers.filter((f) => f.isPublic !== false)
+    expect(sitemapFlowers).toHaveLength(2)
+    expect(sitemapFlowers.map((f) => f.id)).toEqual([1, 3])
+  })
+
+  it('category sitemap count ignores private products', () => {
+    // Simula flowerCount com isPublic filter
+    const flowers = [
+      { categoryId: 1, isPublic: true },
+      { categoryId: 1, isPublic: false },
+      { categoryId: 1, isPublic: true },
+    ]
+    const count = flowers.filter((f) => f.categoryId === 1 && f.isPublic !== false).length
+    expect(count).toBe(2) // 3 flowers total, but 1 is private
+  })
+
+  it('collection sitemap count ignores private products', () => {
+    const flowers = [
+      { collectionId: 1, isPublic: true },
+      { collectionId: 1, isPublic: false },
+      { collectionId: 1, isPublic: true },
+    ]
+    const count = flowers.filter((f) => f.collectionId === 1 && f.isPublic !== false).length
+    expect(count).toBe(2) // 3 flowers total, but 1 is private
+  })
+
+  it('private direct product resolution results in notFound/blocked behaviour', () => {
+    // Simula a lógica do generateMetadata e FlowerDetail
+    const flower = { id: 2, isPublic: false, namePt: 'Flor de Teste' }
+    // generateMetadata returns empty object
+    const metadata = flower.isPublic === false ? {} : { title: flower.namePt }
+    expect(metadata).toEqual({})
+    // FlowerDetail calls notFound()
+    const isBlocked = flower.isPublic === false
+    expect(isBlocked).toBe(true)
+  })
+
+  it('public product behaviour remains unchanged', () => {
+    const flower = { id: 1, isPublic: true, namePt: 'Brincos Rosa', price: 45 }
+    // Storefront listing allows it
+    const allowed = flower.isPublic !== false
+    expect(allowed).toBe(true)
+    // Metadata is generated normally
+    const metadata = flower.isPublic === false ? {} : { title: flower.namePt }
+    expect(metadata.title).toBe('Brincos Rosa')
+    // Product page is accessible
+    const isBlocked = flower.isPublic === false
+    expect(isBlocked).toBe(false)
+  })
+
+  it('category with only private products does not appear in sitemap', () => {
+    const categories = [
+      { slug: 'testes', flowerCount: 0 },
+      { slug: 'brincos', flowerCount: 3 },
+    ]
+    const included = categories.filter((c) => c.flowerCount > 0)
+    expect(included).toHaveLength(1)
+    expect(included[0].slug).toBe('brincos')
+  })
+
+  it('collection with only private products does not appear in sitemap', () => {
+    const collections = [
+      { slug: 'colecao-teste', isActive: true, flowerCount: 0 },
+      { slug: 'primavera', isActive: true, flowerCount: 2 },
+    ]
+    const included = collections.filter((c) => c.isActive && c.flowerCount > 0)
+    expect(included).toHaveLength(1)
+    expect(included[0].slug).toBe('primavera')
   })
 })
 

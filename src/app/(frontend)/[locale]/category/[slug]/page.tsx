@@ -114,10 +114,13 @@ export default async function CategoryPage({
   const category = catResult.docs[0]
   if (!category) notFound()
 
-  // Load flowers belonging to this category
+  // Load flowers belonging to this category (only public)
   const flowers = await payload.find({
     collection: 'flowers',
-    where: { category: { equals: category.id } },
+    where: {
+      category: { equals: category.id },
+      isPublic: { equals: true },
+    },
     limit: 200,
     sort: '-createdAt',
     depth: 1,
