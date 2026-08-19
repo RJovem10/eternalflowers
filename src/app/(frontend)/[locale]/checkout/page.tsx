@@ -336,7 +336,17 @@ export default function Checkout() {
             orderNumber={status.orderNumber}
             checkoutRequestId={checkoutRequestIdRef.current}
             locale={locale}
-            dict={dict}
+            dict={{
+              payNow: dict.payNow,
+              processing: dict.processing,
+              paymentError: dict.paymentError,
+              paymentTryAgain: dict.paymentTryAgain,
+              stripeNotConfigured: dict.stripeNotConfigured,
+              amount: dict.amount,
+              loading: dict.loading,
+              shippingLabel: dict.shippingLabel,
+              shippingToConfirm: dict.shippingToConfirm,
+            }}
           />
         </div>
 

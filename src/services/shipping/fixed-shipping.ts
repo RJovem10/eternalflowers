@@ -9,9 +9,9 @@
  * - Standard International: €6/unidade de envio
  * - canShareShippingPackage=true: até 3 peças = 1 unidade de envio
  * - canShareShippingPackage=false: cada peça = 1 unidade de envio
- * - Subtotal > €100 → portes grátis para toda a encomenda
- * - Cúpula ≤ €100 → sem preço fixo ("portes a confirmar")
- * - Cúpula > €100 → portes grátis (pela regra de free shipping)
+ * - Discounts/coupons DO NOT change shipping calculation
+ * - Cúpula → sempre portes a confirmar manualmente, independentemente do valor
+ * - NUNCA existe portes grátis automático
  */
 
 // ─── Tipos ──────────────────────────────────────────────────────
@@ -30,22 +30,16 @@ export interface FixedShippingInput {
   items: FixedShippingItem[]
   /** País de destino (ISO 3166-1 alpha-2) */
   destinationCountry: string
-  /** Subtotal do produto após descontos, ANTES dos portes */
-  productSubtotal: number
 }
 
 export interface FixedShippingResult {
-  /** Custo total dos portes a cobrar ao cliente (0 se grátis ou a confirmar) */
+  /** Custo total dos portes a cobrar ao cliente (0 se a confirmar) */
   shippingCost: number
-  /** Se o envio é gratuito (subtotal > €100) */
-  isFree: boolean
-  /** Se a encomenda contém cúpula e não atinge o limiar de portes grátis */
+  /** Se a encomenda contém cúpula */
   hasCupula: boolean
   /**
    * Se a cúpula necessita de confirmação manual de portes.
-   * True quando:
-   * - contém pelo menos um item shippingClass=cupula
-   * - productSubtotal <= 100
+   * True quando contém pelo menos um item shippingClass=cupula.
    * Neste caso shippingCost é 0 mas o valor real será
    * confirmado depois da reserva manual do item.
    */
@@ -61,7 +55,6 @@ export interface FixedShippingResult {
 
 const SHIPPING_PRICE_PT = 4.00
 const SHIPPING_PRICE_INTERNATIONAL = 6.00
-const FREE_SHIPPING_THRESHOLD = 100.00
 const SHAREABLE_MAX_PER_UNIT = 3
 
 /** Países considerados Portugal (Continente + Regiões Autónomas) */
@@ -84,38 +77,23 @@ function isCupula(item: FixedShippingItem): boolean {
 // ─── Cálculo principal ──────────────────────────────────────────
 
 export function calculateFixedShipping(input: FixedShippingInput): FixedShippingResult {
-  const { items, destinationCountry, productSubtotal } = input
+  const { items, destinationCountry } = input
   const countryUpper = destinationCountry.toUpperCase()
 
   // ── 1. Determinar se há cúpula ──────────────────────────────
   const hasCupula = items.some(isCupula)
 
-  // ── 2. Determinar se aplica portes grátis ───────────────────
-  // Estritamente > €100 (100.00 não conta)
-  const isFree = productSubtotal > FREE_SHIPPING_THRESHOLD
-
-  if (isFree) {
-    return {
-      shippingCost: 0,
-      isFree: true,
-      hasCupula,
-      cupulaNeedsConfirmation: false,
-      standardShipmentUnits: 0,
-    }
-  }
-
-  // ── 3. Cúpula sem free shipping ─────────────────────────────
+  // ── 2. Cúpula → sempre portes a confirmar manualmente ───────
   if (hasCupula) {
     return {
       shippingCost: 0,
-      isFree: false,
       hasCupula: true,
       cupulaNeedsConfirmation: true,
       standardShipmentUnits: 0,
     }
   }
 
-  // ── 4. Calcular unidades de envio standard ──────────────────
+  // ── 3. Calcular unidades de envio standard ──────────────────
   // A partir daqui, só temos items standard (cupula já foi tratado acima)
   const standardItems = items.filter(isStandard)
 
@@ -136,7 +114,7 @@ export function calculateFixedShipping(input: FixedShippingInput): FixedShipping
   // standardShipmentUnits = shareable + nonShareable
   const standardShipmentUnits = shareableShipmentUnits + totalNonShareableQty
 
-  // ── 5. Calcular custo por destino ───────────────────────────
+  // ── 4. Calcular custo por destino ───────────────────────────
   const pricePerUnit = isPortugal(countryUpper)
     ? SHIPPING_PRICE_PT
     : SHIPPING_PRICE_INTERNATIONAL
@@ -145,7 +123,6 @@ export function calculateFixedShipping(input: FixedShippingInput): FixedShipping
 
   return {
     shippingCost,
-    isFree: false,
     hasCupula: false,
     cupulaNeedsConfirmation: false,
     standardShipmentUnits,

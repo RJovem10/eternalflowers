@@ -22,6 +22,7 @@ import config from '@/payload.config'
 import crypto from 'crypto'
 import { createPaymentForOrder } from '@/services/payments/payments'
 import { InvalidOrderForPaymentError, PaymentError, PaymentReservationExpiredError } from '@/services/payments/payment-types'
+import { prepareOrderForPayment } from '@/services/checkout-finalization'
 
 // ─── Input validation ─────────────────────────────────────
 
@@ -129,15 +130,34 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 5. Validar estado da Order
+    // 5. Validar estado da Order — se draft, finalizar primeiro
     if (order.orderStatus === 'draft') {
-      return NextResponse.json(
-        {
-          error: 'Esta encomenda ainda não está pronta para pagamento. Aguarda o cálculo de portes.',
-          code: 'ORDER_NOT_READY_FOR_PAYMENT',
-        },
-        { status: 400 },
-      )
+      try {
+        const prepared = await prepareOrderForPayment(payload, {
+          orderId: order.id,
+        })
+
+        // Se cupula (awaiting_shipping), retornar erro específico
+        if (prepared.order.orderStatus === 'awaiting_shipping') {
+          return NextResponse.json(
+            {
+              error: 'Encomenda com cúpula — portes de envio a confirmar após a reserva. Pagamento não disponível até confirmação manual.',
+              code: 'CUPULA_SHIPPING_NEEDS_CONFIRMATION',
+            },
+            { status: 400 },
+          )
+        }
+
+        // Order está agora pending_payment — continuar para criar PaymentIntent
+        // Atualizar order local para a versão fresca
+        Object.assign(order, prepared.order)
+      } catch (prepareErr: any) {
+        console.error('[payments/session] prepareOrderForPayment error:', prepareErr)
+        return NextResponse.json(
+          { error: prepareErr.message || 'Erro ao preparar encomenda para pagamento.' },
+          { status: 400 },
+        )
+      }
     }
 
     if (order.orderStatus !== 'pending_payment') {

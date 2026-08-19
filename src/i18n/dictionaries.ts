@@ -152,7 +152,6 @@ type Dict = {
   leadTimeSingular: string
   leadTimePlural: string
   shippingLabel: string
-  shippingFree: string
   shippingToConfirm: string
   internationalPresence: CountryData[]
 }
@@ -307,7 +306,6 @@ export const dictionaries: Record<Locale, Dict> = {
         leadTimeSingular: 'Produzido em 1 dia útil',
         leadTimePlural: 'Produzido em {days} dias úteis',
         shippingLabel: 'Envio',
-        shippingFree: 'Envio grátis',
         shippingToConfirm: 'Portes de envio a confirmar',
         internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lisboa', description: 'Atelier e loja física' },
@@ -457,7 +455,6 @@ export const dictionaries: Record<Locale, Dict> = {
     leadTimeSingular: 'Produced in 1 business day',
     leadTimePlural: 'Produced in {days} business days',
     shippingLabel: 'Shipping',
-    shippingFree: 'Free shipping',
     shippingToConfirm: 'Shipping cost to be confirmed',
     internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lisbon', description: 'Workshop and physical store' },
@@ -607,7 +604,6 @@ export const dictionaries: Record<Locale, Dict> = {
     leadTimeSingular: 'Producido en 1 día laborable',
     leadTimePlural: 'Producido en {days} días laborables',
     shippingLabel: 'Envío',
-    shippingFree: 'Envío gratis',
     shippingToConfirm: 'Gastos de envío a confirmar',
     internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lisboa', description: 'Taller y tienda física' },
@@ -757,7 +753,6 @@ export const dictionaries: Record<Locale, Dict> = {
     leadTimeSingular: 'Prodotto in 1 giorno lavorativo',
     leadTimePlural: 'Prodotto in {days} giorni lavorativi',
     shippingLabel: 'Spedizione',
-    shippingFree: 'Spedizione gratuita',
     shippingToConfirm: 'Costi di spedizione da confermare',
     internationalPresence: [
       { code: 'PT', country: 'Portogallo', cities: 'Braga · Lisbona', description: 'Laboratorio e negozio fisico' },
@@ -907,7 +902,6 @@ export const dictionaries: Record<Locale, Dict> = {
     leadTimeSingular: 'Hergestellt in 1 Werktag',
     leadTimePlural: 'Hergestellt in {days} Werktagen',
     shippingLabel: 'Versand',
-    shippingFree: 'Kostenloser Versand',
     shippingToConfirm: 'Versandkosten müssen bestätigt werden',
     internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lissabon', description: 'Atelier und Ladengeschäft' },

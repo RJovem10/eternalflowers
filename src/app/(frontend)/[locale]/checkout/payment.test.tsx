@@ -105,6 +105,8 @@ describe('StripePaymentSection', () => {
       stripeNotConfigured: 'Pagamento indisponível.',
       loading: 'A carregar…',
       amount: 'Valor',
+      shippingLabel: 'Envio',
+      shippingToConfirm: 'Portes de envio a confirmar',
     },
   }
 

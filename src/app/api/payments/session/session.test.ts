@@ -10,7 +10,7 @@
  *  1. capability correta + pending_payment → clientSecret
  *  2. checkoutRequestId errado → acesso negado sem leak
  *  3. orderNumber inexistente → comportamento seguro
- *  4. draft → ORDER_NOT_READY_FOR_PAYMENT
+ *  4. draft → auto-prepare + create PaymentIntent
  *  5. segunda chamada → mesmo PaymentIntent, não duplica
  *  6. amount/currency não podem ser controlados pelo input
  *  7. clientSecret não é persistido na Order
@@ -20,6 +20,7 @@
  * 11. made_to_order-only não bloqueado
  * 12. reservation released → PAYMENT_RESERVATION_EXPIRED
  * 13. reservation em falta → PAYMENT_RESERVATION_EXPIRED
+ * 14. cupula → CUPULA_SHIPPING_NEEDS_CONFIRMATION
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -93,6 +94,62 @@ vi.mock('@/services/payments/stripe', async () => {
     constructWebhookEvent: vi.fn(),
     createFullRefund: vi.fn(),
     getSupportedPaymentMethods: vi.fn(() => ['card', 'mb_way', 'link']),
+  }
+})
+
+// Mock prepareOrderForPayment for draft → pending_payment transition
+vi.mock('@/services/checkout-finalization', async () => {
+  return {
+    prepareOrderForPayment: vi.fn(async (payload: any, input: any) => {
+      const orderIdx = mockOrders.findIndex((o: any) => o.id === input.orderId)
+      if (orderIdx < 0) throw new Error(`Order ${input.orderId} não encontrada.`)
+
+      const order = mockOrders[orderIdx]
+      if (order.orderStatus !== 'draft') {
+        // If already prepared, return already_prepared
+        if (order.orderStatus === 'pending_payment' || order.orderStatus === 'awaiting_shipping') {
+          return {
+            order,
+            kind: 'already_prepared',
+            checkoutAttemptId: order.checkoutAttemptId,
+          }
+        }
+        throw new Error(`Order ${input.orderId} está "${order.orderStatus}".`)
+      }
+
+      const isCupula = (order.items || []).some((item: any) => {
+        // Check if flower has cupula class — simplified: use override flag
+        return item.productionMode === 'cupula'
+      })
+
+      if (isCupula) {
+        mockOrders[orderIdx] = {
+          ...order,
+          orderStatus: 'awaiting_shipping',
+          checkoutAttemptId: order.checkoutAttemptId || 'ca-mock',
+          shippingCost: null,
+          total: null,
+        }
+        return {
+          order: mockOrders[orderIdx],
+          kind: 'prepared',
+          checkoutAttemptId: mockOrders[orderIdx].checkoutAttemptId || 'ca-mock',
+        }
+      }
+
+      mockOrders[orderIdx] = {
+        ...order,
+        orderStatus: 'pending_payment',
+        checkoutAttemptId: order.checkoutAttemptId || 'ca-mock',
+        shippingCost: 0,
+        total: order.total || 100.00,
+      }
+      return {
+        order: mockOrders[orderIdx],
+        kind: 'prepared',
+        checkoutAttemptId: mockOrders[orderIdx].checkoutAttemptId || 'ca-mock',
+      }
+    }),
   }
 })
 
@@ -300,18 +357,31 @@ describe('POST /api/payments/session', () => {
     expect(body.error).toBe('Encomenda não encontrada.')
   })
 
-  it('4. draft → ORDER_NOT_READY_FOR_PAYMENT', async () => {
-    const checkoutRequestId = 'draft-order-uuid'
+  it('4. draft → auto-prepare + create PaymentIntent', async () => {
+    const checkoutRequestId = 'draft-order-uuid-4'
     createTestOrder({ checkoutRequestId, orderStatus: 'draft', total: null, shippingCost: null })
     const draftOrder = mockOrders[0]
+
+    // Add an active reservation so the guard passes after auto-prepare
+    mockReservationIdSeq++
+    mockReservations.push({
+      id: mockReservationIdSeq,
+      order: draftOrder.id,
+      flower: 1,
+      quantity: 2,
+      status: 'active',
+      expiresAt: new Date(Date.now() + 1800000).toISOString(),
+    })
+
     const req = createRequest({ orderNumber: draftOrder.orderNumber, checkoutRequestId })
 
     const res = await POST(req)
     const body = await res.json()
 
-    expect(res.status).toBe(400)
-    expect(body.error).toContain('não está pronta para pagamento')
-    expect(body.code).toBe('ORDER_NOT_READY_FOR_PAYMENT')
+    // Order should have been auto-prepared → pending_payment → clientSecret
+    expect(res.status).toBe(200)
+    expect(body.clientSecret).toBeDefined()
+    expect(mockOrders[0].orderStatus).toBe('pending_payment')
   })
 
   it('5. segunda chamada → mesmo PaymentIntent (idempotente)', async () => {
@@ -487,5 +557,25 @@ describe('POST /api/payments/session', () => {
 
     expect(res.status).toBe(400)
     expect(body.code).toBe('PAYMENT_RESERVATION_EXPIRED')
+  })
+
+  it('14. cupula draft → CUPULA_SHIPPING_NEEDS_CONFIRMATION', async () => {
+    const checkoutRequestId = 'cupula-draft-uuid'
+    createTestOrder({
+      checkoutRequestId,
+      orderStatus: 'draft',
+      total: null,
+      shippingCost: null,
+      items: [{ flower: 6, name: 'Cúpula de Rosas', price: 80.00, qty: 1, lineTotal: 80.00, productionMode: 'cupula' }],
+    })
+    const cupulaOrder = mockOrders[0]
+
+    const req = createRequest({ orderNumber: cupulaOrder.orderNumber, checkoutRequestId })
+    const res = await POST(req)
+    const body = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(body.code).toBe('CUPULA_SHIPPING_NEEDS_CONFIRMATION')
+    expect(mockOrders[0].orderStatus).toBe('awaiting_shipping')
   })
 })

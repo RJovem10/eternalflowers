@@ -1,7 +1,13 @@
 /**
  * Testes unitários para fixed-shipping.ts — cálculo de portes fixos
  *
- * Cobre os casos A-L especificados na ISSUE-1Q.
+ * ISSUE-1Q Final rules:
+ * - NUNCA existe portes grátis automático
+ * - Standard PT: €4/unidade de envio
+ * - Standard International: €6/unidade de envio
+ * - canShareShippingPackage=true: até 3 peças = 1 unidade
+ * - Cúpula → sempre portes a confirmar manualmente
+ * - Discounts/coupons NÃO alteram o cálculo de portes
  */
 import { describe, it, expect } from 'vitest'
 import {
@@ -15,7 +21,6 @@ function makeInput(overrides: Partial<FixedShippingInput> = {}): FixedShippingIn
   return {
     items: [],
     destinationCountry: 'PT',
-    productSubtotal: 50,
     ...overrides,
   }
 }
@@ -31,64 +36,58 @@ function cupulaItem(qty = 1) {
 // ─── Testes ───────────────────────────────────────────────────
 
 describe('calculateFixedShipping', () => {
-  // ── A) PT, subtotal €50, 1 shareable standard item => €4 ──
+  // ── A) PT 1 shareable → €4 ──
   it('A) PT 1 shareable → €4', () => {
     const result = calculateFixedShipping(makeInput({
       items: [standardItem(true, 1)],
       destinationCountry: 'PT',
-      productSubtotal: 50,
     }))
     expect(result.shippingCost).toBe(4.00)
-    expect(result.isFree).toBe(false)
     expect(result.cupulaNeedsConfirmation).toBe(false)
     expect(result.standardShipmentUnits).toBe(1)
   })
 
-  // ── B) PT, subtotal €50, 3 shareable standard items => €4 ──
+  // ── B) PT 3 shareable → €4 (1 shipment) ──
   it('B) PT 3 shareable → €4 (1 shipment)', () => {
     const result = calculateFixedShipping(makeInput({
       items: [standardItem(true, 3)],
       destinationCountry: 'PT',
-      productSubtotal: 50,
     }))
     expect(result.shippingCost).toBe(4.00)
     expect(result.standardShipmentUnits).toBe(1)
   })
 
-  // ── C) PT, subtotal €50, 4 shareable standard items => €8 ──
+  // ── C) PT 4 shareable → €8 (2 shipments) ──
   it('C) PT 4 shareable → €8 (2 shipments)', () => {
     const result = calculateFixedShipping(makeInput({
       items: [standardItem(true, 4)],
       destinationCountry: 'PT',
-      productSubtotal: 50,
     }))
     expect(result.shippingCost).toBe(8.00)
     expect(result.standardShipmentUnits).toBe(2)
   })
 
-  // ── D) International, subtotal €50, 3 shareable => €6 ──────
+  // ── D) International 3 shareable → €6 ──
   it('D) International 3 shareable → €6 (1 shipment)', () => {
     const result = calculateFixedShipping(makeInput({
       items: [standardItem(true, 3)],
       destinationCountry: 'ES',
-      productSubtotal: 50,
     }))
     expect(result.shippingCost).toBe(6.00)
     expect(result.standardShipmentUnits).toBe(1)
   })
 
-  // ── E) International, subtotal €50, 4 shareable => €12 ─────
+  // ── E) International 4 shareable → €12 ──
   it('E) International 4 shareable → €12 (2 shipments)', () => {
     const result = calculateFixedShipping(makeInput({
       items: [standardItem(true, 4)],
       destinationCountry: 'FR',
-      productSubtotal: 50,
     }))
     expect(result.shippingCost).toBe(12.00)
     expect(result.standardShipmentUnits).toBe(2)
   })
 
-  // ── F) PT: 2 shareable + 2 non-shareable => 3 units => €12 ─
+  // ── F) PT: 2 shareable + 2 non-shareable → 3 units → €12 ──
   it('F) PT 2 shareable + 2 non-shareable → 3 units → €12', () => {
     const result = calculateFixedShipping(makeInput({
       items: [
@@ -96,13 +95,12 @@ describe('calculateFixedShipping', () => {
         standardItem(false, 2),  // non-shareable → 2
       ],
       destinationCountry: 'PT',
-      productSubtotal: 50,
     }))
     expect(result.shippingCost).toBe(12.00)
     expect(result.standardShipmentUnits).toBe(3)  // 1 + 2 = 3
   })
 
-  // ── G) International: 2 shareable + 2 non-shareable => €18 ─
+  // ── G) International 2 shareable + 2 non-shareable → 3 units → €18 ──
   it('G) International 2 shareable + 2 non-shareable → 3 units → €18', () => {
     const result = calculateFixedShipping(makeInput({
       items: [
@@ -110,61 +108,73 @@ describe('calculateFixedShipping', () => {
         standardItem(false, 2),
       ],
       destinationCountry: 'DE',
-      productSubtotal: 50,
     }))
     expect(result.shippingCost).toBe(18.00)
     expect(result.standardShipmentUnits).toBe(3)  // 1 + 2 = 3
   })
 
-  // ── H) Subtotal exactly €100.00 → normal shipping applies ──
-  it('H) Subtotal exactly €100 → NOT free', () => {
+  // ── H) Large-value STANDARD order STILL pays shipping (NO free shipping) ──
+  it('H) Large-value STANDARD order STILL pays shipping (no free shipping)', () => {
     const result = calculateFixedShipping(makeInput({
       items: [standardItem(true, 1)],
-      productSubtotal: 100.00,
+      destinationCountry: 'PT',
     }))
-    expect(result.isFree).toBe(false)
+    // Even with a huge subtotal, shipping is always charged
     expect(result.shippingCost).toBe(4.00)
-  })
-
-  // ── I) Subtotal €100.01 → free shipping ─────────────────────
-  it('I) Subtotal €100.01 → free shipping', () => {
-    const result = calculateFixedShipping(makeInput({
-      items: [standardItem(true, 3)],
-      destinationCountry: 'US',
-      productSubtotal: 100.01,
-    }))
-    expect(result.isFree).toBe(true)
-    expect(result.shippingCost).toBe(0)
-  })
-
-  // ── J) Cupula ≤ €100 → no fixed rate ────────────────────────
-  it('J) Cupula ≤ €100 → cupulaNeedsConfirmation', () => {
-    const result = calculateFixedShipping(makeInput({
-      items: [cupulaItem(1)],
-      productSubtotal: 80,
-    }))
-    expect(result.cupulaNeedsConfirmation).toBe(true)
-    expect(result.isFree).toBe(false)
-    expect(result.shippingCost).toBe(0)
-  })
-
-  // ── K) Cupula order > €100 → free shipping ──────────────────
-  it('K) Cupula > €100 → free shipping (isFree)', () => {
-    const result = calculateFixedShipping(makeInput({
-      items: [cupulaItem(1)],
-      productSubtotal: 150,
-    }))
-    expect(result.isFree).toBe(true)
-    expect(result.shippingCost).toBe(0)
     expect(result.cupulaNeedsConfirmation).toBe(false)
   })
 
-  // ── L) Products without explicit canShareShippingPackage ─────
-  // Default is false for all items
-  it('L) Default canShareShippingPackage=false → non-shareable', () => {
+  // ── I) ANY cupula requires manual shipping confirmation ──
+  it('I) ANY cupula requires manual shipping confirmation', () => {
+    const result = calculateFixedShipping(makeInput({
+      items: [cupulaItem(1)],
+    }))
+    expect(result.cupulaNeedsConfirmation).toBe(true)
+    expect(result.shippingCost).toBe(0)
+    expect(result.hasCupula).toBe(true)
+  })
+
+  // ── J) Large-value cupula order still needs manual confirmation ──
+  it('J) Large-value cupula order STILL needs manual confirmation', () => {
+    const result = calculateFixedShipping(makeInput({
+      items: [cupulaItem(1), standardItem(true, 3)],
+    }))
+    // Cupula always needs confirmation, regardless of value
+    expect(result.cupulaNeedsConfirmation).toBe(true)
+    expect(result.shippingCost).toBe(0)
+    expect(result.hasCupula).toBe(true)
+  })
+
+  // ── K) Mixed cupula + standard ──
+  it('K) Mixed cupula + standard → cupulaNeedsConfirmation', () => {
+    const result = calculateFixedShipping(makeInput({
+      items: [
+        cupulaItem(1),
+        standardItem(true, 2),
+      ],
+    }))
+    expect(result.cupulaNeedsConfirmation).toBe(true)
+    expect(result.hasCupula).toBe(true)
+    expect(result.shippingCost).toBe(0)
+  })
+
+  // ── L) shareable + non-shareable formula correct ──
+  it('L) 5 shareable + 1 non-shareable → ceil(5/3)=2 + 1 = 3 units', () => {
+    const result = calculateFixedShipping(makeInput({
+      items: [
+        standardItem(true, 5),   // ceil(5/3) = 2 shareable units
+        standardItem(false, 1),  // 1 non-shareable unit
+      ],
+      destinationCountry: 'PT',
+    }))
+    expect(result.standardShipmentUnits).toBe(3)  // 2 + 1
+    expect(result.shippingCost).toBe(12.00)       // 3 × €4
+  })
+
+  // ── Products without explicit canShareShippingPackage ─────
+  it('Default canShareShippingPackage=false → non-shareable', () => {
     const result = calculateFixedShipping(makeInput({
       items: [standardItem(false, 2)],
-      productSubtotal: 50,
     }))
     // 2 non-shareable items = 2 shipment units = €8
     expect(result.shippingCost).toBe(8.00)
@@ -179,7 +189,6 @@ describe('calculateFixedShipping', () => {
         standardItem(true, 1),  // Product B shareable
         standardItem(true, 1),  // Product C shareable
       ],
-      productSubtotal: 50,
     }))
     // 3 shareable total = 1 shipment = €4
     expect(result.shippingCost).toBe(4.00)
@@ -190,42 +199,16 @@ describe('calculateFixedShipping', () => {
   it('7 shareable items → ceil(7/3)=3 shipments', () => {
     const result = calculateFixedShipping(makeInput({
       items: [standardItem(true, 7)],
-      productSubtotal: 50,
     }))
     expect(result.shippingCost).toBe(12.00)  // 3 × €4
     expect(result.standardShipmentUnits).toBe(3)
   })
 
-  // ── Free shipping trumps cupula ──────────────────────────────
-  it('Cupula + subtotal > €100 → free (not needsConfirmation)', () => {
-    const result = calculateFixedShipping(makeInput({
-      items: [
-        cupulaItem(1),
-        standardItem(true, 2),
-      ],
-      productSubtotal: 120,
-    }))
-    expect(result.isFree).toBe(true)
-    expect(result.shippingCost).toBe(0)
-    expect(result.cupulaNeedsConfirmation).toBe(false)
-  })
-
-  // ── Açores = PT pricing ──────────────────────────────────────
-  it('Açores (PT) → €4/unit', () => {
+  // ── Açores (PT) → €4/unit ──────────────────────────────────────
+  it('Portugal (Açores/Madeira) → €4/unit', () => {
     const result = calculateFixedShipping(makeInput({
       items: [standardItem(true, 1)],
       destinationCountry: 'PT',
-      productSubtotal: 50,
-    }))
-    expect(result.shippingCost).toBe(4.00)
-  })
-
-  // ── Madeira = PT pricing ─────────────────────────────────────
-  it('Madeira (PT) → €4/unit', () => {
-    const result = calculateFixedShipping(makeInput({
-      items: [standardItem(true, 1)],
-      destinationCountry: 'PT',
-      productSubtotal: 50,
     }))
     expect(result.shippingCost).toBe(4.00)
   })
@@ -235,20 +218,8 @@ describe('calculateFixedShipping', () => {
     const result = calculateFixedShipping(makeInput({
       items: [standardItem(true, 1)],
       destinationCountry: 'US',
-      productSubtotal: 50,
     }))
     expect(result.shippingCost).toBe(6.00)
-  })
-
-  // ── Free shipping with international ─────────────────────────
-  it('International + subtotal > €100 → free', () => {
-    const result = calculateFixedShipping(makeInput({
-      items: [standardItem(true, 3)],
-      destinationCountry: 'JP',
-      productSubtotal: 200,
-    }))
-    expect(result.isFree).toBe(true)
-    expect(result.shippingCost).toBe(0)
   })
 
   // ── Country case-insensitive ─────────────────────────────────
@@ -256,13 +227,22 @@ describe('calculateFixedShipping', () => {
     const result1 = calculateFixedShipping(makeInput({
       items: [standardItem(true, 1)],
       destinationCountry: 'pt',
-      productSubtotal: 50,
     }))
     const result2 = calculateFixedShipping(makeInput({
       items: [standardItem(true, 1)],
       destinationCountry: 'PT',
-      productSubtotal: 50,
     }))
     expect(result1.shippingCost).toBe(result2.shippingCost)
+  })
+
+  // ── Empty items → 0 cost ─────────────────────────────────────
+  it('Empty items → €0 shipping cost', () => {
+    const result = calculateFixedShipping(makeInput({
+      items: [],
+      destinationCountry: 'PT',
+    }))
+    expect(result.shippingCost).toBe(0)
+    expect(result.standardShipmentUnits).toBe(0)
+    expect(result.cupulaNeedsConfirmation).toBe(false)
   })
 })

@@ -352,6 +352,7 @@ const Orders: CollectionConfig = {
       options: [
         { label: 'Rascunho', value: 'draft' },
         { label: 'A aguardar pagamento', value: 'pending_payment' },
+        { label: 'A aguardar confirmação de portes', value: 'awaiting_shipping' },
         { label: 'Confirmada', value: 'confirmed' },
         { label: 'Em preparação', value: 'processing' },
         { label: 'Expedida', value: 'shipped' },
