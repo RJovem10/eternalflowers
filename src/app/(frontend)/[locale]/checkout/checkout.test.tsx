@@ -150,9 +150,9 @@ describe('Checkout Page', () => {
             orderNumber: 'EF-2026-ABCD',
             subtotal: 69,
             discount: 0,
-            shippingCost: null,
-            total: null,
-            orderStatus: 'draft',
+            shippingCost: 8.00,
+            total: 77.00,
+            orderStatus: 'pending_payment',
             paymentStatus: 'unpaid',
           }),
       })

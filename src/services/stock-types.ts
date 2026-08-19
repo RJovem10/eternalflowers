@@ -14,6 +14,8 @@ export interface ReserveStockInput {
   quantity: number
   checkoutAttemptId: string
   req?: any
+  /** Duração da reserva em ms. Default: 30 min (1800000). Cupula: 48h (172800000) */
+  durationMs?: number
 }
 
 export interface ConfirmReservationInput {

@@ -151,6 +151,8 @@ type Dict = {
   noCode: string
   leadTimeSingular: string
   leadTimePlural: string
+  shippingLabel: string
+  shippingToConfirm: string
   internationalPresence: CountryData[]
 }
 
@@ -303,6 +305,8 @@ export const dictionaries: Record<Locale, Dict> = {
         amount: 'Valor',
         leadTimeSingular: 'Produzido em 1 dia útil',
         leadTimePlural: 'Produzido em {days} dias úteis',
+        shippingLabel: 'Envio',
+        shippingToConfirm: 'Peça reservada.\nPortes de envio a confirmar.\nA Eternal Flowers entrará em contacto consigo para confirmar o valor dos portes.',
         internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lisboa', description: 'Atelier e loja física' },
       { code: 'ES', country: 'Espanha', cities: 'Exposições', description: 'Feiras de orquídeas' },
@@ -450,10 +454,12 @@ export const dictionaries: Record<Locale, Dict> = {
     amount: 'Amount',
     leadTimeSingular: 'Produced in 1 business day',
     leadTimePlural: 'Produced in {days} business days',
-    internationalPresence: [
-      { code: 'PT', country: 'Portugal', cities: 'Braga · Lisbon', description: 'Workshop and physical store' },
-      { code: 'ES', country: 'Spain', cities: 'Exhibitions', description: 'Orchid fairs' },
-      { code: 'IT', country: 'Italy', cities: 'Trento · Mati', description: 'International exhibitions' },
+    shippingLabel: 'Shipping',
+    shippingToConfirm: 'Item reserved.\nShipping cost to be confirmed.\nEternal Flowers will contact you to confirm the shipping amount.',
+        internationalPresence: [
+          { code: 'PT', country: 'Portugal', cities: 'Braga · Lisbon', description: 'Workshop and physical store' },
+          { code: 'ES', country: 'Spain', cities: 'Exhibitions', description: 'Orchid fairs' },
+          { code: 'IT', country: 'Italy', cities: 'Trento · Mati', description: 'International exhibitions' },
     ],
   },
   es: {
@@ -597,6 +603,8 @@ export const dictionaries: Record<Locale, Dict> = {
     amount: 'Importe',
     leadTimeSingular: 'Producido en 1 día laborable',
     leadTimePlural: 'Producido en {days} días laborables',
+    shippingLabel: 'Envío',
+        shippingToConfirm: 'Pieza reservada.\nGastos de env\u00edo a confirmar.\nEternal Flowers se pondr\u00e1 en contacto para confirmar el importe del env\u00edo.',
     internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lisboa', description: 'Taller y tienda física' },
       { code: 'ES', country: 'España', cities: 'Exposiciones', description: 'Ferias de orquídeas' },
@@ -744,6 +752,8 @@ export const dictionaries: Record<Locale, Dict> = {
     amount: 'Importo',
     leadTimeSingular: 'Prodotto in 1 giorno lavorativo',
     leadTimePlural: 'Prodotto in {days} giorni lavorativi',
+    shippingLabel: 'Spedizione',
+        shippingToConfirm: 'Articolo riservato.\nCosti di spedizione da confermare.\nEternal Flowers la contatter\u00e0 per confermare l\'importo della spedizione.',
     internationalPresence: [
       { code: 'PT', country: 'Portogallo', cities: 'Braga · Lisbona', description: 'Laboratorio e negozio fisico' },
       { code: 'ES', country: 'Spagna', cities: 'Esposizioni', description: 'Fiere di orchidee' },
@@ -891,6 +901,8 @@ export const dictionaries: Record<Locale, Dict> = {
     amount: 'Betrag',
     leadTimeSingular: 'Hergestellt in 1 Werktag',
     leadTimePlural: 'Hergestellt in {days} Werktagen',
+    shippingLabel: 'Versand',
+        shippingToConfirm: 'Artikel reserviert.\nVersandkosten m\u00fcssen best\u00e4tigt werden.\nEternal Flowers wird Sie kontaktieren, um den Versandbetrag zu best\u00e4tigen.',
     internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lissabon', description: 'Atelier und Ladengeschäft' },
       { code: 'ES', country: 'Spanien', cities: 'Ausstellungen', description: 'Orchideenmessen' },

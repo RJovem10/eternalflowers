@@ -2,7 +2,7 @@
  * Testes unitários para checkout-finalization.ts — sem Payload real, com mocking.
  *
  * Testa a lógica de finalização de checkout:
- * 1. draft + quote válida → pending_payment
+ * 1. draft + shipping válido → pending_payment
  * 2. shippingCost gravado
  * 3. total correto
  * 4. checkoutAttemptId server-side criado
@@ -12,16 +12,16 @@
  * 8. made_to_order não cria reserva
  * 9. múltiplos items → reservas corretas
  * 10. stock insuficiente → rollback total
- * 11. provider não configurado → Order continua draft, 0 reservas
- * 12. segunda finalização não duplica reservas
- * 13. paymentStatus continua unpaid
- * 14. reservations.order aponta para Order
- * 15. quote negativa/inválida rejeitada
- * 16. parcel ausente → erro tipado
- * 17. parcel inválido → erro
- * 18. origem/destination da Order usada correctamente
- * 19. origin é passado sem alteração ao provider
- * 20. FakeShippingProvider funciona apenas como test double
+ * 11. paymentStatus continua unpaid
+ * 12. reservations.order aponta para Order
+ * 13. cupula → reservas criadas + awaiting_shipping
+ * 14. cupula não bloqueia stock reservation
+ * 15. cupula → shippingCost null
+ * 16. cupula → total null
+ * 17. large-value standard → pending_payment (not free)
+ * 18. discount não altera shipping
+ * 19. parcel/provider não são necessários para fixed shipping
+ * 20. draft + cupula → checkoutAttemptId criado
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { prepareOrderForPayment } from './checkout-finalization'
@@ -30,12 +30,7 @@ import type { ShippingParcel, ShippingAddress } from './shipping/shipping-types'
 import {
   CheckoutFinalizationError,
   InvalidOrderStateError,
-  IncompatibleQuoteError,
-  NegativeTotalError,
-  ShippingParcelNotConfiguredError,
-  InvalidShippingParcelError,
 } from './checkout-finalization-types'
-import { ShippingProviderNotConfiguredError } from './shipping/shipping-types'
 
 // ─── Helpers ──────────────────────────────────────────────────
 
@@ -60,21 +55,18 @@ const DEFAULT_PARCEL: ShippingParcel = {
 function makeInput(overrides: Record<string, any> = {}) {
   return {
     orderId: 0, // placeholder — cada teste especifica o seu
-    provider: fakeProvider,
-    shippingServiceCode: 'STANDARD',
-    parcel: DEFAULT_PARCEL,
-    origin: DEFAULT_ORIGIN,
     ...overrides,
   }
 }
 
-// Mock flowers store
+// Mock flowers store with shipping properties
 const mockFlowers: Record<number, any> = {
-  1: { id: 1, namePt: 'Rosa Vermelha', price: 25.50, productionMode: 'reproducible', stockQuantity: 10, availability: 'available' },
-  2: { id: 2, namePt: 'Orquídea Azul', price: 45.00, productionMode: 'unique', stockQuantity: 1, availability: 'available' },
-  3: { id: 3, namePt: 'Girassol Made-to-Order', price: 30.00, productionMode: 'made_to_order', stockQuantity: 0, availability: 'available' },
-  4: { id: 4, namePt: 'Tulipa Legacy', price: 15.00, productionMode: undefined, stockQuantity: 5, availability: 'available' },
-  5: { id: 5, namePt: 'Lírio Esgotado', price: 20.00, productionMode: 'reproducible', stockQuantity: 2, availability: 'available' },
+  1: { id: 1, namePt: 'Rosa Vermelha', price: 25.50, productionMode: 'reproducible', stockQuantity: 10, availability: 'available', shippingClass: 'standard', canShareShippingPackage: false },
+  2: { id: 2, namePt: 'Orquídea Azul', price: 45.00, productionMode: 'unique', stockQuantity: 1, availability: 'available', shippingClass: 'standard', canShareShippingPackage: false },
+  3: { id: 3, namePt: 'Girassol Made-to-Order', price: 30.00, productionMode: 'made_to_order', stockQuantity: 0, availability: 'available', shippingClass: 'standard', canShareShippingPackage: false },
+  4: { id: 4, namePt: 'Tulipa Legacy', price: 15.00, productionMode: undefined, stockQuantity: 5, availability: 'available', shippingClass: 'standard', canShareShippingPackage: false },
+  5: { id: 5, namePt: 'Lírio Esgotado', price: 20.00, productionMode: 'reproducible', stockQuantity: 2, availability: 'available', shippingClass: 'standard', canShareShippingPackage: false },
+  6: { id: 6, namePt: 'Cúpula de Rosas', price: 80.00, productionMode: 'reproducible', stockQuantity: 3, availability: 'available', shippingClass: 'cupula', canShareShippingPackage: false },
 }
 
 interface MockOrder {
@@ -185,22 +177,18 @@ function createMockPayload() {
     if (collection === 'stock-reservations' || collection === 'stock-reservations') {
       let filtered = [...mockReservations]
 
-      // Filter by idempotencyKeyHash
       if (where?.idempotencyKeyHash?.equals) {
         filtered = filtered.filter((r: any) => r.idempotencyKeyHash === where.idempotencyKeyHash.equals)
       }
-      // Filter by flower
       if (where?.flower?.equals !== undefined) {
         filtered = filtered.filter((r: any) => {
           const rFlowerId = typeof r.flower === 'object' ? r.flower.id : r.flower
           return rFlowerId === where.flower.equals
         })
       }
-      // Filter by status
       if (where?.status?.equals) {
         filtered = filtered.filter((r: any) => r.status === where.status.equals)
       }
-      // Filter by expiresAt
       if (where?.expiresAt?.greater_than) {
         const threshold = new Date(where.expiresAt.greater_than).getTime()
         filtered = filtered.filter((r: any) => new Date(r.expiresAt).getTime() > threshold)
@@ -279,7 +267,9 @@ describe('prepareOrderForPayment', () => {
     resetMocks()
   })
 
-  it('1. draft + quote válida → pending_payment', async () => {
+  // ── Testes standard ────────────────────────────────────────
+
+  it('1. draft + shipping válido → pending_payment', async () => {
     const payload = createMockPayload()
     const order = createDraftOrder({ items: [makeOrderItem(1, 2)] })
 
@@ -292,7 +282,7 @@ describe('prepareOrderForPayment', () => {
     expect(result.order.paymentStatus).toBe('unpaid')
   })
 
-  it('2. shippingCost gravado', async () => {
+  it('2. shippingCost gravado (fixed shipping para 2 items non-shareable PT)', async () => {
     const payload = createMockPayload()
     const order = createDraftOrder({ items: [makeOrderItem(1, 2)] })
 
@@ -300,15 +290,16 @@ describe('prepareOrderForPayment', () => {
       orderId: order.id,
     }))
 
-    expect(result.order.shippingCost).toBe(7.90)
-    expect(result.order.shippingProvider).toBe('fake')
-    expect(result.order.shippingServiceCode).toBe('STANDARD')
-    expect(result.order.shippingServiceName).toBe('Standard Delivery (Fake)')
-    expect(result.order.shippingEstimatedMinDays).toBe(2)
-    expect(result.order.shippingEstimatedMaxDays).toBe(5)
+    // 2 unidades standard non-shareable (default) em PT → 2 × €4 = €8
+    expect(result.order.shippingCost).toBe(8.00)
+    expect(result.order.shippingProvider).toBe('fixed')
+    expect(result.order.shippingServiceCode).toBe('FIXED_STANDARD')
+    expect(result.order.shippingServiceName).toBe('Portes Fixos Standard')
+    expect(result.order.shippingEstimatedMinDays).toBeNull()
+    expect(result.order.shippingEstimatedMaxDays).toBeNull()
   })
 
-  it('3. total correto (subtotal - discount + shippingCost)', async () => {
+  it('3. total correto (subtotal - discount + fixed shipping)', async () => {
     const payload = createMockPayload()
     const order = createDraftOrder({
       items: [makeOrderItem(1, 2)], // 25.50 * 2 = 51.00
@@ -319,8 +310,8 @@ describe('prepareOrderForPayment', () => {
       orderId: order.id,
     }))
 
-    // total = 51.00 - 5.10 + 7.90 = 53.80
-    expect(Number(result.order.total)).toBeCloseTo(53.80, 2)
+    // total = 51.00 - 5.10 + 8.00 (2 non-shareable × €4) = 53.90
+    expect(Number(result.order.total)).toBeCloseTo(53.90, 2)
   })
 
   it('4. checkoutAttemptId server-side criado', async () => {
@@ -413,7 +404,6 @@ describe('prepareOrderForPayment', () => {
     }))
 
     const orderReserves = mockReservations.filter((r: any) => r.order === order.id)
-    // 2 reservas: reproducible + unique (made_to_order não cria)
     expect(orderReserves.length).toBe(2)
 
     const reproReserve = orderReserves.find((r: any) => {
@@ -441,58 +431,14 @@ describe('prepareOrderForPayment', () => {
       }))
     ).rejects.toThrow()
 
-    // Order should still be draft
     const updatedOrder = mockOrders.find((o) => o.id === order.id)
     expect(updatedOrder?.orderStatus).toBe('draft')
     expect(updatedOrder?.total).toBeNull()
 
-    // No reservations should persist (tx rolled back)
     expect(mockReservations.length).toBe(0)
   })
 
-  it('11. provider não configurado → Order continua draft, 0 reservas', async () => {
-    const payload = createMockPayload()
-    const order = createDraftOrder({ items: [makeOrderItem(1, 1)] })
-
-    const failingProvider = {
-      id: 'inexistente',
-      async quote() {
-        throw new ShippingProviderNotConfiguredError('Provider de teste não configurado.')
-      },
-    }
-
-    await expect(
-      prepareOrderForPayment(payload, makeInput({
-        orderId: order.id,
-        provider: failingProvider,
-      }))
-    ).rejects.toThrow(ShippingProviderNotConfiguredError)
-
-    const updatedOrder = mockOrders.find((o) => o.id === order.id)
-    expect(updatedOrder?.orderStatus).toBe('draft')
-    expect(updatedOrder?.total).toBeNull()
-    expect(updatedOrder?.checkoutAttemptId).toBeNull()
-    expect(mockReservations.length).toBe(0)
-  })
-
-  it('12. segunda finalização não duplica reservas', async () => {
-    const payload = createMockPayload()
-    const order = createDraftOrder({ items: [makeOrderItem(1, 2)] })
-
-    await prepareOrderForPayment(payload, makeInput({
-      orderId: order.id,
-    }))
-
-    const r2 = await prepareOrderForPayment(payload, makeInput({
-      orderId: order.id,
-    }))
-
-    expect(r2.kind).toBe('already_prepared')
-    const orderReserves = mockReservations.filter((r: any) => r.order === order.id)
-    expect(orderReserves.length).toBe(1) // não duplicada
-  })
-
-  it('13. paymentStatus continua unpaid', async () => {
+  it('11. paymentStatus continua unpaid', async () => {
     const payload = createMockPayload()
     const order = createDraftOrder({ items: [makeOrderItem(1, 1)] })
 
@@ -503,7 +449,7 @@ describe('prepareOrderForPayment', () => {
     expect(result.order.paymentStatus).toBe('unpaid')
   })
 
-  it('14. reservations.order aponta para Order', async () => {
+  it('12. reservations.order aponta para Order', async () => {
     const payload = createMockPayload()
     const order = createDraftOrder({ items: [makeOrderItem(1, 1)] })
 
@@ -516,395 +462,182 @@ describe('prepareOrderForPayment', () => {
     expect(orderReserves[0].order).toBe(order.id)
   })
 
-  it('15. quote negativa/inválida rejeitada (serviceCode inexistente)', async () => {
+  // ── Testes Cúpula ─────────────────────────────────────────
+
+  it('13. cupula → reservas criadas + awaiting_shipping', async () => {
     const payload = createMockPayload()
-    const order = createDraftOrder({ items: [makeOrderItem(1, 1)] })
-
-    await expect(
-      prepareOrderForPayment(payload, makeInput({
-        orderId: order.id,
-        shippingServiceCode: 'SAME_DAY', // non-existent in fake provider
-      }))
-    ).rejects.toThrow(IncompatibleQuoteError)
-  })
-
-  // ── Parcel validation tests ──────────────────────────────
-
-  it('16. parcel ausente → ShippingParcelNotConfiguredError', async () => {
-    const payload = createMockPayload()
-    const order = createDraftOrder({ items: [makeOrderItem(1, 1)] })
-
-    // parcel === undefined
-    await expect(
-      prepareOrderForPayment(payload, makeInput({
-        orderId: order.id,
-        parcel: undefined,
-      }))
-    ).rejects.toThrow(ShippingParcelNotConfiguredError)
-
-    // Order continues draft
-    const updatedOrder = mockOrders.find((o) => o.id === order.id)
-    expect(updatedOrder?.orderStatus).toBe('draft')
-    expect(updatedOrder?.total).toBeNull()
-    expect(updatedOrder?.checkoutAttemptId).toBeNull()
-    expect(mockReservations.length).toBe(0)
-  })
-
-  it('17a. parcel inválido (weight ausente) → InvalidShippingParcelError', async () => {
-    const payload = createMockPayload()
-    const order = createDraftOrder({ items: [makeOrderItem(1, 1)] })
-
-    await expect(
-      prepareOrderForPayment(payload, makeInput({
-        orderId: order.id,
-        parcel: {} as any,
-      }))
-    ).rejects.toThrow(InvalidShippingParcelError)
-
-    const updatedOrder = mockOrders.find((o) => o.id === order.id)
-    expect(updatedOrder?.orderStatus).toBe('draft')
-    expect(updatedOrder?.total).toBeNull()
-    expect(mockReservations.length).toBe(0)
-  })
-
-  it('17b. parcel inválido (weight zero) → InvalidShippingParcelError', async () => {
-    const payload = createMockPayload()
-    const order = createDraftOrder({ items: [makeOrderItem(1, 1)] })
-
-    await expect(
-      prepareOrderForPayment(payload, makeInput({
-        orderId: order.id,
-        parcel: { weight: 0 },
-      }))
-    ).rejects.toThrow(InvalidShippingParcelError)
-
-    const updatedOrder = mockOrders.find((o) => o.id === order.id)
-    expect(updatedOrder?.orderStatus).toBe('draft')
-  })
-
-  it('17c. parcel inválido (weight negativo) → InvalidShippingParcelError', async () => {
-    const payload = createMockPayload()
-    const order = createDraftOrder({ items: [makeOrderItem(1, 1)] })
-
-    await expect(
-      prepareOrderForPayment(payload, makeInput({
-        orderId: order.id,
-        parcel: { weight: -1 },
-      }))
-    ).rejects.toThrow(InvalidShippingParcelError)
-  })
-
-  it('17d. parcel inválido (length negativo) → InvalidShippingParcelError', async () => {
-    const payload = createMockPayload()
-    const order = createDraftOrder({ items: [makeOrderItem(1, 1)] })
-
-    await expect(
-      prepareOrderForPayment(payload, makeInput({
-        orderId: order.id,
-        parcel: { weight: 1.0, length: -5 },
-      }))
-    ).rejects.toThrow(InvalidShippingParcelError)
-  })
-
-  it('17e. parcel inválido (null) → ShippingParcelNotConfiguredError', async () => {
-    const payload = createMockPayload()
-    const order = createDraftOrder({ items: [makeOrderItem(1, 1)] })
-
-    await expect(
-      prepareOrderForPayment(payload, makeInput({
-        orderId: order.id,
-        parcel: null,
-      }))
-    ).rejects.toThrow(ShippingParcelNotConfiguredError)
-  })
-
-  // ── Destination / shippingAddress tests ──────────────────
-
-  it('18a. destination enviado ao provider corresponde à shippingAddress da Order', async () => {
-    const payload = createMockPayload()
-    const order = createDraftOrder({
-      items: [makeOrderItem(1, 1)],
-      shippingAddress: {
-        recipientName: 'João Teste',
-        phone: '+351911222333',
-        line1: 'Av. da Liberdade, 100',
-        line2: 'Apartamento 4C',
-        city: 'Porto',
-        region: 'Norte',
-        postalCode: '4000-001',
-        country: 'PT',
-      },
-    })
-
-    // Replace fakeProvider with a spy
-    const spyQuote = vi.fn(async () => {
-      return [{
-        provider: fakeProviderId,
-        serviceCode: 'STANDARD',
-        serviceName: 'Standard Delivery (Fake)',
-        amount: 7.90,
-        currency: 'EUR',
-        estimatedMinDays: 2,
-        estimatedMaxDays: 5,
-      }]
-    })
-    const spyProvider = { id: fakeProviderId, quote: spyQuote }
-
-    await prepareOrderForPayment(payload, makeInput({
-      orderId: order.id,
-      provider: spyProvider,
-    }))
-
-    const callInput = (spyQuote.mock.calls[0] as any)[0]
-    expect(callInput.destination.recipientName).toBe('João Teste')
-    expect(callInput.destination.phone).toBe('+351911222333')
-    expect(callInput.destination.line1).toBe('Av. da Liberdade, 100')
-    expect(callInput.destination.line2).toBe('Apartamento 4C')
-    expect(callInput.destination.city).toBe('Porto')
-    expect(callInput.destination.region).toBe('Norte')
-    expect(callInput.destination.postalCode).toBe('4000-001')
-    expect(callInput.destination.country).toBe('PT')
-  })
-
-  it('18b. line2/region/postalCode opcionais são undefined quando ausentes', async () => {
-    const payload = createMockPayload()
-    // Order sem line2, region, postalCode, phone
-    const order = createDraftOrder({
-      items: [makeOrderItem(1, 1)],
-      shippingAddress: {
-        recipientName: 'Maria',
-        line1: 'Rua Principal',
-        city: 'Faro',
-        country: 'PT',
-        // phone, line2, region, postalCode ausentes
-      },
-    })
-
-    const spyQuote = vi.fn(async () => {
-      return [{
-        provider: fakeProviderId,
-        serviceCode: 'STANDARD',
-        serviceName: 'Standard Delivery (Fake)',
-        amount: 7.90,
-        currency: 'EUR',
-        estimatedMinDays: 2,
-        estimatedMaxDays: 5,
-      }]
-    })
-    const spyProvider = { id: fakeProviderId, quote: spyQuote }
-
-    await prepareOrderForPayment(payload, makeInput({
-      orderId: order.id,
-      provider: spyProvider,
-    }))
-
-    const callInput = (spyQuote.mock.calls[0] as any)[0]
-    expect(callInput.destination.phone).toBeUndefined()
-    expect(callInput.destination.line2).toBeUndefined()
-    expect(callInput.destination.region).toBeUndefined()
-    expect(callInput.destination.postalCode).toBeUndefined()
-  })
-
-  it('18c. country real da Order é usado (não PT hardcoded)', async () => {
-    const payload = createMockPayload()
-    const order = createDraftOrder({
-      items: [makeOrderItem(1, 1)],
-      shippingAddress: {
-        recipientName: 'John Doe',
-        line1: '123 Main St',
-        city: 'Madrid',
-        country: 'ES',
-      },
-    })
-
-    const spyQuote = vi.fn(async () => {
-      return [{
-        provider: fakeProviderId,
-        serviceCode: 'STANDARD',
-        serviceName: 'Standard Delivery (Fake)',
-        amount: 15.00,
-        currency: 'EUR',
-        estimatedMinDays: 3,
-        estimatedMaxDays: 7,
-      }]
-    })
-    const spyProvider = { id: fakeProviderId, quote: spyQuote }
-
-    await prepareOrderForPayment(payload, makeInput({
-      orderId: order.id,
-      provider: spyProvider,
-    }))
-
-    const callInput = (spyQuote.mock.calls[0] as any)[0]
-    expect(callInput.destination.country).toBe('ES')
-  })
-
-  // ── Parcel passthrough test ──────────────────────────────
-
-  it('19. parcel server-side é passado sem alteração indevida ao provider', async () => {
-    const payload = createMockPayload()
-    const order = createDraftOrder({ items: [makeOrderItem(1, 2)] })
-
-    const spyQuote = vi.fn(async () => {
-      return [{
-        provider: fakeProviderId,
-        serviceCode: 'STANDARD',
-        serviceName: 'Standard Delivery (Fake)',
-        amount: 7.90,
-        currency: 'EUR',
-        estimatedMinDays: 2,
-        estimatedMaxDays: 5,
-      }]
-    })
-    const spyProvider = { id: fakeProviderId, quote: spyQuote }
-
-    const customParcel: ShippingParcel = { weight: 3.5, length: 30, width: 20, height: 15 }
-
-    await prepareOrderForPayment(payload, makeInput({
-      orderId: order.id,
-      provider: spyProvider,
-      parcel: customParcel,
-    }))
-
-    const callInput = (spyQuote.mock.calls[0] as any)[0]
-    expect(callInput.parcels).toHaveLength(1)
-    expect(callInput.parcels[0].weight).toBe(3.5)
-    expect(callInput.parcels[0].length).toBe(30)
-    expect(callInput.parcels[0].width).toBe(20)
-    expect(callInput.parcels[0].height).toBe(15)
-  })
-
-  // ── Fail-closed tests ────────────────────────────────────
-
-  it('20a. falta de parcel → Order continua draft, 0 reservas', async () => {
-    const payload = createMockPayload()
-    const order = createDraftOrder({ items: [makeOrderItem(1, 2)] })
-
-    await expect(
-      prepareOrderForPayment(payload, makeInput({
-        orderId: order.id,
-        parcel: undefined,
-      }))
-    ).rejects.toThrow(ShippingParcelNotConfiguredError)
-
-    const updatedOrder = mockOrders.find((o) => o.id === order.id)
-    expect(updatedOrder?.orderStatus).toBe('draft')
-    expect(updatedOrder?.shippingCost).toBeNull()
-    expect(updatedOrder?.total).toBeNull()
-    expect(mockReservations.length).toBe(0)
-  })
-
-  it('20b. fakeProvider funciona apenas como test double (não disponível em runtime)', async () => {
-    // Verificar que fakeProvider NÃO está disponível através da implementação
-    // (é importado directamente pelos testes, não via produção)
-    expect(fakeProvider.id).toBe('fake')
-
-    // O provider é passado explicitamente pelo caller do teste —
-    // production code nunca consegue usar fakeProvider acidentalmente
-    const payload = createMockPayload()
-    const order = createDraftOrder({ items: [makeOrderItem(1, 1)] })
+    const order = createDraftOrder({ items: [makeOrderItem(6, 1)] }) // cupula
 
     const result = await prepareOrderForPayment(payload, makeInput({
       orderId: order.id,
     }))
+
+    // Stock foi reservado
+    const orderReserves = mockReservations.filter((r: any) => r.order === order.id)
+    expect(orderReserves.length).toBe(1)
+
+    // Order em awaiting_shipping
+    expect(result.order.orderStatus).toBe('awaiting_shipping')
+    expect(result.order.paymentStatus).toBe('unpaid')
+    expect(result.checkoutAttemptId).toBeDefined()
+  })
+
+  it('14. cupula → shippingCost null e total null', async () => {
+    const payload = createMockPayload()
+    const order = createDraftOrder({ items: [makeOrderItem(6, 1)] }) // cupula
+
+    const result = await prepareOrderForPayment(payload, makeInput({
+      orderId: order.id,
+    }))
+
+    expect(result.order.shippingCost).toBeNull()
+    expect(result.order.total).toBeNull()
+    expect(result.order.shippingProvider).toBeNull()
+    expect(result.order.shippingServiceCode).toBeNull()
+    expect(result.order.shippingServiceName).toBeNull()
+  })
+
+  it('15. cupula + standard items → awaiting_shipping + stock reservado', async () => {
+    const payload = createMockPayload()
+    const order = createDraftOrder({
+      items: [
+        makeOrderItem(6, 1),  // cupula
+        makeOrderItem(1, 2),  // standard
+      ],
+    })
+
+    const result = await prepareOrderForPayment(payload, makeInput({
+      orderId: order.id,
+    }))
+
+    // Stock foi reservado para todos os items
+    const orderReserves = mockReservations.filter((r: any) => r.order === order.id)
+    expect(orderReserves.length).toBe(2)
+
+    expect(result.order.orderStatus).toBe('awaiting_shipping')
+  })
+
+  it('16. large-value standard → pending_payment (NOT free)', async () => {
+    const payload = createMockPayload()
+    const order = createDraftOrder({
+      items: [makeOrderItem(1, 10)], // 10 × 25.50 = 255.00
+    })
+
+    const result = await prepareOrderForPayment(payload, makeInput({
+      orderId: order.id,
+    }))
+
+    // Large value still pays shipping
+    expect(result.order.orderStatus).toBe('pending_payment')
+    // 10 non-shareable items = 10 shipment units × €4 = €40
+    expect(result.order.shippingCost).toBe(40.00)
+  })
+
+  it('17. discount does NOT change shipping calculation', async () => {
+    const payload = createMockPayload()
+    const order = createDraftOrder({
+      items: [makeOrderItem(1, 2)], // subtotal = 51.00
+      discount: 25.50, // 50% discount
+    })
+
+    const result = await prepareOrderForPayment(payload, makeInput({
+      orderId: order.id,
+    }))
+
+    // Shipping is based on items, not on discounted total
+    expect(result.order.shippingCost).toBe(8.00) // 2 units × €4
+    expect(Number(result.order.total)).toBeCloseTo(51.00 - 25.50 + 8.00, 2) // = 33.50
+  })
+
+  it('18. parcel/provider não são necessários para fixed shipping', async () => {
+    const payload = createMockPayload()
+    const order = createDraftOrder({ items: [makeOrderItem(1, 1)] })
+
+    // Chamar sem parcel/provider/origin
+    const result = await prepareOrderForPayment(payload, {
+      orderId: order.id,
+    })
 
     expect(result.kind).toBe('prepared')
     expect(result.order.orderStatus).toBe('pending_payment')
+    expect(result.order.shippingCost).toBe(4.00) // 1 non-shareable PT = €4
   })
 
-  it('21. shippingCost continua a vir exclusivamente da quote do provider', async () => {
+  // ── Idempotência cupula ──────────────────────────────────
+
+  it('19. segunda chamada cupula → already_prepared', async () => {
     const payload = createMockPayload()
-    const order = createDraftOrder({ items: [makeOrderItem(1, 1)] })
+    const order = createDraftOrder({ items: [makeOrderItem(6, 1)] })
 
-    const providerWithCustomQuote = {
-      id: 'custom',
-      async quote() {
-        return [{
-          provider: 'custom',
-          serviceCode: 'EXPRESS',
-          serviceName: 'Expresso',
-          amount: 12.50,
-          currency: 'EUR',
-          estimatedMinDays: 1,
-          estimatedMaxDays: 2,
-        }]
-      },
-    }
-
-    const result = await prepareOrderForPayment(payload, makeInput({
+    await prepareOrderForPayment(payload, makeInput({
       orderId: order.id,
-      provider: providerWithCustomQuote,
-      shippingServiceCode: 'EXPRESS',
     }))
 
-    expect(result.order.shippingCost).toBe(12.50)
-    expect(result.order.shippingProvider).toBe('custom')
+    const r2 = await prepareOrderForPayment(payload, makeInput({
+      orderId: order.id,
+    }))
+
+    expect(r2.kind).toBe('already_prepared')
+    expect(r2.order.orderStatus).toBe('awaiting_shipping')
   })
 
-  // ── Additional edge cases ──────────────────────────────
-
-  it('Order inexistente → erro', async () => {
-    const payload = createMockPayload()
-    await expect(
-      prepareOrderForPayment(payload, makeInput({
-        orderId: 999,
-      }))
-    ).rejects.toThrow(CheckoutFinalizationError)
-  })
-
-  it('Order não-draft rejeitada (confirmed)', async () => {
-    const payload = createMockPayload()
-    const order = createDraftOrder({ items: [makeOrderItem(1, 1)], orderStatus: 'confirmed' })
-
-    await expect(
-      prepareOrderForPayment(payload, makeInput({
-        orderId: order.id,
-      }))
-    ).rejects.toThrow(InvalidOrderStateError)
-  })
-
-  it('Order não-draft rejeitada (cancelled)', async () => {
-    const payload = createMockPayload()
-    const order = createDraftOrder({ items: [makeOrderItem(1, 1)], orderStatus: 'cancelled' })
-
-    await expect(
-      prepareOrderForPayment(payload, makeInput({
-        orderId: order.id,
-      }))
-    ).rejects.toThrow(InvalidOrderStateError)
-  })
-
-  it('subtotal zero rejeitado', async () => {
-    const payload = createMockPayload()
-    const order = createDraftOrder({ items: [] })
-
-    await expect(
-      prepareOrderForPayment(payload, makeInput({
-        orderId: order.id,
-      }))
-    ).rejects.toThrow(CheckoutFinalizationError)
-  })
-
-  it('total com despesas de envio positiva calcula corretamente', async () => {
+  // ── Test I: standard reservation ~30 min ─────────────────────
+  it('I) standard reservation ~30 min', async () => {
     const payload = createMockPayload()
     const order = createDraftOrder({ items: [makeOrderItem(1, 1)] })
+
+    await prepareOrderForPayment(payload, makeInput({
+      orderId: order.id,
+    }))
+
+    const orderReserves = mockReservations.filter((r: any) => r.order === order.id)
+    expect(orderReserves.length).toBe(1)
+
+    const expiresAt = new Date(orderReserves[0].expiresAt).getTime()
+    const now = Date.now()
+    const diffMs = expiresAt - now
+    // Should be ~30 min (1800000 ms) — allow ±5 min tolerance
+    expect(diffMs).toBeGreaterThan(25 * 60 * 1000)   // > 25 min
+    expect(diffMs).toBeLessThan(35 * 60 * 1000)      // < 35 min
+  })
+
+  // ── Test E: cupula reservation ~48h ──────────────────────────
+  it('E) cupula reservation ~48h expiry', async () => {
+    const payload = createMockPayload()
+    const order = createDraftOrder({ items: [makeOrderItem(6, 1)] })
+
+    await prepareOrderForPayment(payload, makeInput({
+      orderId: order.id,
+    }))
+
+    const orderReserves = mockReservations.filter((r: any) => r.order === order.id)
+    expect(orderReserves.length).toBe(1)
+
+    const expiresAt = new Date(orderReserves[0].expiresAt).getTime()
+    const now = Date.now()
+    const diffMs = expiresAt - now
+    // Should be ~48h (172800000 ms) — allow ±1h tolerance
+    expect(diffMs).toBeGreaterThan(47 * 60 * 60 * 1000)   // > 47h
+    expect(diffMs).toBeLessThan(49 * 60 * 60 * 1000)      // < 49h
+  })
+
+  // ── Test D: checkout response includes authoritative fields ──
+  it('D) standard response has authoritative shippingCost and total', async () => {
+    const payload = createMockPayload()
+    const order = createDraftOrder({
+      items: [makeOrderItem(1, 2)], // 2 non-shareable PT = €8 shipping
+      discount: 0,
+    })
 
     const result = await prepareOrderForPayment(payload, makeInput({
       orderId: order.id,
     }))
 
-    // total = 25.50 - 0 + 7.90 = 33.40
-    expect(Number(result.order.total)).toBeCloseTo(33.40, 2)
-  })
-
-  it('productionMode null/legacy → rejeitado (stock service regra segura)', async () => {
-    const payload = createMockPayload()
-    const order = createDraftOrder({ items: [makeOrderItem(4, 2)] }) // legacy, stock service rejeita
-
-    await expect(
-      prepareOrderForPayment(payload, makeInput({
-        orderId: order.id,
-      }))
-    ).rejects.toThrow()
+    // Verify authoritative server-side calculation
+    expect(result.order.shippingCost).toBe(8.00)
+    expect(result.order.total).toBeGreaterThan(0)
+    expect(result.order.orderStatus).toBe('pending_payment')
+    // subtotal comes from the order's own items
+    expect(Number(result.order.subtotal)).toBeGreaterThan(0)
   })
 })

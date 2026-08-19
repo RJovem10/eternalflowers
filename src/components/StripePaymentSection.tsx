@@ -18,6 +18,8 @@ interface StripePaymentSectionProps {
     stripeNotConfigured: string
     amount: string
     loading: string
+    shippingLabel: string
+    shippingToConfirm: string
   }
 }
 
@@ -111,6 +113,7 @@ export default function StripePaymentSection(props: StripePaymentSectionProps) {
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [loadingSession, setLoadingSession] = useState(false)
   const [sessionError, setSessionError] = useState<string | null>(null)
+  const [isCupula, setIsCupula] = useState(false)
 
   // Verificar se Stripe está configurado
   const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
@@ -142,6 +145,12 @@ export default function StripePaymentSection(props: StripePaymentSectionProps) {
       const data = await res.json()
 
       if (!res.ok) {
+        // Cupula — portes a confirmar
+        if (data.code === 'CUPULA_SHIPPING_NEEDS_CONFIRMATION') {
+          setIsCupula(true)
+          setLoadingSession(false)
+          return
+        }
         setSessionError(data.error || props.dict.paymentError)
         setLoadingSession(false)
         return
@@ -154,6 +163,20 @@ export default function StripePaymentSection(props: StripePaymentSectionProps) {
 
     setLoadingSession(false)
   }, [props.orderNumber, props.checkoutRequestId, props.dict, clientSecret, loadingSession])
+
+  // Cupula — mostrar mensagem de portes a confirmar
+  if (isCupula) {
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2">
+        <p className="text-sm text-amber-800 font-medium">
+          {props.dict.shippingLabel}
+        </p>
+        <p className="text-sm text-amber-700">
+          {props.dict.shippingToConfirm}
+        </p>
+      </div>
+    )
+  }
 
   // Se ainda não temos clientSecret, mostrar botão para iniciar pagamento
   if (!clientSecret) {

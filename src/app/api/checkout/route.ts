@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { createOrder } from '@/services/orders'
+import { prepareOrderForPayment } from '@/services/checkout-finalization'
 import type { CreateOrderInput } from '@/services/order-types'
 import {
   OrderValidationError,
@@ -62,7 +63,21 @@ export async function POST(req: NextRequest) {
 
     const result = await createOrder(payload, input)
 
-    const order = result.order
+    let order = result.order
+
+    // ════════════════════════════════════════════════════════
+    // Server-side order preparation (F5 — ISSUE-1Q)
+    // ════════════════════════════════════════════════════════
+    // If the order is still draft, call prepareOrderForPayment
+    // immediately so reservations are created and shipping is
+    // calculated server-side. The browser must never trigger
+    // this independently.
+    if (order.orderStatus === 'draft') {
+      const prepared = await prepareOrderForPayment(payload, {
+        orderId: order.id,
+      })
+      order = prepared.order
+    }
 
     return NextResponse.json(
       {

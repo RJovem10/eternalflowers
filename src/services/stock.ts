@@ -180,7 +180,7 @@ async function executeReserve(
       quantity: input.quantity,
       status: 'active',
       idempotencyKeyHash: keyHash,
-      expiresAt: new Date(now.getTime() + RESERVATION_DURATION_MS).toISOString(),
+      expiresAt: new Date(now.getTime() + (input.durationMs ?? RESERVATION_DURATION_MS)).toISOString(),
     },
     req: ctx.req,
     overrideAccess: true,

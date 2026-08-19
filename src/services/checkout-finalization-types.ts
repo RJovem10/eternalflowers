@@ -12,14 +12,14 @@ import type { ShippingParcel, ShippingAddress } from './shipping/shipping-types'
 export interface PrepareOrderInput {
   /** ID da Order a finalizar */
   orderId: number
-  /** Provider de shipping (server-side, nunca do browser) */
-  provider: ShippingProvider
-  /** Código do serviço de envio escolhido (e.g. 'STANDARD') */
-  shippingServiceCode: string
-  /** Parcel de envio (server-side, nunca do browser) */
-  parcel: ShippingParcel
-  /** Morada de origem/loja (server-side, nunca do browser) */
-  origin: ShippingAddress
+  /** Provider de shipping (server-side, nunca do browser) — opcional para fixed shipping */
+  provider?: ShippingProvider
+  /** Código do serviço de envio escolhido (e.g. 'STANDARD') — opcional para fixed shipping */
+  shippingServiceCode?: string
+  /** Parcel de envio (server-side, nunca do browser) — opcional para fixed shipping */
+  parcel?: ShippingParcel
+  /** Morada de origem/loja (server-side, nunca do browser) — opcional para fixed shipping */
+  origin?: ShippingAddress
   /** Payload request para transacções internas */
   req?: any
 }
@@ -84,5 +84,13 @@ export class InvalidShippingParcelError extends Error {
     super(msg)
     this.name = 'InvalidShippingParcelError'
     this.details = details
+  }
+}
+
+export class CupulaShippingNeedsConfirmationError extends Error {
+  code = 'CUPULA_SHIPPING_NEEDS_CONFIRMATION' as const
+  constructor(msg = 'Encomenda com cúpula necessita de confirmação manual de portes de envio.') {
+    super(msg)
+    this.name = 'CupulaShippingNeedsConfirmationError'
   }
 }
