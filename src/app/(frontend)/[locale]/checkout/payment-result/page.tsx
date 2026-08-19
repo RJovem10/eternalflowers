@@ -4,6 +4,7 @@ import { Suspense } from 'react'
 import { useSearchParams, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useEffect, useState, useRef } from 'react'
+import { useCart } from '@/components/CartProvider'
 import { getStripe } from '@/lib/stripe-client'
 import { getDictionary } from '@/i18n/dictionaries'
 
@@ -22,61 +23,81 @@ function PaymentResultInner() {
   const [status, setStatus] = useState<PaymentResultStatus>('loading')
   const [message, setMessage] = useState<string>('')
   const processedRef = useRef(false)
+  const cartClearedRef = useRef(false)
+  const { clear } = useCart()
 
   useEffect(() => {
     if (processedRef.current) return
     processedRef.current = true
 
     const clientSecret = searchParams.get('payment_intent_client_secret')
-    const redirectStatus = searchParams.get('redirect_status')
 
-    if (!clientSecret || !redirectStatus) {
+    if (!clientSecret) {
       setStatus('error')
       setMessage(dict.paymentResultError)
       return
     }
 
-    // Mapear redirect_status para status interno
-    switch (redirectStatus) {
-      case 'succeeded':
-        setStatus('succeeded')
-        setMessage(dict.paymentResultSucceeded)
-        break
-      case 'processing':
-        setStatus('processing')
-        setMessage(dict.paymentResultProcessing)
-        break
-      case 'requires_payment_method':
-        setStatus('requires_payment_method')
-        setMessage(dict.paymentResultFailed)
-        break
-      default:
-        setStatus('unknown')
-        setMessage(dict.paymentResultUnknown)
+    // ─── Retrieve the real PaymentIntent from Stripe ───────────
+    // The redirect_status URL parameter is NOT trusted for
+    // business decisions (it is client-side). Only the actual
+    // PaymentIntent status from Stripe may authorise cart clearing.
+    const stripePromise = getStripe()
+    if (!stripePromise) {
+      setStatus('error')
+      setMessage(dict.paymentResultError)
+      return
     }
 
-    // Opcional: recuperar estado do PaymentIntent para confirmação
-    // (apenas para UX — webhook é fonte de verdade)
-    const stripePromise = getStripe()
-    if (stripePromise && clientSecret) {
-      stripePromise.then((stripe) => {
-        if (!stripe) return
-        stripe.retrievePaymentIntent(clientSecret).then(({ paymentIntent }) => {
-          if (!paymentIntent) return
-          if (paymentIntent.status === 'succeeded') {
+    stripePromise.then((stripe) => {
+      if (!stripe) {
+        setStatus('error')
+        setMessage(dict.paymentResultError)
+        return
+      }
+
+      stripe.retrievePaymentIntent(clientSecret).then(({ paymentIntent }) => {
+        if (!paymentIntent) {
+          setStatus('error')
+          setMessage(dict.paymentResultError)
+          return
+        }
+
+        switch (paymentIntent.status) {
+          case 'succeeded':
             setStatus('succeeded')
             setMessage(dict.paymentResultSucceeded)
-          } else if (paymentIntent.status === 'processing') {
+            // Clear cart only on genuinely successful payment
+            if (!cartClearedRef.current) {
+              cartClearedRef.current = true
+              clear()
+            }
+            break
+          case 'processing':
             setStatus('processing')
             setMessage(dict.paymentResultProcessing)
-          } else if (paymentIntent.status === 'requires_payment_method' || paymentIntent.status === 'requires_action') {
+            break
+          case 'requires_payment_method':
+          case 'requires_action':
             setStatus('requires_payment_method')
             setMessage(dict.paymentResultFailed)
-          }
-        })
+            break
+          default:
+            setStatus('unknown')
+            setMessage(dict.paymentResultUnknown)
+        }
+      }).catch(() => {
+        // retrievePaymentIntent threw (network failure, Stripe JS error)
+        // Do NOT clear cart. Show safe generic error without exposing internals.
+        setStatus('error')
+        setMessage(dict.paymentResultError)
       })
-    }
-  }, [searchParams, dict])
+    }).catch(() => {
+      // getStripe() or stripe initialisation threw
+      setStatus('error')
+      setMessage(dict.paymentResultError)
+    })
+  }, [searchParams, dict, clear])
 
   const icon: Record<PaymentResultStatus, string> = {
     succeeded: '✅',

@@ -28,6 +28,7 @@ import {
   CouponValidationError,
   IdempotencyConflictError,
 } from './order-types'
+import { isShippingDestination } from './shipping/country-whitelist'
 
 // ─── Constantes ───────────────────────────────────────────────
 
@@ -102,6 +103,8 @@ function validateInput(input: CreateOrderInput): void {
       const normalized = normalizeCountry(input.shippingAddress.country)
       if (!ISO_ALPHA2_RE.test(normalized)) {
         errors.push('shippingAddress.country deve ser ISO 3166-1 alpha-2.')
+      } else if (!isShippingDestination(normalized)) {
+        errors.push(`Envio não disponível para "${normalized}". Destinos suportados: UE-27 + GB/CH/NO/IS/LI.`)
       }
     } else {
       errors.push('shippingAddress.country é obrigatório.')

@@ -639,66 +639,6 @@ const Homepage: GlobalConfig = {
   ],
 }
 
-// ─── Shipping Settings Global ──────────────────────────────────
-
-const ShippingSettings: GlobalConfig = {
-  slug: 'shipping-settings',
-  label: 'Configurações de Expedição',
-  admin: {
-    group: 'Loja',
-    description: 'Morada de origem (loja) e pesos padrão para classes de expedição.',
-  },
-  fields: [
-    {
-      type: 'group',
-      name: 'origin',
-      label: 'Morada de Origem (Loja)',
-      fields: [
-        { name: 'senderName', type: 'text', required: true, label: 'Nome do Remetente' },
-        { name: 'phone', type: 'text', label: 'Telefone' },
-        { name: 'email', type: 'email', label: 'Email' },
-        { name: 'line1', type: 'text', required: true, label: 'Morada' },
-        { name: 'line2', type: 'text', label: 'Complemento' },
-        { name: 'city', type: 'text', required: true, label: 'Cidade' },
-        { name: 'region', type: 'text', label: 'Distrito/Região' },
-        { name: 'postalCode', type: 'text', required: true, label: 'Código Postal' },
-        {
-          name: 'country',
-          type: 'text',
-          required: true,
-          defaultValue: 'PT',
-          label: 'País (ISO 3166-1 alpha-2)',
-          admin: { description: 'Ex: PT, ES, FR' },
-        },
-      ],
-    },
-    {
-      type: 'group',
-      name: 'weightSettings',
-      label: 'Pesos Padrão',
-      admin: { description: 'Peso em gramas para cada classe de expedição.' },
-      fields: [
-        {
-          name: 'standardWeightGrams',
-          type: 'number',
-          required: true,
-          defaultValue: 500,
-          min: 1,
-          label: 'Peso Standard (g)',
-        },
-        {
-          name: 'cupulaWeightGrams',
-          type: 'number',
-          required: true,
-          defaultValue: 1000,
-          min: 1,
-          label: 'Peso Cúpula (g)',
-        },
-      ],
-    },
-  ],
-}
-
 // ─── Email Notifications Collection ────────────────────────────
 
 const EmailNotifications: CollectionConfig = {
@@ -821,7 +761,7 @@ const EmailNotifications: CollectionConfig = {
 export default buildConfig({
   serverURL: process.env.NEXT_PUBLIC_SERVER_URL || '',
   collections: [Flowers, Categories, Collections, Media, Coupons, Orders, StockReservations, EmailNotifications],
-  globals: [Homepage, ShippingSettings],
+  globals: [Homepage],
   db,
   localization: {
     locales: [

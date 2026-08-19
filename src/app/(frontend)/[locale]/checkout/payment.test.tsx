@@ -12,6 +12,10 @@
  * 15. payment-result succeeded apresenta sucesso
  * 16. processing apresenta estado pendente
  * 17. requires_payment_method apresenta falha/retry
+ * 18. cart clearing só acontece com PaymentIntent.status=succeeded
+ * 19. redirect_status=succeeded + retrieved processing → clear NOT called
+ * 20. missing clientSecret → clear NOT called
+ * 21. retrieval failure → clear NOT called
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -42,13 +46,23 @@ vi.mock('@stripe/react-stripe-js', () => ({
 }))
 
 // ─── Mock @/lib/stripe-client ─────────────────────────────
+// retrievePaymentIntent is overridable per test via mockRetrievePaymentIntent
+
+let mockRetrievePaymentIntent: any = () =>
+  Promise.resolve({ paymentIntent: { status: 'succeeded' } })
 
 vi.mock('@/lib/stripe-client', () => ({
   getStripe: vi.fn().mockResolvedValue({
-    retrievePaymentIntent: vi.fn(() =>
-      Promise.resolve({ paymentIntent: { status: 'succeeded' } })
-    ),
+    retrievePaymentIntent: (...args: any[]) => mockRetrievePaymentIntent(...args),
   }),
+}))
+
+// ─── Mock CartProvider — expose clear call counter ────────
+
+const mockClear = vi.fn()
+
+vi.mock('@/components/CartProvider', () => ({
+  useCart: () => ({ clear: mockClear }),
 }))
 
 // ─── Mock i18n ────────────────────────────────────────────
@@ -191,21 +205,210 @@ describe('StripePaymentSection', () => {
   })
 })
 
+// ─── Helpers para PaymentResultPage ───────────────────────
+
+function mockSearchParams(overrides: Record<string, string | null>) {
+  ;(useSearchParams as any).mockReturnValue({
+    get: (key: string) => overrides[key] ?? null,
+  })
+}
+
 // ─── Testes PaymentResultPage ─────────────────────────────
 
 describe('PaymentResultPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockClear.mockClear()
     ;(useParams as any).mockReturnValue({ locale: 'pt' })
   })
 
-  it('15. succeeded → mostra sucesso', async () => {
-    ;(useSearchParams as any).mockReturnValue({
-      get: (key: string) => {
-        if (key === 'payment_intent_client_secret') return 'pi_secret_123'
-        if (key === 'redirect_status') return 'succeeded'
-        return null
-      },
+  // ════════════════════════════════════════════════════════════
+  // Cart clearing — only when PaymentIntent.status === 'succeeded'
+  // ════════════════════════════════════════════════════════════
+
+  it('retrieved succeeded → clear called exactly once', async () => {
+    mockRetrievePaymentIntent = () =>
+      Promise.resolve({ paymentIntent: { status: 'succeeded' } })
+
+    mockSearchParams({
+      payment_intent_client_secret: 'pi_secret_123',
+      redirect_status: 'succeeded',
+    })
+
+    render(<PaymentResultPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Pagamento recebido!')).toBeDefined()
+    })
+
+    expect(mockClear).toHaveBeenCalledTimes(1)
+  })
+
+  it('retrieved processing → clear NOT called', async () => {
+    mockRetrievePaymentIntent = () =>
+      Promise.resolve({ paymentIntent: { status: 'processing' } })
+
+    mockSearchParams({
+      payment_intent_client_secret: 'pi_secret_456',
+      redirect_status: 'processing',
+    })
+
+    render(<PaymentResultPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Pagamento em processamento.')).toBeDefined()
+    })
+
+    expect(mockClear).not.toHaveBeenCalled()
+  })
+
+  it('retrieved requires_payment_method → clear NOT called', async () => {
+    mockRetrievePaymentIntent = () =>
+      Promise.resolve({ paymentIntent: { status: 'requires_payment_method' } })
+
+    mockSearchParams({
+      payment_intent_client_secret: 'pi_secret_789',
+      redirect_status: 'requires_payment_method',
+    })
+
+    render(<PaymentResultPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Pagamento não concluído.')).toBeDefined()
+      expect(screen.getByText('Tentar novamente')).toBeDefined()
+    })
+
+    expect(mockClear).not.toHaveBeenCalled()
+  })
+
+  it('retrieved requires_action → clear NOT called', async () => {
+    mockRetrievePaymentIntent = () =>
+      Promise.resolve({ paymentIntent: { status: 'requires_action' } })
+
+    mockSearchParams({
+      payment_intent_client_secret: 'pi_secret_aaa',
+      redirect_status: 'requires_action',
+    })
+
+    render(<PaymentResultPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Pagamento não concluído.')).toBeDefined()
+    })
+
+    expect(mockClear).not.toHaveBeenCalled()
+  })
+
+  it('redirect_status=succeeded + retrieved processing → clear NOT called', async () => {
+    // This is the critical forgery scenario: client sends
+    // redirect_status=succeeded but Stripe says processing
+    mockRetrievePaymentIntent = () =>
+      Promise.resolve({ paymentIntent: { status: 'processing' } })
+
+    mockSearchParams({
+      payment_intent_client_secret: 'pi_secret_forged',
+      redirect_status: 'succeeded',
+    })
+
+    render(<PaymentResultPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Pagamento em processamento.')).toBeDefined()
+    })
+
+    expect(mockClear).not.toHaveBeenCalled()
+  })
+
+  it('retrieved succeeded only triggers clear once (idempotency)', async () => {
+    let callCount = 0
+    mockRetrievePaymentIntent = () => {
+      callCount++
+      return Promise.resolve({ paymentIntent: { status: 'succeeded' } })
+    }
+
+    mockSearchParams({
+      payment_intent_client_secret: 'pi_secret_ccc',
+      redirect_status: 'succeeded',
+    })
+
+    // Render will call retrievePaymentIntent once; React strict-mode
+    // double-invocation is handled by processedRef. Only one clear.
+    const { rerender } = render(<PaymentResultPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Pagamento recebido!')).toBeDefined()
+    })
+
+    expect(mockClear).toHaveBeenCalledTimes(1)
+  })
+
+  it('no clientSecret → clear NOT called', async () => {
+    mockRetrievePaymentIntent = () =>
+      Promise.resolve({ paymentIntent: { status: 'succeeded' } })
+
+    mockSearchParams({
+      payment_intent_client_secret: null,
+      redirect_status: 'succeeded',
+    })
+
+    render(<PaymentResultPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Erro ao verificar pagamento.')).toBeDefined()
+    })
+
+    expect(mockClear).not.toHaveBeenCalled()
+  })
+
+  it('no paymentIntent returned (retrieval failure) → clear NOT called', async () => {
+    mockRetrievePaymentIntent = () =>
+      Promise.resolve({ paymentIntent: null })
+
+    mockSearchParams({
+      payment_intent_client_secret: 'pi_secret_fail',
+      redirect_status: 'succeeded',
+    })
+
+    render(<PaymentResultPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Erro ao verificar pagamento.')).toBeDefined()
+    })
+
+    expect(mockClear).not.toHaveBeenCalled()
+  })
+
+  it('retrievePaymentIntent rejects → clear NOT called, safe error shown', async () => {
+    mockRetrievePaymentIntent = () =>
+      Promise.reject(new Error('network failure'))
+
+    mockSearchParams({
+      payment_intent_client_secret: 'pi_secret_reject',
+      redirect_status: 'succeeded',
+    })
+
+    render(<PaymentResultPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Erro ao verificar pagamento.')).toBeDefined()
+    })
+
+    // Generic error must not expose internal details
+    expect(screen.queryByText('network failure')).toBeNull()
+    expect(mockClear).not.toHaveBeenCalled()
+  })
+
+  // ════════════════════════════════════════════════════════════
+  // Display-only tests (redirect_status used for UX only)
+  // ════════════════════════════════════════════════════════════
+
+  it('exibe succeeded (redirect_status via Stripe retrieval)', async () => {
+    mockRetrievePaymentIntent = () =>
+      Promise.resolve({ paymentIntent: { status: 'succeeded' } })
+
+    mockSearchParams({
+      payment_intent_client_secret: 'pi_secret_123',
+      redirect_status: 'succeeded',
     })
 
     render(<PaymentResultPage />)
@@ -214,13 +417,13 @@ describe('PaymentResultPage', () => {
     })
   })
 
-  it('16. processing → mostra pendente', async () => {
-    ;(useSearchParams as any).mockReturnValue({
-      get: (key: string) => {
-        if (key === 'payment_intent_client_secret') return 'pi_secret_456'
-        if (key === 'redirect_status') return 'processing'
-        return null
-      },
+  it('exibe processing (redirect_status via Stripe retrieval)', async () => {
+    mockRetrievePaymentIntent = () =>
+      Promise.resolve({ paymentIntent: { status: 'processing' } })
+
+    mockSearchParams({
+      payment_intent_client_secret: 'pi_secret_456',
+      redirect_status: 'processing',
     })
 
     render(<PaymentResultPage />)
@@ -229,13 +432,13 @@ describe('PaymentResultPage', () => {
     })
   })
 
-  it('17. requires_payment_method → mostra falha + retry', async () => {
-    ;(useSearchParams as any).mockReturnValue({
-      get: (key: string) => {
-        if (key === 'payment_intent_client_secret') return 'pi_secret_789'
-        if (key === 'redirect_status') return 'requires_payment_method'
-        return null
-      },
+  it('exibe failed + retry (redirect_status via Stripe retrieval)', async () => {
+    mockRetrievePaymentIntent = () =>
+      Promise.resolve({ paymentIntent: { status: 'requires_payment_method' } })
+
+    mockSearchParams({
+      payment_intent_client_secret: 'pi_secret_789',
+      redirect_status: 'requires_payment_method',
     })
 
     render(<PaymentResultPage />)
@@ -246,8 +449,12 @@ describe('PaymentResultPage', () => {
   })
 
   it('sem parâmetros → erro', async () => {
-    ;(useSearchParams as any).mockReturnValue({
-      get: () => null,
+    mockRetrievePaymentIntent = () =>
+      Promise.resolve({ paymentIntent: { status: 'succeeded' } })
+
+    mockSearchParams({
+      payment_intent_client_secret: null,
+      redirect_status: null,
     })
 
     render(<PaymentResultPage />)
