@@ -33,7 +33,7 @@ export default function CollectionsSection({ collections, locale, dict }: Collec
           return (
             <Link
               key={col.id}
-              href={`/${locale}/catalog?collection=${col.slug}`}
+              href={`/${locale}/collection/${col.slug}`}
               className="group relative bg-white overflow-hidden"
             >
               <div className="aspect-[4/3] relative overflow-hidden">

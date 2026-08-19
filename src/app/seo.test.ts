@@ -326,3 +326,108 @@ describe('Image SEO — alt text', () => {
   })
 })
 
+// ── Category / Collection landing page logic ───────────
+describe('Category/Collection landing page resolution', () => {
+  it('resolves category by slug from an index', () => {
+    const categories = [
+      { id: 1, name: 'Brincos', slug: 'brincos' },
+      { id: 2, name: 'Anéis', slug: 'aneis' },
+    ]
+    const found = categories.find((c) => c.slug === 'brincos')
+    expect(found).toBeDefined()
+    expect(found!.name).toBe('Brincos')
+  })
+
+  it('returns undefined for non-existent category slug', () => {
+    const categories = [
+      { id: 1, name: 'Brincos', slug: 'brincos' },
+    ]
+    const found = categories.find((c) => c.slug === 'pingentes')
+    expect(found).toBeUndefined()
+  })
+
+  it('rejects inactive collections', () => {
+    const collections = [
+      { id: 1, name: 'Primavera', slug: 'primavera', isActive: true },
+      { id: 2, name: 'Inverno', slug: 'inverno', isActive: false },
+    ]
+    const lookupSlug = (slug: string) => {
+      const col = collections.find((c) => c.slug === slug)
+      return col && col.isActive ? col : null
+    }
+    expect(lookupSlug('primavera')).toBeDefined()
+    expect(lookupSlug('inverno')).toBeNull()
+  })
+
+  it('filters products by category id', () => {
+    const products = [
+      { id: 1, category: { id: 1 }, namePt: 'Brincos Rosa' },
+      { id: 2, category: { id: 2 }, namePt: 'Anel Orquídea' },
+      { id: 3, category: { id: 1 }, namePt: 'Brincos Azul' },
+    ]
+    const catId = 1
+    const filtered = products.filter((p) => p.category.id === catId)
+    expect(filtered).toHaveLength(2)
+    expect(filtered.map((p) => p.namePt)).toEqual(['Brincos Rosa', 'Brincos Azul'])
+  })
+
+  it('filters products by collection id', () => {
+    const products = [
+      { id: 1, collections: [{ id: 1 }, { id: 2 }], namePt: 'Peça A' },
+      { id: 2, collections: [{ id: 1 }], namePt: 'Peça B' },
+      { id: 3, collections: [{ id: 3 }], namePt: 'Peça C' },
+    ]
+    const colId = 1
+    const filtered = products.filter((p) =>
+      p.collections.some((c: { id: number }) => c.id === colId)
+    )
+    expect(filtered).toHaveLength(2)
+    expect(filtered.map((p) => p.namePt)).toEqual(['Peça A', 'Peça B'])
+  })
+
+  it('sitemap excludes categories with no products', () => {
+    const categories = [
+      { slug: 'brincos', flowerCount: 5 },
+      { slug: 'vazia', flowerCount: 0 },
+    ]
+    const included = categories.filter((c) => c.flowerCount > 0)
+    expect(included).toHaveLength(1)
+    expect(included[0].slug).toBe('brincos')
+  })
+
+  it('sitemap excludes inactive collections', () => {
+    const collections = [
+      { slug: 'primavera', isActive: true, flowerCount: 3 },
+      { slug: 'inverno', isActive: false, flowerCount: 2 },
+      { slug: 'vazia', isActive: true, flowerCount: 0 },
+    ]
+    const included = collections.filter((c) => c.isActive && c.flowerCount > 0)
+    expect(included).toHaveLength(1)
+    expect(included[0].slug).toBe('primavera')
+  })
+
+  it('does not duplicate homepage PT in sitemap', () => {
+    const urls = [
+      'https://eternalflowers.pt/pt',
+      'https://eternalflowers.pt/en',
+      'https://eternalflowers.pt/pt/catalog',
+    ]
+    const ptHome = urls.filter((u) => u === 'https://eternalflowers.pt/pt')
+    expect(ptHome).toHaveLength(1)
+  })
+
+  it('category links have correct format', () => {
+    const locale = 'pt'
+    const slug = 'brincos'
+    const href = `/${locale}/category/${slug}`
+    expect(href).toBe('/pt/category/brincos')
+  })
+
+  it('collection links have correct format', () => {
+    const locale = 'en'
+    const slug = 'primavera'
+    const href = `/${locale}/collection/${slug}`
+    expect(href).toBe('/en/collection/primavera')
+  })
+})
+

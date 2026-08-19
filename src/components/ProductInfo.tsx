@@ -1,14 +1,17 @@
+import Link from 'next/link'
 import AddToCartButton from './AddToCartButton'
 import { computePurchaseEligibility } from '@/lib/can-purchase'
 
 interface CategoryRef {
   id: number
   name: string
+  slug: string
 }
 
 interface CollectionRef {
   id: number
   name: string
+  slug: string
 }
 
 interface ProductInfoProps {
@@ -70,10 +73,12 @@ export default function ProductInfo({
 }: ProductInfoProps) {
   const catName =
     category && typeof category !== 'number' ? category.name : null
-  const colNames: string[] =
+  const catSlug =
+    category && typeof category !== 'number' ? category.slug : null
+  const colRefs: { name: string; slug: string }[] =
     collections
       ?.filter((c): c is CollectionRef => typeof c !== 'number')
-      .map((c) => c.name) ?? []
+      .map((c) => ({ name: c.name, slug: c.slug })) ?? []
 
   // Determinar se o produto é comprável (delega no helper partilhado para consistência com JSON-LD)
   const { canPurchase: canAddToCart } = computePurchaseEligibility({
@@ -99,18 +104,22 @@ export default function ProductInfo({
       </div>
 
       <div className="mt-7 flex flex-wrap gap-2">
-        {catName && (
-          <span className="border border-brand-wood/10 bg-brand-wood/5 px-3 py-1.5 text-xs text-brand-wood">
-            {catName}
-          </span>
-        )}
-        {colNames.map((n) => (
-          <span
-            key={n}
-            className="border border-brand-wood/10 bg-brand-wood/5 px-3 py-1.5 text-xs text-brand-wood"
+        {catName && catSlug && (
+          <Link
+            href={`/${locale}/category/${catSlug}`}
+            className="border border-brand-wood/10 bg-brand-wood/5 px-3 py-1.5 text-xs text-brand-wood transition-colors duration-300 hover:border-brand-gold/30 hover:text-brand-gold-dark"
           >
-            {n}
-          </span>
+            {catName}
+          </Link>
+        )}
+        {colRefs.map((c) => (
+          <Link
+            key={c.slug}
+            href={`/${locale}/collection/${c.slug}`}
+            className="border border-brand-wood/10 bg-brand-wood/5 px-3 py-1.5 text-xs text-brand-wood transition-colors duration-300 hover:border-brand-gold/30 hover:text-brand-gold-dark"
+          >
+            {c.name}
+          </Link>
         ))}
         <span className="border border-brand-wood/10 bg-brand-wood/5 px-3 py-1.5 text-xs text-brand-wood">
           {dict[productTypeLabels[productType]] || productType}
