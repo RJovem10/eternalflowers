@@ -57,7 +57,7 @@ const FORWARD_FULFILLMENT_STATUSES = new Set([
  * Cancela uma Order.
  *
  * O serviço decide internamente a estratégia:
- *   - pending_payment → pre_payment_cancel
+ *   - pending_payment / awaiting_shipping → pre_payment_cancel
  *   - confirmed + paid → paid_refund_cancel
  *   - processing/shipped/completed → erro (não permitido)
  *   - já cancelled/expired → already_cancelled (idempotente)
@@ -94,7 +94,7 @@ export async function cancelOrder(
   const paymentStatus = order.paymentStatus as string | undefined
 
   // ─── 4. Escolher estratégia ─────────────────────────────────
-  if (order.orderStatus === 'pending_payment') {
+  if (order.orderStatus === 'pending_payment' || order.orderStatus === 'awaiting_shipping') {
     return prePaymentCancel(payload, order)
   }
 
@@ -180,7 +180,7 @@ async function prePaymentCancel(
       return { kind: 'already_cancelled', orderId }
     }
 
-    if (!['pending_payment', 'draft'].includes(freshOrder.orderStatus)) {
+    if (!['pending_payment', 'draft', 'awaiting_shipping'].includes(freshOrder.orderStatus)) {
       throw new CancelOrderNotAllowedError(
         orderId,
         `Order mudou para "${freshOrder.orderStatus}" entre validações.`,

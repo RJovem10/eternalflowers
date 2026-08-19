@@ -580,4 +580,64 @@ describe('prepareOrderForPayment', () => {
     expect(r2.kind).toBe('already_prepared')
     expect(r2.order.orderStatus).toBe('awaiting_shipping')
   })
+
+  // ── Test I: standard reservation ~30 min ─────────────────────
+  it('I) standard reservation ~30 min', async () => {
+    const payload = createMockPayload()
+    const order = createDraftOrder({ items: [makeOrderItem(1, 1)] })
+
+    await prepareOrderForPayment(payload, makeInput({
+      orderId: order.id,
+    }))
+
+    const orderReserves = mockReservations.filter((r: any) => r.order === order.id)
+    expect(orderReserves.length).toBe(1)
+
+    const expiresAt = new Date(orderReserves[0].expiresAt).getTime()
+    const now = Date.now()
+    const diffMs = expiresAt - now
+    // Should be ~30 min (1800000 ms) — allow ±5 min tolerance
+    expect(diffMs).toBeGreaterThan(25 * 60 * 1000)   // > 25 min
+    expect(diffMs).toBeLessThan(35 * 60 * 1000)      // < 35 min
+  })
+
+  // ── Test E: cupula reservation ~48h ──────────────────────────
+  it('E) cupula reservation ~48h expiry', async () => {
+    const payload = createMockPayload()
+    const order = createDraftOrder({ items: [makeOrderItem(6, 1)] })
+
+    await prepareOrderForPayment(payload, makeInput({
+      orderId: order.id,
+    }))
+
+    const orderReserves = mockReservations.filter((r: any) => r.order === order.id)
+    expect(orderReserves.length).toBe(1)
+
+    const expiresAt = new Date(orderReserves[0].expiresAt).getTime()
+    const now = Date.now()
+    const diffMs = expiresAt - now
+    // Should be ~48h (172800000 ms) — allow ±1h tolerance
+    expect(diffMs).toBeGreaterThan(47 * 60 * 60 * 1000)   // > 47h
+    expect(diffMs).toBeLessThan(49 * 60 * 60 * 1000)      // < 49h
+  })
+
+  // ── Test D: checkout response includes authoritative fields ──
+  it('D) standard response has authoritative shippingCost and total', async () => {
+    const payload = createMockPayload()
+    const order = createDraftOrder({
+      items: [makeOrderItem(1, 2)], // 2 non-shareable PT = €8 shipping
+      discount: 0,
+    })
+
+    const result = await prepareOrderForPayment(payload, makeInput({
+      orderId: order.id,
+    }))
+
+    // Verify authoritative server-side calculation
+    expect(result.order.shippingCost).toBe(8.00)
+    expect(result.order.total).toBeGreaterThan(0)
+    expect(result.order.orderStatus).toBe('pending_payment')
+    // subtotal comes from the order's own items
+    expect(Number(result.order.subtotal)).toBeGreaterThan(0)
+  })
 })

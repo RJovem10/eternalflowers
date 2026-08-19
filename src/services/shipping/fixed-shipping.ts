@@ -33,8 +33,8 @@ export interface FixedShippingInput {
 }
 
 export interface FixedShippingResult {
-  /** Custo total dos portes a cobrar ao cliente (0 se a confirmar) */
-  shippingCost: number
+  /** Custo total dos portes a cobrar ao cliente (null se a confirmar) */
+  shippingCost: number | null
   /** Se a encomenda contém cúpula */
   hasCupula: boolean
   /**
@@ -86,7 +86,7 @@ export function calculateFixedShipping(input: FixedShippingInput): FixedShipping
   // ── 2. Cúpula → sempre portes a confirmar manualmente ───────
   if (hasCupula) {
     return {
-      shippingCost: 0,
+      shippingCost: null,
       hasCupula: true,
       cupulaNeedsConfirmation: true,
       standardShipmentUnits: 0,

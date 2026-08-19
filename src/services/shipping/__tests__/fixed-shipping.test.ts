@@ -130,7 +130,7 @@ describe('calculateFixedShipping', () => {
       items: [cupulaItem(1)],
     }))
     expect(result.cupulaNeedsConfirmation).toBe(true)
-    expect(result.shippingCost).toBe(0)
+    expect(result.shippingCost).toBeNull()
     expect(result.hasCupula).toBe(true)
   })
 
@@ -141,7 +141,7 @@ describe('calculateFixedShipping', () => {
     }))
     // Cupula always needs confirmation, regardless of value
     expect(result.cupulaNeedsConfirmation).toBe(true)
-    expect(result.shippingCost).toBe(0)
+    expect(result.shippingCost).toBeNull()
     expect(result.hasCupula).toBe(true)
   })
 
@@ -155,7 +155,7 @@ describe('calculateFixedShipping', () => {
     }))
     expect(result.cupulaNeedsConfirmation).toBe(true)
     expect(result.hasCupula).toBe(true)
-    expect(result.shippingCost).toBe(0)
+    expect(result.shippingCost).toBeNull()
   })
 
   // ── L) shareable + non-shareable formula correct ──

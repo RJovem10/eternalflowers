@@ -114,18 +114,29 @@ function createMockPayload() {
   const mockFind = vi.fn(async ({ collection, where, limit }: any) => {
     // Orders
     if (collection === 'orders') {
-      // Filtro complexo: and + or
+      // Filtro complexo: and + nested or
       if (where?.and) {
-        // Candidates: pending_payment + (unpaid OR failed)
-        const orderStatusFilter = where.and[0]?.orderStatus?.equals
+        // OrderStatus filter: can be direct (pending_payment) or nested or (pending_payment OR awaiting_shipping)
+        const statusOr = where.and[0]?.or
+        const statusDirect = where.and[0]?.orderStatus?.equals
         const paymentFilter = where.and[1]?.or
-        if (orderStatusFilter === 'pending_payment' && paymentFilter) {
+
+        let validStatuses: string[] = []
+        if (statusOr) {
+          validStatuses = statusOr
+            .filter((f: any) => f.orderStatus?.equals)
+            .map((f: any) => f.orderStatus.equals)
+        } else if (statusDirect) {
+          validStatuses = [statusDirect]
+        }
+
+        if (validStatuses.length > 0 && paymentFilter) {
           const validPaymentStatuses = paymentFilter
             .filter((f: any) => f.paymentStatus?.equals)
             .map((f: any) => f.paymentStatus.equals)
           return {
             docs: mockOrders.filter(
-              (o) => o.orderStatus === 'pending_payment' && validPaymentStatuses.includes(o.paymentStatus),
+              (o) => validStatuses.includes(o.orderStatus) && validPaymentStatuses.includes(o.paymentStatus),
             ).slice(0, limit || 100),
             totalDocs: mockOrders.length,
           }
@@ -643,5 +654,54 @@ describe('expireAbandonedPendingOrders', () => {
     expect(result.expired).toBe(1)
     // stripeCancelCalled is true (called outside transaction)
     expect(stripeCancelCalled).toBe(true)
+  })
+
+  // ── Test H: awaiting_shipping expiry ─────────────────────────
+  it('H) awaiting_shipping with expired reservation → expires order', async () => {
+    const payload = createMockPayload()
+    const order = createMockOrder({
+      orderStatus: 'awaiting_shipping',
+      paymentStatus: 'unpaid',
+    })
+    const now = new Date('2026-08-09T12:00:00Z')
+
+    // Create an expired reservation (expiresAt in the past)
+    createMockReservation({
+      flower: 1,
+      order: order.id,
+      status: 'active',
+      expiresAt: new Date('2026-08-07T12:00:00Z').toISOString(), // expired 2 days ago
+    })
+
+    const result = await expireAbandonedPendingOrders(payload, { now })
+
+    // Should find and expire the awaiting_shipping order
+    expect(result.total).toBe(1)
+    expect(result.expired).toBe(1)
+    expect(mockOrders.find((o) => o.id === order.id).orderStatus).toBe('expired')
+  })
+
+  it('H2) awaiting_shipping with valid reservation → NOT expired', async () => {
+    const payload = createMockPayload()
+    const order = createMockOrder({
+      orderStatus: 'awaiting_shipping',
+      paymentStatus: 'unpaid',
+    })
+    const now = new Date('2026-08-09T12:00:00Z')
+
+    // Create a valid reservation (expiresAt in the future)
+    createMockReservation({
+      flower: 1,
+      order: order.id,
+      status: 'active',
+      expiresAt: new Date('2026-08-11T12:00:00Z').toISOString(), // still valid
+    })
+
+    const result = await expireAbandonedPendingOrders(payload, { now })
+
+    // Should find the order but NOT expire it (reservation still valid)
+    expect(result.total).toBe(1)
+    expect(result.expired).toBe(0)
+    expect(mockOrders.find((o) => o.id === order.id).orderStatus).toBe('awaiting_shipping')
   })
 })

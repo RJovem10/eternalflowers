@@ -130,7 +130,12 @@ export async function expireAbandonedPendingOrders(
     collection: 'orders',
     where: {
       and: [
-        { orderStatus: { equals: 'pending_payment' } },
+        {
+          or: [
+            { orderStatus: { equals: 'pending_payment' } },
+            { orderStatus: { equals: 'awaiting_shipping' } },
+          ],
+        },
         {
           or: [
             { paymentStatus: { equals: 'unpaid' } },

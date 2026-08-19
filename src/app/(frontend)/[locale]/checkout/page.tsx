@@ -76,7 +76,16 @@ type CheckoutStatus =
   | { type: 'idle' }
   | { type: 'busy' }
   | { type: 'error'; message: string }
-  | { type: 'success'; orderNumber: string; orderId: number }
+  | {
+      type: 'success'
+      orderNumber: string
+      orderId: number
+      orderStatus: string
+      shippingCost: number | null
+      total: number | null
+      subtotal?: number
+      discount?: number
+    }
 
 // ─── Helpers ───────────────────────────────────────────
 function emptyCustomer(): CustomerForm {
@@ -225,7 +234,16 @@ export default function Checkout() {
       const data = await res.json()
 
       if (res.ok) {
-        setStatus({ type: 'success', orderNumber: data.orderNumber, orderId: data.orderId })
+        setStatus({
+          type: 'success',
+          orderNumber: data.orderNumber,
+          orderId: data.orderId,
+          orderStatus: data.orderStatus,
+          shippingCost: data.shippingCost ?? null,
+          total: data.total ?? null,
+          subtotal: data.subtotal,
+          discount: data.discount,
+        })
         // NÃO limpar carrinho — draft/unpaid
       } else if (res.status === 409) {
         setStatus({ type: 'error', message: dict.checkoutConflict })
@@ -319,6 +337,8 @@ export default function Checkout() {
   // ── Success view ────────────────────────────────────
 
   if (status.type === 'success') {
+    const isCupula = status.orderStatus === 'awaiting_shipping'
+
     return (
       <div className="max-w-lg mx-auto py-10 space-y-6">
         <div className="text-center space-y-4">
@@ -327,28 +347,65 @@ export default function Checkout() {
           <p className="text-stone-600">
             {dict.orderNumberLabel}: <strong>{status.orderNumber}</strong>
           </p>
-          <p className="text-sm text-stone-500">{dict.checkoutNextStep}</p>
         </div>
 
-        {/* Payment Element — aparece automaticamente se a Order estiver pending_payment */}
-        <div className="border-t pt-6">
-          <StripePaymentSection
-            orderNumber={status.orderNumber}
-            checkoutRequestId={checkoutRequestIdRef.current}
-            locale={locale}
-            dict={{
-              payNow: dict.payNow,
-              processing: dict.processing,
-              paymentError: dict.paymentError,
-              paymentTryAgain: dict.paymentTryAgain,
-              stripeNotConfigured: dict.stripeNotConfigured,
-              amount: dict.amount,
-              loading: dict.loading,
-              shippingLabel: dict.shippingLabel,
-              shippingToConfirm: dict.shippingToConfirm,
-            }}
-          />
-        </div>
+        {/* Server-authoritative order summary */}
+        {!isCupula && status.shippingCost !== null && status.total !== null && (
+          <div className="bg-white border border-stone-200 rounded-lg p-4 space-y-1.5 text-sm">
+            <div className="flex justify-between text-stone-600">
+              <span>{dict.subtotal}</span>
+              <span>{(status.subtotal ?? 0).toFixed(2)} €</span>
+            </div>
+            {status.discount ? (
+              <div className="flex justify-between text-emerald-700">
+                <span>{dict.discount}</span>
+                <span>-{(status.discount).toFixed(2)} €</span>
+              </div>
+            ) : null}
+            <div className="flex justify-between text-stone-600">
+              <span>{dict.shippingLabel}</span>
+              <span>{status.shippingCost.toFixed(2)} €</span>
+            </div>
+            <div className="flex justify-between font-semibold border-t pt-2 mt-2 text-stone-800">
+              <span>{dict.total}</span>
+              <span>{status.total.toFixed(2)} €</span>
+            </div>
+          </div>
+        )}
+
+        {/* CUPULA confirmation — NO Pay Now */}
+        {isCupula ? (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2">
+            <p className="text-sm text-amber-800 font-medium">
+              {dict.shippingLabel}
+            </p>
+            <p className="text-sm text-amber-700 whitespace-pre-line">
+              {dict.shippingToConfirm}
+            </p>
+          </div>
+        ) : status.orderStatus === 'pending_payment' ? (
+          <>
+            <p className="text-sm text-stone-500 text-center">{dict.checkoutNextStep}</p>
+            <div className="border-t pt-6">
+              <StripePaymentSection
+                orderNumber={status.orderNumber}
+                checkoutRequestId={checkoutRequestIdRef.current}
+                locale={locale}
+                dict={{
+                  payNow: dict.payNow,
+                  processing: dict.processing,
+                  paymentError: dict.paymentError,
+                  paymentTryAgain: dict.paymentTryAgain,
+                  stripeNotConfigured: dict.stripeNotConfigured,
+                  amount: dict.amount,
+                  loading: dict.loading,
+                  shippingLabel: dict.shippingLabel,
+                  shippingToConfirm: dict.shippingToConfirm,
+                }}
+              />
+            </div>
+          </>
+        ) : null}
 
         <div className="text-center">
           <Link

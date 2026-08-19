@@ -71,9 +71,9 @@ const RESULT_ORDER = {
   orderNumber: 'EF-20260808-A1B2C3D4',
   subtotal: 51.0,
   discount: 0,
-  shippingCost: null,
-  total: null,
-  orderStatus: 'draft',
+  shippingCost: 8.00,
+  total: 59.00,
+  orderStatus: 'pending_payment',
   paymentStatus: 'unpaid',
 }
 
@@ -96,21 +96,21 @@ describe('POST /api/checkout', () => {
     expect(data.orderNumber).toBe('EF-20260808-A1B2C3D4')
     expect(data.subtotal).toBe(51.0)
     expect(data.discount).toBe(0)
-    expect(data.shippingCost).toBeNull()
-    expect(data.total).toBeNull()
-    expect(data.orderStatus).toBe('draft')
+    expect(data.shippingCost).toBe(8.00)
+    expect(data.total).toBe(59.00)
+    expect(data.orderStatus).toBe('pending_payment')
     expect(data.paymentStatus).toBe('unpaid')
   })
 
   // ── 2. OrderStatus = draft, paymentStatus = unpaid ──────────
 
-  it('2. status da ordem: draft/unpaid', async () => {
+  it('2. status da ordem: pending_payment/unpaid', async () => {
     mockCreateOrderFn.mockResolvedValue({ order: RESULT_ORDER })
 
     const res = await POST(makeRequest(VALID_INPUT))
     const data = await res.json()
 
-    expect(data.orderStatus).toBe('draft')
+    expect(data.orderStatus).toBe('pending_payment')
     expect(data.paymentStatus).toBe('unpaid')
   })
 

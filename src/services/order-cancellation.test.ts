@@ -747,6 +747,57 @@ describe('cancelOrder — estados não permitidos', () => {
   })
 })
 
+describe('cancelOrder — awaiting_shipping (ISSUE-1Q)', () => {
+  beforeEach(() => {
+    resetMockPayload()
+    resetStripeMocks()
+  })
+
+  // ── Test G: awaiting_shipping cancellation ──────────────────
+  it('G) awaiting_shipping cancela → reserva libertada + order cancelled', async () => {
+    mockOptions.flowers = mockOptions.flowers || {}
+    const flowerId = 10
+    mockOptions.flowers[flowerId] = { id: flowerId, stockQuantity: 2 }
+    mockOptions.order = createMockOrder({
+      orderStatus: 'awaiting_shipping',
+      paymentStatus: 'unpaid',
+    })
+    mockOptions.reservations = [
+      createMockReservation({ flower: flowerId, order: 1, status: 'active' }),
+    ]
+    mockOptions.expectedOrderUpdate = {
+      id: 1,
+      data: {
+        orderStatus: 'cancelled',
+        cancelledAt: expect.any(String),
+      },
+    }
+    const payload = createMockPayload()
+
+    const result = await cancelOrder(payload, { orderId: 1 })
+
+    expect(result.kind).toBe('pre_payment_cancelled')
+    // Reservation foi libertada
+    expect(mockOptions.reservations[0].status).toBe('released')
+    // Order foi cancelada
+    expect(mockOptions.order.orderStatus).toBe('cancelled')
+    expect(mockOptions.order.cancelledAt).toBeDefined()
+  })
+
+  it('G2) awaiting_shipping já cancelled → idempotente', async () => {
+    mockOptions.order = createMockOrder({
+      orderStatus: 'awaiting_shipping',
+      paymentStatus: 'unpaid',
+      cancelledAt: new Date().toISOString(),
+    })
+    mockOptions.order.orderStatus = 'cancelled'
+    const payload = createMockPayload()
+
+    const result = await cancelOrder(payload, { orderId: 1 })
+    expect(result.kind).toBe('already_cancelled')
+  })
+})
+
 describe('cancelOrder — idempotência', () => {
   beforeEach(() => {
     resetMockPayload()

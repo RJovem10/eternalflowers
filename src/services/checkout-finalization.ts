@@ -141,10 +141,11 @@ export async function prepareOrderForPayment(
   const originalSubtotal = Number(order.subtotal) || 0
   const discount = Number(order.discount) || 0
 
-  // Para cupula: shippingCost é 0 porque é a confirmar, total = subtotal - discount (sem portes)
-  const total = Number(((originalSubtotal - discount) + shippingCost).toFixed(2))
+  // Para cupula: shippingCost é null (a confirmar), total = null
+  const effectiveShipping = shippingCost ?? 0
+  const total = hasCupula ? null : Number(((originalSubtotal - discount) + effectiveShipping).toFixed(2))
 
-  if (total < 0) {
+  if (total !== null && total < 0) {
     throw new NegativeTotalError(
       `Total calculado (${total}) é negativo. subtotal=${originalSubtotal}, discount=${discount}, shippingCost=${shippingCost}.`,
     )
@@ -165,8 +166,8 @@ async function executeFinalize(
   order: any,
   input: PrepareOrderInput,
   shippingResult: import('./shipping/fixed-shipping').FixedShippingResult,
-  shippingCost: number,
-  total: number,
+  shippingCost: number | null,
+  total: number | null,
   items: any[],
   hasCupula: boolean,
 ): Promise<PrepareOrderResult> {
@@ -235,6 +236,7 @@ async function executeFinalize(
         quantity: qty,
         checkoutAttemptId,
         req: ctx.req,
+        durationMs: hasCupula ? 48 * 60 * 60 * 1000 : undefined,
       })
 
       if (outcome.kind === 'created' || outcome.kind === 'existing_active') {
