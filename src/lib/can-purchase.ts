@@ -34,8 +34,7 @@ export interface PurchaseEligibilityResult {
  * Schema.org availability mapping:
  * - sold / reserved / out-of-stock-reproducible → OutOfStock
  * - preparing + not made_to_order              → OutOfStock
- * - purchasable + preparing + made_to_order    → PreOrder
- * - purchasable + sold / reserved / unavailable → OutOfStock
+ * - made_to_order (when purchasable)           → PreOrder (not physically in stock)
  * - otherwise                                  → InStock
  */
 export function computePurchaseEligibility(input: PurchaseEligibilityInput): PurchaseEligibilityResult {
@@ -58,11 +57,10 @@ export function computePurchaseEligibility(input: PurchaseEligibilityInput): Pur
   let schemaAvailability: string
   if (isSold || isReserved || isOutOfStockReproducible || isPreparingBlocked) {
     schemaAvailability = 'https://schema.org/OutOfStock'
-  } else if (availability === 'preparing') {
-    // preparing + made_to_order — purchasable but not immediately available
+  } else if (productionMode === 'made_to_order') {
+    // made_to_order is always PreOrder when purchasable
+    // — product is produced after ordering, not physically in stock
     schemaAvailability = 'https://schema.org/PreOrder'
-  } else if (availability === 'sold' || availability === 'reserved') {
-    schemaAvailability = 'https://schema.org/OutOfStock'
   } else {
     schemaAvailability = 'https://schema.org/InStock'
   }

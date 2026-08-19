@@ -186,10 +186,10 @@ describe('computePurchaseEligibility', () => {
     expect(r.schemaAvailability).toBe('https://schema.org/OutOfStock')
   })
 
-  it('made_to_order + stock = 0 → InStock + purchasable', () => {
+  it('made_to_order + available → PreOrder + purchasable', () => {
     const r = computePurchaseEligibility({ availability: 'available', productionMode: 'made_to_order', stockQuantity: 0 })
     expect(r.canPurchase).toBe(true)
-    expect(r.schemaAvailability).toBe('https://schema.org/InStock')
+    expect(r.schemaAvailability).toBe('https://schema.org/PreOrder')
   })
 
   it('sold → OutOfStock + not purchasable', () => {
@@ -326,12 +326,3 @@ describe('Image SEO — alt text', () => {
   })
 })
 
-// ── Favicon ───────────────────────────────────────────
-describe('Favicon', () => {
-  it('references public favicon.svg', () => {
-    const icon = '/favicon.svg'
-    expect(icon).toBe('/favicon.svg')
-    // Not blocked by robots
-    expect(icon).not.toMatch(/\/admin|\/api/)
-  })
-})

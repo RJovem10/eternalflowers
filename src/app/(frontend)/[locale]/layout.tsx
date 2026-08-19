@@ -36,10 +36,6 @@ export const metadata: Metadata = {
   description:
     'Joias botânicas artesanais com flores naturais verdadeiras, preservadas em resina. Peças únicas feitas à mão em Portugal pela Marina. Brincos, colares e pingentes com orquídeas reais.',
   applicationName: 'Eternal Flowers',
-  icons: {
-    icon: '/favicon.svg',
-    apple: '/favicon.svg',
-  },
   generator: 'Next.js',
   referrer: 'origin-when-cross-origin',
   keywords: [
