@@ -156,48 +156,48 @@ export async function resolveShippingContext(
   payload: Payload,
   order: any,
 ): Promise<ShippingContext> {
-  // 1. Carregar Shipping Settings
-  const settings: any = await payload.findGlobal({
-    slug: 'shipping-settings',
-    depth: 0,
-  }).catch(() => null)
+  // 1. Fixed origin (Braga, Portugal) — ShippingSettings Global removed
+  const origin: ShippingAddress = {
+    recipientName: 'Eternal Flowers',
+    phone: '+351',
+    line1: 'Rua do Castelo, 123',
+    city: 'Braga',
+    region: 'Braga',
+    postalCode: '4700-000',
+    country: 'PT',
+  }
 
-  // 2. Fail closed se não existirem
-  validateShippingSettings(settings)
+  // 2. Fixed default weights
+  const defaultStandardWeightGrams = 500
+  const defaultCupulaWeightGrams = 1000
 
-  // 3. Construir origin
-  const origin = buildOrigin(settings.origin)
-
-  // 4. Recolher items e shippingClass de cada produto
+  // 3. Recolher items e shippingClass de cada produto
   const items = (order.items as any[]) || []
   const itemsWithClass = items.map((item: any) => {
-    // shippingClass pode vir do item directamente se o resolver expandir,
-    // ou do flower relationship se depth > 0
-    // Neste caso, lemos o item.flower com depth para obter shippingClass
     const flower = typeof item.flower === 'object' ? item.flower : null
     return {
       shippingClass: flower?.shippingClass || 'standard',
     }
   })
 
-  // 5. Determinar peso
+  // 4. Determinar peso com base nos valores fixos
   const weightKg = resolveWeightKg(
     {
-      standardWeightGrams: settings.weightSettings.standardWeightGrams,
-      cupulaWeightGrams: settings.weightSettings.cupulaWeightGrams,
+      standardWeightGrams: defaultStandardWeightGrams,
+      cupulaWeightGrams: defaultCupulaWeightGrams,
     },
     itemsWithClass,
   )
 
-  // 6. Validar peso resultante (fail closed adicional)
+  // 5. Validar peso resultante
   if (typeof weightKg !== 'number' || weightKg <= 0 || !isFinite(weightKg)) {
     throw new InvalidShippingWeightError(
       'Peso de expedição inválido.',
-      `Peso calculado: ${weightKg} kg. Verificar weightSettings no Payload Global.`,
+      `Peso calculado: ${weightKg} kg. Verificar configurações de peso.`,
     )
   }
 
-  // 7. Construir parcel (apenas weight — sem dimensões fictícias)
+  // 6. Construir parcel (apenas weight — sem dimensões fictícias)
   const parcel: ShippingParcel = { weight: weightKg }
 
   return { origin, parcel }
