@@ -31,63 +31,63 @@ function PaymentResultInner() {
     processedRef.current = true
 
     const clientSecret = searchParams.get('payment_intent_client_secret')
-    const redirectStatus = searchParams.get('redirect_status')
 
-    if (!clientSecret || !redirectStatus) {
+    if (!clientSecret) {
       setStatus('error')
       setMessage(dict.paymentResultError)
       return
     }
 
-    // Mapear redirect_status para status interno
-    switch (redirectStatus) {
-      case 'succeeded':
-        setStatus('succeeded')
-        setMessage(dict.paymentResultSucceeded)
-        // Clear cart only on genuinely successful payment
-        if (!cartClearedRef.current) {
-          cartClearedRef.current = true
-          clear()
-        }
-        break
-      case 'processing':
-        setStatus('processing')
-        setMessage(dict.paymentResultProcessing)
-        break
-      case 'requires_payment_method':
-        setStatus('requires_payment_method')
-        setMessage(dict.paymentResultFailed)
-        break
-      default:
-        setStatus('unknown')
-        setMessage(dict.paymentResultUnknown)
+    // ─── Retrieve the real PaymentIntent from Stripe ───────────
+    // The redirect_status URL parameter is NOT trusted for
+    // business decisions (it is client-side). Only the actual
+    // PaymentIntent status from Stripe may authorise cart clearing.
+    const stripePromise = getStripe()
+    if (!stripePromise) {
+      setStatus('error')
+      setMessage(dict.paymentResultError)
+      return
     }
 
-    // Opcional: recuperar estado do PaymentIntent para confirmação
-    // (apenas para UX — webhook é fonte de verdade)
-    const stripePromise = getStripe()
-    if (stripePromise && clientSecret) {
-      stripePromise.then((stripe) => {
-        if (!stripe) return
-        stripe.retrievePaymentIntent(clientSecret).then(({ paymentIntent }) => {
-          if (!paymentIntent) return
-          if (paymentIntent.status === 'succeeded') {
+    stripePromise.then((stripe) => {
+      if (!stripe) {
+        setStatus('error')
+        setMessage(dict.paymentResultError)
+        return
+      }
+
+      stripe.retrievePaymentIntent(clientSecret).then(({ paymentIntent }) => {
+        if (!paymentIntent) {
+          setStatus('error')
+          setMessage(dict.paymentResultError)
+          return
+        }
+
+        switch (paymentIntent.status) {
+          case 'succeeded':
             setStatus('succeeded')
             setMessage(dict.paymentResultSucceeded)
+            // Clear cart only on genuinely successful payment
             if (!cartClearedRef.current) {
               cartClearedRef.current = true
               clear()
             }
-          } else if (paymentIntent.status === 'processing') {
+            break
+          case 'processing':
             setStatus('processing')
             setMessage(dict.paymentResultProcessing)
-          } else if (paymentIntent.status === 'requires_payment_method' || paymentIntent.status === 'requires_action') {
+            break
+          case 'requires_payment_method':
+          case 'requires_action':
             setStatus('requires_payment_method')
             setMessage(dict.paymentResultFailed)
-          }
-        })
+            break
+          default:
+            setStatus('unknown')
+            setMessage(dict.paymentResultUnknown)
+        }
       })
-    }
+    })
   }, [searchParams, dict, clear])
 
   const icon: Record<PaymentResultStatus, string> = {
