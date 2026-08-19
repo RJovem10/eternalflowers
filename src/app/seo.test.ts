@@ -435,9 +435,9 @@ describe('Category/Collection landing page resolution', () => {
       { id: 1, name: 'Primavera', slug: 'primavera', isActive: true },
       { id: 2, name: 'Inverno', slug: 'inverno', isActive: false },
     ]
-    // Simula o filtro do ProductInfo.tsx
+    // Simula o filtro do ProductInfo.tsx – só isActive === true gera link
     const colRefs = collections
-      .filter((c) => c.isActive !== false)
+      .filter((c) => c.isActive === true)
       .map((c) => ({ name: c.name, slug: c.slug }))
     expect(colRefs).toHaveLength(1)
     expect(colRefs[0].name).toBe('Primavera')
@@ -449,20 +449,20 @@ describe('Category/Collection landing page resolution', () => {
       { id: 1, name: 'Inverno', slug: 'inverno', isActive: false },
     ]
     const colRefs = collections
-      .filter((c) => c.isActive !== false)
+      .filter((c) => c.isActive === true)
       .map((c) => ({ name: c.name, slug: c.slug }))
     expect(colRefs).toHaveLength(0)
   })
 
-  it('collection with undefined isActive defaults to linkable', () => {
-    // Legacy data where isActive was never set should still appear
+  it('collection with undefined isActive → not linkable', () => {
+    // Legacy data without isActive cannot safely link to a 404
     const collections = [
       { id: 1, name: 'Primavera', slug: 'primavera', isActive: undefined },
     ]
     const colRefs = collections
-      .filter((c) => c.isActive !== false)
+      .filter((c) => c.isActive === true)
       .map((c) => ({ name: c.name, slug: c.slug }))
-    expect(colRefs).toHaveLength(1)
+    expect(colRefs).toHaveLength(0)
   })
 })
 

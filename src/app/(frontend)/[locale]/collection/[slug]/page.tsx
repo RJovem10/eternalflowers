@@ -26,11 +26,11 @@ const nfMap: Record<string, string> = {
 }
 
 const collectionFallbackDescriptions: Record<string, (name: string) => string> = {
-  pt: (name) => `Coleção ${name} — joias botânicas artesanais com flores naturais verdadeiras, preservadas em resina. Peças únicas feitas à mão em Portugal.`,
-  en: (name) => `${name} collection — handmade botanical jewellery with real natural flowers preserved in resin. One-of-a-kind pieces handcrafted in Portugal.`,
-  es: (name) => `Colección ${name} — joyería botánica artesanal con flores naturales reales preservadas en resina. Piezas únicas hechas a mano en Portugal.`,
-  it: (name) => `Collezione ${name} — gioielli botanici artigianali con fiori naturali veri preservati in resina. Pezzi unici fatti a mano in Portogallo.`,
-  de: (name) => `${name} Kollektion — handgefertigter botanischer Schmuck mit echten Naturblumen, konserviert in Harz. Einzigartige Stücke, handgefertigt in Portugal.`,
+  pt: (name) => `Coleção ${name} — joias botânicas artesanais com flores naturais verdadeiras, preservadas em resina. Feitas à mão em Portugal.`,
+  en: (name) => `${name} collection — handmade botanical jewellery with real natural flowers preserved in resin. Handcrafted in Portugal.`,
+  es: (name) => `Colección ${name} — joyería botánica artesanal con flores naturales reales preservadas en resina. Hechas a mano en Portugal.`,
+  it: (name) => `Collezione ${name} — gioielli botanici artigianali con fiori naturali veri preservati in resina. Fatti a mano in Portogallo.`,
+  de: (name) => `${name} Kollektion — handgefertigter botanischer Schmuck mit echten Naturblumen, konserviert in Harz. Handgefertigt in Portugal.`,
 }
 
 export async function generateMetadata({

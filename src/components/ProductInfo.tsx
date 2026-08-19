@@ -79,7 +79,7 @@ export default function ProductInfo({
   const colRefs: { name: string; slug: string }[] =
     collections
       ?.filter((c): c is CollectionRef => typeof c !== 'number')
-      .filter((c) => c.isActive !== false) // only active collections get a public link
+      .filter((c) => c.isActive === true) // only active collections get a public link
       .map((c) => ({ name: c.name, slug: c.slug })) ?? []
 
   // Determinar se o produto é comprável (delega no helper partilhado para consistência com JSON-LD)

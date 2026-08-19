@@ -24,11 +24,11 @@ const nfMap: Record<string, string> = {
 }
 
 const categoryFallbackDescriptions: Record<string, (name: string) => string> = {
-  pt: (name) => `${name} — joias botânicas artesanais com flores naturais verdadeiras, preservadas em resina. Peças únicas feitas à mão em Portugal.`,
-  en: (name) => `${name} — handmade botanical jewellery with real natural flowers preserved in resin. One-of-a-kind pieces handcrafted in Portugal.`,
-  es: (name) => `${name} — joyería botánica artesanal con flores naturales reales preservadas en resina. Piezas únicas hechas a mano en Portugal.`,
-  it: (name) => `${name} — gioielli botanici artigianali con fiori naturali veri preservati in resina. Pezzi unici fatti a mano in Portogallo.`,
-  de: (name) => `${name} — handgefertigter botanischer Schmuck mit echten Naturblumen, konserviert in Harz. Einzigartige Stücke, handgefertigt in Portugal.`,
+  pt: (name) => `${name} — joias botânicas artesanais com flores naturais verdadeiras, preservadas em resina. Feitas à mão em Portugal.`,
+  en: (name) => `${name} — handmade botanical jewellery with real natural flowers preserved in resin. Handcrafted in Portugal.`,
+  es: (name) => `${name} — joyería botánica artesanal con flores naturales reales preservadas en resina. Hechas a mano en Portugal.`,
+  it: (name) => `${name} — gioielli botanici artigianali con fiori naturali veri preservati in resina. Fatti a mano in Portogallo.`,
+  de: (name) => `${name} — handgefertigter botanischer Schmuck mit echten Naturblumen, konserviert in Harz. Handgefertigt in Portugal.`,
 }
 
 export async function generateMetadata({
@@ -66,7 +66,7 @@ export async function generateMetadata({
     const fallbackFn = categoryFallbackDescriptions[locale]
     const description =
       localizedDesc ||
-      fallbackFn(cat.name.toLowerCase())
+      fallbackFn(cat.name)
 
     const languages: Record<string, string> = {}
     for (const l of locales) {
