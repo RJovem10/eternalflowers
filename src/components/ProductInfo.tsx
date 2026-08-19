@@ -1,4 +1,5 @@
 import AddToCartButton from './AddToCartButton'
+import { computePurchaseEligibility } from '@/lib/can-purchase'
 
 interface CategoryRef {
   id: number
@@ -74,20 +75,12 @@ export default function ProductInfo({
       ?.filter((c): c is CollectionRef => typeof c !== 'number')
       .map((c) => c.name) ?? []
 
-  // Determinar se o produto é comprável
-  const isSold = availability === 'sold'
-  const isReserved = availability === 'reserved'
-  const isOutOfStock = productionMode === 'reproducible' && (stockQuantity ?? 0) === 0
-
-  let canAddToCart: boolean
-
-  // Produto demo (productionMode=null): preserva comportamento anterior — só sold/reserved bloqueiam
-  if (!productionMode) {
-    canAddToCart = !isSold && !isReserved
-  } else {
-    // made_to_order + preparing é comprável; outros modes + preparing não
-    canAddToCart = !isSold && !isReserved && !isOutOfStock && !(availability === 'preparing' && productionMode !== 'made_to_order')
-  }
+  // Determinar se o produto é comprável (delega no helper partilhado para consistência com JSON-LD)
+  const { canPurchase: canAddToCart } = computePurchaseEligibility({
+    availability,
+    productionMode,
+    stockQuantity,
+  })
 
   // Prazo de produção (só made_to_order)
   const showLeadTime = productionMode === 'made_to_order' && productionLeadTime != null && productionLeadTime > 0

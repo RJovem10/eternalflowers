@@ -42,16 +42,25 @@ export async function generateMetadata({
     de: 'Eternal Flowers Portugal — Handgefertigter botanischer Schmuck mit echten Orchideen',
   }
 
+  // Locale-specific SEO descriptions — reinforce core message in all 5 languages
+  const seoDescription: Record<string, string> = {
+    pt: 'Joias botânicas artesanais feitas à mão com orquídeas e flores naturais verdadeiras, preservadas em resina. Brincos, colares e pingentes únicos criados pela Marina em Portugal.',
+    en: 'Handmade botanical jewellery crafted with real natural orchids and flowers, preserved in resin. Unique earrings, necklaces and pendants created by Marina in Portugal.',
+    es: 'Joyas botánicas artesanales hechas a mano con orquídeas y flores naturales verdaderas, preservadas en resina. Pendientes, collares y colgantes únicos creados por Marina en Portugal.',
+    it: 'Gioielli botanici artigianali fatti a mano con orchidee e fiori naturali veri, preservati nella resina. Orecchini, collane e pendenti unici creati da Marina in Portogallo.',
+    de: 'Handgefertigter botanischer Schmuck mit echten natürlichen Orchideen und Blumen, in Harz konserviert. Einzigartige Ohrringe, Halsketten und Anhänger von Marina in Portugal handgefertigt.',
+  }
+
   return {
     title: seoTitle[locale] || seoTitle.pt,
-    description: dict.heroSubtitleFallback,
+    description: seoDescription[locale] || dict.heroSubtitleFallback,
     alternates: {
       canonical: `${siteUrl}/${locale}`,
       languages,
     },
     openGraph: {
       title: seoTitle[locale] || seoTitle.pt,
-      description: dict.heroSubtitleFallback,
+      description: seoDescription[locale] || dict.heroSubtitleFallback,
       locale: ({ pt: 'pt_PT', en: 'en_GB', es: 'es_ES', it: 'it_IT', de: 'de_DE' } as Record<string, string>)[locale] || 'pt_PT',
       siteName: 'Eternal Flowers',
       type: 'website',

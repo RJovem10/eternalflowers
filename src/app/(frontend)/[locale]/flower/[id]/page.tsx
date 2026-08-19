@@ -12,6 +12,7 @@ import ProductStory from '@/components/ProductStory'
 import ProductAttributes from '@/components/ProductAttributes'
 import RelatedProducts from '@/components/RelatedProducts'
 import type { Flower, Category, Collection, Media } from '@/payload-types'
+import { computePurchaseEligibility } from '@/lib/can-purchase'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,7 +44,7 @@ export async function generateMetadata({ params }: FlowerPageParams): Promise<Me
     const localizedName = getLocaleField<string>(flower, 'name', locale, '')
     const creationName = flower.creationName
     const scientificName = flower.scientificName
-    const title = creationName || localizedName || scientificName
+    const title = `${creationName || localizedName || scientificName} — Eternal Flowers`
     const localizedDescription = getLocaleField<string>(flower, 'description', locale, '')
     const price = `${flower.price.toFixed(2)} €`
     const hasScientificName = scientificName && scientificName !== title
@@ -120,10 +121,21 @@ export default async function FlowerDetail({ params }: FlowerPageParams) {
 
   const productUrl = `${siteUrl}/${locale}/flower/${id}`
   const catalogUrl = `${siteUrl}/${locale}/catalog`
-  const imageUrl = image?.url || null
-  const availabilityLd = (flower.availability === 'sold' || (flower.stockQuantity !== null && flower.stockQuantity !== undefined && flower.stockQuantity <= 0))
-    ? 'https://schema.org/OutOfStock'
-    : 'https://schema.org/InStock'
+  const rawImageUrl = image?.url || null
+  // Resolve relative image URL to absolute for structured data
+  const absoluteImageUrl = rawImageUrl
+    ? rawImageUrl.startsWith('http')
+      ? rawImageUrl
+      : rawImageUrl.startsWith('/')
+        ? `${siteUrl}${rawImageUrl}`
+        : `${siteUrl}/${rawImageUrl}`
+    : null
+
+  const { schemaAvailability } = computePurchaseEligibility({
+    availability: flower.availability || 'available',
+    productionMode: flower.productionMode,
+    stockQuantity: flower.stockQuantity,
+  })
 
   const collections: Collection[] = (flower.collections?.filter((c): c is Collection =>
     typeof c !== 'number'
@@ -160,7 +172,7 @@ export default async function FlowerDetail({ params }: FlowerPageParams) {
             '@type': 'Product',
             name: name,
             description: description || `${name} — joia botânica artesanal com flor natural${flower.scientificName ? ' (' + flower.scientificName + ')' : ''}.`,
-            image: imageUrl ? [imageUrl] : undefined,
+            image: absoluteImageUrl ? [absoluteImageUrl] : undefined,
             url: productUrl,
             brand: {
               '@type': 'Brand',
@@ -170,7 +182,7 @@ export default async function FlowerDetail({ params }: FlowerPageParams) {
               '@type': 'Offer',
               price: flower.price,
               priceCurrency: 'EUR',
-              availability: availabilityLd,
+              availability: schemaAvailability,
               url: productUrl,
               seller: {
                 '@type': 'Organization',
