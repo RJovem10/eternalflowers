@@ -5,7 +5,7 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { getDictionary, locales, defaultLocale } from '@/i18n/dictionaries'
 import type { Locale } from '@/i18n/dictionaries'
-import { payloadLocaleOptions } from '@/lib/payload-locale'
+import { payloadLocaleOptions, payloadLocaleWithoutFallback } from '@/lib/payload-locale'
 import FlowerCard from '@/components/FlowerCard'
 import Image from 'next/image'
 import type { Media } from '@/payload-types'
@@ -23,6 +23,14 @@ const nfMap: Record<string, string> = {
   es: 'nameEs',
   it: 'nameIt',
   de: 'nameDe',
+}
+
+const collectionFallbackDescriptions: Record<string, (name: string) => string> = {
+  pt: (name) => `Coleção ${name} — joias botânicas artesanais com flores naturais verdadeiras, preservadas em resina. Peças únicas feitas à mão em Portugal.`,
+  en: (name) => `${name} collection — handmade botanical jewellery with real natural flowers preserved in resin. One-of-a-kind pieces handcrafted in Portugal.`,
+  es: (name) => `Colección ${name} — joyería botánica artesanal con flores naturales reales preservadas en resina. Piezas únicas hechas a mano en Portugal.`,
+  it: (name) => `Collezione ${name} — gioielli botanici artigianali con fiori naturali veri preservati in resina. Pezzi unici fatti a mano in Portogallo.`,
+  de: (name) => `${name} Kollektion — handgefertigter botanischer Schmuck mit echten Naturblumen, konserviert in Harz. Einzigartige Stücke, handgefertigt in Portugal.`,
 }
 
 export async function generateMetadata({
@@ -46,10 +54,21 @@ export async function generateMetadata({
     const collection = colResult.docs[0]
     if (!collection || !collection.isActive) return {}
 
+    // Check if a genuine localized description exists (without PT fallback)
+    const colRaw = await payload.find({
+      collection: 'collections',
+      where: { slug: { equals: slug } },
+      limit: 1,
+      depth: 0,
+      ...payloadLocaleWithoutFallback(locale as Locale),
+    })
+    const localizedDesc = colRaw.docs[0]?.description || null
+
     const title = `${collection.name} — Eternal Flowers Portugal`
+    const fallbackFn = collectionFallbackDescriptions[locale]
     const description =
-      collection.description ||
-      `Coleção ${collection.name} — joias botânicas artesanais com flores naturais verdadeiras, preservadas em resina. Peças únicas feitas à mão em Portugal.`
+      localizedDesc ||
+      fallbackFn(collection.name)
 
     const languages: Record<string, string> = {}
     for (const l of locales) {

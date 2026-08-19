@@ -429,5 +429,40 @@ describe('Category/Collection landing page resolution', () => {
     const href = `/${locale}/collection/${slug}`
     expect(href).toBe('/en/collection/primavera')
   })
+
+  it('active collection → linkable from product info', () => {
+    const collections = [
+      { id: 1, name: 'Primavera', slug: 'primavera', isActive: true },
+      { id: 2, name: 'Inverno', slug: 'inverno', isActive: false },
+    ]
+    // Simula o filtro do ProductInfo.tsx
+    const colRefs = collections
+      .filter((c) => c.isActive !== false)
+      .map((c) => ({ name: c.name, slug: c.slug }))
+    expect(colRefs).toHaveLength(1)
+    expect(colRefs[0].name).toBe('Primavera')
+    expect(colRefs[0].slug).toBe('primavera')
+  })
+
+  it('inactive collection → not linkable from product info', () => {
+    const collections = [
+      { id: 1, name: 'Inverno', slug: 'inverno', isActive: false },
+    ]
+    const colRefs = collections
+      .filter((c) => c.isActive !== false)
+      .map((c) => ({ name: c.name, slug: c.slug }))
+    expect(colRefs).toHaveLength(0)
+  })
+
+  it('collection with undefined isActive defaults to linkable', () => {
+    // Legacy data where isActive was never set should still appear
+    const collections = [
+      { id: 1, name: 'Primavera', slug: 'primavera', isActive: undefined },
+    ]
+    const colRefs = collections
+      .filter((c) => c.isActive !== false)
+      .map((c) => ({ name: c.name, slug: c.slug }))
+    expect(colRefs).toHaveLength(1)
+  })
 })
 

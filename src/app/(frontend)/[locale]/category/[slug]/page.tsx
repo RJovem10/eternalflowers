@@ -5,7 +5,7 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { getDictionary, locales, defaultLocale } from '@/i18n/dictionaries'
 import type { Locale } from '@/i18n/dictionaries'
-import { payloadLocaleOptions } from '@/lib/payload-locale'
+import { payloadLocaleOptions, payloadLocaleWithoutFallback } from '@/lib/payload-locale'
 import FlowerCard from '@/components/FlowerCard'
 
 export const dynamic = 'force-dynamic'
@@ -21,6 +21,14 @@ const nfMap: Record<string, string> = {
   es: 'nameEs',
   it: 'nameIt',
   de: 'nameDe',
+}
+
+const categoryFallbackDescriptions: Record<string, (name: string) => string> = {
+  pt: (name) => `${name} — joias botânicas artesanais com flores naturais verdadeiras, preservadas em resina. Peças únicas feitas à mão em Portugal.`,
+  en: (name) => `${name} — handmade botanical jewellery with real natural flowers preserved in resin. One-of-a-kind pieces handcrafted in Portugal.`,
+  es: (name) => `${name} — joyería botánica artesanal con flores naturales reales preservadas en resina. Piezas únicas hechas a mano en Portugal.`,
+  it: (name) => `${name} — gioielli botanici artigianali con fiori naturali veri preservati in resina. Pezzi unici fatti a mano in Portogallo.`,
+  de: (name) => `${name} — handgefertigter botanischer Schmuck mit echten Naturblumen, konserviert in Harz. Einzigartige Stücke, handgefertigt in Portugal.`,
 }
 
 export async function generateMetadata({
@@ -44,10 +52,21 @@ export async function generateMetadata({
     const cat = catResult.docs[0]
     if (!cat) return {}
 
+    // Check if a genuine localized description exists (without PT fallback)
+    const catRaw = await payload.find({
+      collection: 'categories',
+      where: { slug: { equals: slug } },
+      limit: 1,
+      depth: 0,
+      ...payloadLocaleWithoutFallback(locale as Locale),
+    })
+    const localizedDesc = catRaw.docs[0]?.description || null
+
     const title = `${cat.name} — Eternal Flowers Portugal`
+    const fallbackFn = categoryFallbackDescriptions[locale]
     const description =
-      cat.description ||
-      `Coleção de ${cat.name.toLowerCase()} — joias botânicas artesanais com flores naturais verdadeiras, preservadas em resina. Peças únicas feitas à mão em Portugal.`
+      localizedDesc ||
+      fallbackFn(cat.name.toLowerCase())
 
     const languages: Record<string, string> = {}
     for (const l of locales) {
