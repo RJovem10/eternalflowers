@@ -43,7 +43,7 @@ export async function generateMetadata({ params }: FlowerPageParams): Promise<Me
     })
 
     // Do not expose metadata for private products
-    if (flower.isPublic === false) {
+    if (flower.isPublic !== true) {
       return {}
     }
 
@@ -114,7 +114,7 @@ export default async function FlowerDetail({ params }: FlowerPageParams) {
   if (!flower) notFound()
 
   // Private products must not have a public product page
-  if (flower.isPublic === false) {
+  if (flower.isPublic !== true) {
     notFound()
   }
 
