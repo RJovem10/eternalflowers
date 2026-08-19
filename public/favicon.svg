@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="48" fill="#f5f0eb"/>
+  <circle cx="50" cy="50" r="45" fill="none" stroke="#c4a265" stroke-width="2"/>
+  <!-- Orchid silhouette -->
+  <g transform="translate(50,55)" fill="#c4a265">
+    <!-- Petals -->
+    <ellipse cx="0" cy="-18" rx="8" ry="14" transform="rotate(0)"/>
+    <ellipse cx="-12" cy="-8" rx="8" ry="12" transform="rotate(-25)"/>
+    <ellipse cx="12" cy="-8" rx="8" ry="12" transform="rotate(25)"/>
+    <ellipse cx="-8" cy="5" rx="7" ry="10" transform="rotate(-50)"/>
+    <ellipse cx="8" cy="5" rx="7" ry="10" transform="rotate(50)"/>
+    <!-- Labellum / lip -->
+    <ellipse cx="0" cy="2" rx="8" ry="5" fill="#d4af7a"/>
+  </g>
+</svg>

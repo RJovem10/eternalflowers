@@ -13,6 +13,7 @@ interface ProductGalleryProps {
   singleImage?: (number | null) | Media
   galleryImages?: GalleryImage[] | null
   name: string
+  scientificName?: string | null
 }
 
 function getMediaUrl(img: number | Media): string | null {
@@ -20,7 +21,7 @@ function getMediaUrl(img: number | Media): string | null {
   return img.url || null
 }
 
-export default function ProductGallery({ singleImage, galleryImages, name }: ProductGalleryProps) {
+export default function ProductGallery({ singleImage, galleryImages, name, scientificName }: ProductGalleryProps) {
   const all: string[] = []
 
   const single = singleImage && typeof singleImage !== 'number' ? singleImage.url : null
@@ -36,12 +37,17 @@ export default function ProductGallery({ singleImage, galleryImages, name }: Pro
   const [selected, setSelected] = useState(0)
   const currentUrl = all[selected] || null
 
+  // Build meaningful alt text: botanical jewellery description + product name
+  const altBase = name
+    ? `Joia botânica artesanal — ${name}${scientificName ? ` (${scientificName})` : ''} — Eternal Flowers. Flor natural preservada em resina.`
+    : 'Joia botânica artesanal Eternal Flowers — flor natural preservada em resina.'
+
   if (!currentUrl) {
     return (
       <div className="relative aspect-square overflow-hidden bg-brand-cream">
         <Image
           src="/hero-fallback.png"
-          alt={name}
+          alt={altBase}
           fill
           sizes="(min-width: 768px) 50vw, 100vw"
           className="object-cover"
@@ -63,7 +69,7 @@ export default function ProductGallery({ singleImage, galleryImages, name }: Pro
           >
             <Image
               src={url}
-              alt={i === selected ? name : ''}
+              alt={i === selected ? altBase : ''}
               fill
               sizes="(min-width: 768px) 50vw, 100vw"
               className="object-cover"
@@ -89,7 +95,7 @@ export default function ProductGallery({ singleImage, galleryImages, name }: Pro
             >
               <Image
                 src={url}
-                alt={`${name} — ${i + 1}`}
+                alt={`${altBase} — foto ${i + 1}`}
                 fill
                 sizes="80px"
                 className="object-cover"

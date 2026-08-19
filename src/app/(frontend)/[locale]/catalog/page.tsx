@@ -17,17 +17,22 @@ export async function generateMetadata({
   const { locale } = await params
   const dict = getDictionary(locale)
 
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_SERVER_URL ||
+    'https://eternalflowers.pt'
+
   const languages: Record<string, string> = {}
   for (const l of locales) {
-    languages[l] = `/${l}/catalog`
+    languages[l] = `${siteUrl}/${l}/catalog`
   }
-  languages['x-default'] = `/${defaultLocale}/catalog`
+  languages['x-default'] = `${siteUrl}/${defaultLocale}/catalog`
 
   return {
-    title: `${dict.catalog} — Eternal Flowers`,
+    title: `${dict.catalog} — Eternal Flowers Portugal`,
     description: dict.catalogDescription,
     alternates: {
-      canonical: `/${locale}/catalog`,
+      canonical: `${siteUrl}/${locale}/catalog`,
       languages,
     },
     robots: { index: true, follow: true },

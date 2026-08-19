@@ -12,22 +12,28 @@ export async function generateMetadata({
   const { locale } = await params
   const content = aboutContent[locale] || aboutContent.pt
 
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_SERVER_URL ||
+    'https://eternalflowers.pt'
+
   const languages: Record<string, string> = {}
   for (const l of locales) {
-    languages[l] = `/${l}/about`
+    languages[l] = `${siteUrl}/${l}/about`
   }
-  languages['x-default'] = `/${defaultLocale}/about`
+  languages['x-default'] = `${siteUrl}/${defaultLocale}/about`
 
   return {
     title: content.meta.title,
     description: content.meta.description,
     alternates: {
-      canonical: `/${locale}/about`,
+      canonical: `${siteUrl}/${locale}/about`,
       languages,
     },
     openGraph: {
       title: content.meta.title,
       description: content.meta.description,
+      url: `${siteUrl}/${locale}/about`,
       images: [{ url: '/marina/marina-hero-orquidea-rosa.jpeg' }],
       locale: ({ pt: 'pt_PT', en: 'en_GB', es: 'es_ES', it: 'it_IT', de: 'de_DE' } as Record<string, string>)[locale] || 'pt_PT',
     },
