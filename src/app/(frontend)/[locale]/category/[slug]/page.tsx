@@ -33,12 +33,16 @@ export async function generateMetadata({
 
   try {
     const payload = await getPayload({ config })
-    const cat = await payload.findByID({
+    const catResult = await payload.find({
       collection: 'categories',
-      id: slug,
+      where: { slug: { equals: slug } },
+      limit: 1,
       depth: 0,
       ...payloadLocaleOptions(locale as Locale),
     })
+
+    const cat = catResult.docs[0]
+    if (!cat) return {}
 
     const title = `${cat.name} — Eternal Flowers Portugal`
     const description =
