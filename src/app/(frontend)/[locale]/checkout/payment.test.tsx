@@ -378,6 +378,26 @@ describe('PaymentResultPage', () => {
     expect(mockClear).not.toHaveBeenCalled()
   })
 
+  it('retrievePaymentIntent rejects → clear NOT called, safe error shown', async () => {
+    mockRetrievePaymentIntent = () =>
+      Promise.reject(new Error('network failure'))
+
+    mockSearchParams({
+      payment_intent_client_secret: 'pi_secret_reject',
+      redirect_status: 'succeeded',
+    })
+
+    render(<PaymentResultPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Erro ao verificar pagamento.')).toBeDefined()
+    })
+
+    // Generic error must not expose internal details
+    expect(screen.queryByText('network failure')).toBeNull()
+    expect(mockClear).not.toHaveBeenCalled()
+  })
+
   // ════════════════════════════════════════════════════════════
   // Display-only tests (redirect_status used for UX only)
   // ════════════════════════════════════════════════════════════

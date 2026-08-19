@@ -86,7 +86,16 @@ function PaymentResultInner() {
             setStatus('unknown')
             setMessage(dict.paymentResultUnknown)
         }
+      }).catch(() => {
+        // retrievePaymentIntent threw (network failure, Stripe JS error)
+        // Do NOT clear cart. Show safe generic error without exposing internals.
+        setStatus('error')
+        setMessage(dict.paymentResultError)
       })
+    }).catch(() => {
+      // getStripe() or stripe initialisation threw
+      setStatus('error')
+      setMessage(dict.paymentResultError)
     })
   }, [searchParams, dict, clear])
 
