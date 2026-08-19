@@ -26,19 +26,35 @@ const body = Inter({
 // o comportamento correcto para produção com PostgreSQL.
 // O locale route segment funciona sem generateStaticParams.
 
-export async function generateMetadata(): Promise<Metadata> {
-  const siteUrl =
+export const metadata: Metadata = {
+  metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.NEXT_PUBLIC_SERVER_URL ||
-    'http://localhost:3000'
-
-  return {
-    metadataBase: new URL(siteUrl),
-    title: 'Eternal Flowers — Joias Botânicas Artesanais',
-    description:
-      'Joias botânicas em resina para eternizar memórias com alma. Peças únicas feitas à mão com flores reais em Portugal.',
-    applicationName: 'Eternal Flowers',
-  }
+      process.env.NEXT_PUBLIC_SERVER_URL ||
+      'https://eternalflowers.pt'
+  ),
+  title: 'Eternal Flowers Portugal — Joias Botânicas Artesanais com Orquídeas Naturais',
+  description:
+    'Joias botânicas artesanais com flores naturais verdadeiras, preservadas em resina. Peças únicas feitas à mão em Portugal pela Marina. Brincos, colares e pingentes com orquídeas reais.',
+  applicationName: 'Eternal Flowers',
+  generator: 'Next.js',
+  referrer: 'origin-when-cross-origin',
+  keywords: [
+    'Eternal Flowers Portugal',
+    'joias botânicas',
+    'joalharia botânica',
+    'joias com orquídeas',
+    'joias com flores naturais',
+    'joias com flores verdadeiras',
+    'orquídeas em resina',
+    'flores preservadas em resina',
+    'brincos botânicos',
+    'colares botânicos',
+    'pingentes botânicos',
+    'joias artesanais Portugal',
+    'botanical jewellery',
+    'orchid jewellery',
+    'real flower jewellery',
+  ],
 }
 
 const supportedLocales = new Set<string>(locales as readonly string[])

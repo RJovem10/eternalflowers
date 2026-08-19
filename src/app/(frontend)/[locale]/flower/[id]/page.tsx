@@ -12,6 +12,7 @@ import ProductStory from '@/components/ProductStory'
 import ProductAttributes from '@/components/ProductAttributes'
 import RelatedProducts from '@/components/RelatedProducts'
 import type { Flower, Category, Collection, Media } from '@/payload-types'
+import { computePurchaseEligibility } from '@/lib/can-purchase'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,6 +28,11 @@ function getLocaleField<T>(record: any, field: string, locale: string, fallback:
 export async function generateMetadata({ params }: FlowerPageParams): Promise<Metadata> {
   const { locale, id } = await params
 
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_SERVER_URL ||
+    'https://eternalflowers.pt'
+
   try {
     const payload = await getPayload({ config })
     const flower = await payload.findByID({
@@ -36,11 +42,17 @@ export async function generateMetadata({ params }: FlowerPageParams): Promise<Me
       ...payloadLocaleOptions(locale as Locale),
     })
     const localizedName = getLocaleField<string>(flower, 'name', locale, '')
-    const title = flower.creationName || localizedName || flower.scientificName
+    const creationName = flower.creationName
+    const scientificName = flower.scientificName
+    const title = `${creationName || localizedName || scientificName} — Eternal Flowers`
     const localizedDescription = getLocaleField<string>(flower, 'description', locale, '')
     const price = `${flower.price.toFixed(2)} €`
-    const productDescription = localizedDescription || flower.scientificName
-    const description = `${productDescription} — ${price}`
+    const hasScientificName = scientificName && scientificName !== title
+    // Build a descriptive SEO description mentioning botanical jewellery with real flowers
+    const botanicalContext = localizedDescription || scientificName || ''
+    const description = botanicalContext
+      ? `${botanicalContext} — ${price}`
+      : `Joia botânica artesanal com flor natural${scientificName ? ' — ' + scientificName : ''} — ${price}`
     const imageUrl =
       flower.image && typeof flower.image !== 'number'
         ? flower.image.url
@@ -50,9 +62,9 @@ export async function generateMetadata({ params }: FlowerPageParams): Promise<Me
       title,
       description,
       alternates: {
-        canonical: `/${locale}/flower/${id}`,
+        canonical: `${siteUrl}/${locale}/flower/${id}`,
         languages: Object.fromEntries(
-          locales.map((l) => [l, `/${l}/flower/${id}`])
+          locales.map((l) => [l, `${siteUrl}/${l}/flower/${id}`])
         ),
       },
       openGraph: {
@@ -71,6 +83,10 @@ export async function generateMetadata({ params }: FlowerPageParams): Promise<Me
 export default async function FlowerDetail({ params }: FlowerPageParams) {
   const { locale, id } = await params
   const dict = getDictionary(locale)
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_SERVER_URL ||
+    'https://eternalflowers.pt'
   const payload = await getPayload({ config })
 
   let flower: Flower
@@ -103,6 +119,24 @@ export default async function FlowerDetail({ params }: FlowerPageParams) {
     ? flower.category as Category
     : null
 
+  const productUrl = `${siteUrl}/${locale}/flower/${id}`
+  const catalogUrl = `${siteUrl}/${locale}/catalog`
+  const rawImageUrl = image?.url || null
+  // Resolve relative image URL to absolute for structured data
+  const absoluteImageUrl = rawImageUrl
+    ? rawImageUrl.startsWith('http')
+      ? rawImageUrl
+      : rawImageUrl.startsWith('/')
+        ? `${siteUrl}${rawImageUrl}`
+        : `${siteUrl}/${rawImageUrl}`
+    : null
+
+  const { schemaAvailability } = computePurchaseEligibility({
+    availability: flower.availability || 'available',
+    productionMode: flower.productionMode,
+    stockQuantity: flower.stockQuantity,
+  })
+
   const collections: Collection[] = (flower.collections?.filter((c): c is Collection =>
     typeof c !== 'number'
   ) as Collection[]) ?? []
@@ -129,6 +163,64 @@ export default async function FlowerDetail({ params }: FlowerPageParams) {
 
   return (
     <article className="mx-auto max-w-content px-6 pb-24 lg:px-8 lg:pb-30">
+      {/* ─── STRUCTURED DATA ───────────────────────────── */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Product',
+            name: name,
+            description: description || `${name} — joia botânica artesanal com flor natural${flower.scientificName ? ' (' + flower.scientificName + ')' : ''}.`,
+            image: absoluteImageUrl ? [absoluteImageUrl] : undefined,
+            url: productUrl,
+            brand: {
+              '@type': 'Brand',
+              name: 'Eternal Flowers',
+            },
+            offers: {
+              '@type': 'Offer',
+              price: flower.price,
+              priceCurrency: 'EUR',
+              availability: schemaAvailability,
+              url: productUrl,
+              seller: {
+                '@type': 'Organization',
+                name: 'Eternal Flowers',
+              },
+            },
+          }),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              {
+                '@type': 'ListItem',
+                position: 1,
+                name: dict.home,
+                item: `${siteUrl}/${locale}`,
+              },
+              {
+                '@type': 'ListItem',
+                position: 2,
+                name: dict.catalog,
+                item: catalogUrl,
+              },
+              {
+                '@type': 'ListItem',
+                position: 3,
+                name: name,
+              },
+            ],
+          }),
+        }}
+      />
+
       <Link
         href={`/${locale}/catalog`}
         className="inline-flex items-center text-xs uppercase tracking-[0.18em] text-brand-charcoal/50 transition-colors duration-300 hover:text-brand-gold-dark"
@@ -150,6 +242,7 @@ export default async function FlowerDetail({ params }: FlowerPageParams) {
           singleImage={flower.image as Media | number | null}
           galleryImages={images as { image: Media; id?: string | null }[] | null}
           name={name}
+          scientificName={flower.scientificName}
         />
         <ProductInfo
           creationName={flower.creationName}

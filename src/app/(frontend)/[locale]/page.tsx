@@ -22,23 +22,49 @@ export async function generateMetadata({
   const { locale } = await params
   const dict = getDictionary(locale)
 
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_SERVER_URL ||
+    'https://eternalflowers.pt'
+
   const languages: Record<string, string> = {}
   for (const l of locales) {
-    languages[l] = `/${l}`
+    languages[l] = `${siteUrl}/${l}`
   }
-  languages['x-default'] = `/${defaultLocale}`
+  languages['x-default'] = `${siteUrl}/${defaultLocale}`
+
+  // Locale-specific SEO titles focused on botanical jewellery with real orchids
+  const seoTitle: Record<string, string> = {
+    pt: 'Eternal Flowers Portugal — Joias Botânicas Artesanais com Orquídeas Naturais',
+    en: 'Eternal Flowers Portugal — Handmade Botanical Jewellery with Real Orchids',
+    es: 'Eternal Flowers Portugal — Joyería Botánica Artesanal con Orquídeas Naturales',
+    it: 'Eternal Flowers Portugal — Gioielli Botanici Artigianali con Orchidee Naturali',
+    de: 'Eternal Flowers Portugal — Handgefertigter botanischer Schmuck mit echten Orchideen',
+  }
+
+  // Locale-specific SEO descriptions — reinforce core message in all 5 languages
+  const seoDescription: Record<string, string> = {
+    pt: 'Joias botânicas artesanais feitas à mão com orquídeas e flores naturais verdadeiras, preservadas em resina. Brincos, colares e pingentes únicos criados pela Marina em Portugal.',
+    en: 'Handmade botanical jewellery crafted with real natural orchids and flowers, preserved in resin. Unique earrings, necklaces and pendants created by Marina in Portugal.',
+    es: 'Joyas botánicas artesanales hechas a mano con orquídeas y flores naturales verdaderas, preservadas en resina. Pendientes, collares y colgantes únicos creados por Marina en Portugal.',
+    it: 'Gioielli botanici artigianali fatti a mano con orchidee e fiori naturali veri, preservati nella resina. Orecchini, collane e pendenti unici creati da Marina in Portogallo.',
+    de: 'Handgefertigter botanischer Schmuck mit echten natürlichen Orchideen und Blumen, in Harz konserviert. Einzigartige Ohrringe, Halsketten und Anhänger von Marina in Portugal handgefertigt.',
+  }
 
   return {
-    title: `Eternal Flowers | ${dict.tagline}`,
-    description: dict.heroSubtitleFallback,
+    title: seoTitle[locale] || seoTitle.pt,
+    description: seoDescription[locale] || dict.heroSubtitleFallback,
     alternates: {
-      canonical: `/${locale}`,
+      canonical: `${siteUrl}/${locale}`,
       languages,
     },
     openGraph: {
-      title: `Eternal Flowers | ${dict.tagline}`,
-      description: dict.heroSubtitleFallback,
+      title: seoTitle[locale] || seoTitle.pt,
+      description: seoDescription[locale] || dict.heroSubtitleFallback,
       locale: ({ pt: 'pt_PT', en: 'en_GB', es: 'es_ES', it: 'it_IT', de: 'de_DE' } as Record<string, string>)[locale] || 'pt_PT',
+      siteName: 'Eternal Flowers',
+      type: 'website',
+      url: `${siteUrl}/${locale}`,
     },
   }
 }
@@ -72,6 +98,10 @@ export async function generateMetadata({
 export default async function Home({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
   const dict = getDictionary(locale)
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_SERVER_URL ||
+    'https://eternalflowers.pt'
   const payload = await getPayloadClient()
   const homepage = await payload.findGlobal({
     slug: 'homepage',
@@ -114,6 +144,34 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
 
   return (
     <div className="-mt-16 lg:-mt-20">
+      {/* ─── STRUCTURED DATA ───────────────────────────── */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            name: 'Eternal Flowers',
+            alternateName: 'Eternal Flowers Portugal',
+            url: siteUrl,
+            description: dict.heroSubtitleFallback,
+            inLanguage: locale,
+          }),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Organization',
+            name: 'Eternal Flowers',
+            url: siteUrl,
+            description: dict.heroSubtitleFallback,
+          }),
+        }}
+      />
+
       {/* ─── ATO 1: HERÓI — A MARINA ─── */}
       <Hero
         heroTitle={hero.heroTitle || 'Joias Botânicas\nFeitas à Mão'}

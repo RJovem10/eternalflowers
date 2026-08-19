@@ -98,7 +98,7 @@ export const aboutContent: Record<string, AboutContent> = {
       link: '/catalog',
     },
     meta: {
-      title: 'Conhecer a Marina — Eternal Flowers',
+      title: 'Conhecer a Marina',
       description:
         'Conhece a Marina, engenheira agronómica, naturopata e artesã por detrás da Eternal Flowers. A história de como uma viagem à Tailândia e uma paixão por orquídeas deram origem a joias botânicas que imortalizam a beleza das flores.',
     },
@@ -186,7 +186,7 @@ export const aboutContent: Record<string, AboutContent> = {
       link: '/catalog',
     },
     meta: {
-      title: 'Meet Marina — Eternal Flowers',
+      title: 'Meet Marina',
       description:
         'Meet Marina, agricultural engineer, naturopath and artisan behind Eternal Flowers. The story of how a trip to Thailand and a passion for orchids gave rise to unique botanical jewellery that immortalises the beauty of flowers.',
     },
@@ -274,7 +274,7 @@ export const aboutContent: Record<string, AboutContent> = {
       link: '/catalogo',
     },
     meta: {
-      title: 'Conocer a Marina — Eternal Flowers',
+      title: 'Conocer a Marina',
       description:
         'Conoce a Marina, ingeniera agronómica, naturópata y artesana detrás de Eternal Flowers. La historia de cómo un viaje a Tailandia y una pasión por las orquídeas dieron origen a joyas botánicas que inmortalizan la belleza de las flores.',
     },
@@ -362,7 +362,7 @@ export const aboutContent: Record<string, AboutContent> = {
       link: '/catalogo',
     },
     meta: {
-      title: 'Conoscere Marina — Eternal Flowers',
+      title: 'Conoscere Marina',
       description:
         'Conosci Marina, ingegnere agronomica, naturopata e artigiana dietro Eternal Flowers. La storia di come un viaggio in Thailandia e una passione per le orchidee hanno dato origine a gioielli botanici che immortalano la bellezza dei fiori.',
     },
@@ -450,7 +450,7 @@ export const aboutContent: Record<string, AboutContent> = {
       link: '/katalog',
     },
     meta: {
-      title: 'Marina kennenlernen — Eternal Flowers',
+      title: 'Marina kennenlernen',
       description:
         'Lerne Marina kennen, Agrarwissenschaftlerin, Naturheilpraktikerin und Kunsthandwerkerin hinter Eternal Flowers. Die Geschichte, wie eine Reise nach Thailand und eine Leidenschaft für Orchideen zu einzigartigem botanischem Schmuck führten, der die Schönheit der Blumen unsterblich macht.',
     },
