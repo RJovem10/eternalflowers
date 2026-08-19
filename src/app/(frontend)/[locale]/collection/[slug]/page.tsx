@@ -116,10 +116,13 @@ export default async function CollectionPage({
   const collection = colResult.docs[0]
   if (!collection || !collection.isActive) notFound()
 
-  // Load flowers in this collection
+  // Load flowers in this collection (only public)
   const flowers = await payload.find({
     collection: 'flowers',
-    where: { collections: { in: collection.id } },
+    where: {
+      collections: { in: collection.id },
+      isPublic: { equals: true },
+    },
     limit: 200,
     sort: '-createdAt',
     depth: 1,

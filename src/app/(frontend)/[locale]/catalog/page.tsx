@@ -93,6 +93,7 @@ export default async function Catalog({
     limit: 200,
     sort: '-createdAt',
     depth: 1,
+    where: { isPublic: { equals: true } },
     ...payloadLocaleOptions(locale as Locale),
   })
 

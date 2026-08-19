@@ -43,7 +43,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     for (const cat of categories.docs) {
       const flowerCount = await payload.count({
         collection: 'flowers',
-        where: { category: { equals: cat.id } },
+        where: {
+          category: { equals: cat.id },
+          isPublic: { equals: true },
+        },
       })
       if (flowerCount.totalDocs > 0) {
         catSlugs.add(cat.id)
@@ -69,7 +72,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     for (const col of collections.docs) {
       const flowerCount = await payload.count({
         collection: 'flowers',
-        where: { collections: { in: col.id } },
+        where: {
+          collections: { in: col.id },
+          isPublic: { equals: true },
+        },
       })
       if (flowerCount.totalDocs > 0) {
         for (const locale of locales) {
@@ -82,12 +88,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }
     }
 
-    // ── Product pages from Payload ───────────────────────────
+    // ── Product pages from Payload (only public) ───────────
     const flowers = await payload.find({
       collection: 'flowers',
       limit: 500,
       depth: 0,
       pagination: false,
+      where: { isPublic: { equals: true } },
     })
 
     for (const flower of flowers.docs) {

@@ -454,6 +454,16 @@ describe('Category/Collection landing page resolution', () => {
     expect(colRefs).toHaveLength(0)
   })
 
+  it('inactive collection → not linkable from product info', () => {
+    const collections = [
+      { id: 1, name: 'Inverno', slug: 'inverno', isActive: false },
+    ]
+    const colRefs = collections
+      .filter((c) => c.isActive === true)
+      .map((c) => ({ name: c.name, slug: c.slug }))
+    expect(colRefs).toHaveLength(0)
+  })
+
   it('collection with undefined isActive → not linkable', () => {
     // Legacy data without isActive cannot safely link to a 404
     const collections = [
@@ -463,6 +473,142 @@ describe('Category/Collection landing page resolution', () => {
       .filter((c) => c.isActive === true)
       .map((c) => ({ name: c.name, slug: c.slug }))
     expect(colRefs).toHaveLength(0)
+  })
+})
+
+// ── isPublic visibility — strict true-only semantics ──────
+describe('isPublic visibility', () => {
+  it('true → public on storefront', () => {
+    const products = [
+      { id: 1, isPublic: true, namePt: 'Brincos Rosa' },
+      { id: 2, isPublic: false, namePt: 'Flor de Teste' },
+      { id: 3, isPublic: true, namePt: 'Anel Orquídea' },
+    ]
+    const storefront = products.filter((p) => p.isPublic === true)
+    expect(storefront).toHaveLength(2)
+    expect(storefront.map((p) => p.namePt)).toEqual(['Brincos Rosa', 'Anel Orquídea'])
+  })
+
+  it('false → private, excluded from listings', () => {
+    const products = [
+      { id: 1, isPublic: true, namePt: 'Brincos Rosa' },
+      { id: 2, isPublic: false, namePt: 'Flor de Teste' },
+    ]
+    const publicProducts = products.filter((p) => p.isPublic === true)
+    const privateProducts = products.filter((p) => p.isPublic !== true)
+    expect(publicProducts).toHaveLength(1)
+    expect(privateProducts).toHaveLength(1)
+    expect(privateProducts[0].namePt).toBe('Flor de Teste')
+  })
+
+  it('null → private, excluded from storefront', () => {
+    const flowers = [
+      { id: 1, isPublic: true },
+      { id: 2, isPublic: null },
+    ]
+    const publicFlowers = flowers.filter((f) => f.isPublic === true)
+    expect(publicFlowers).toHaveLength(1)
+    expect(publicFlowers[0].id).toBe(1)
+  })
+
+  it('undefined → private, excluded from storefront', () => {
+    const flowers = [
+      { id: 1, isPublic: true },
+      { id: 3, isPublic: undefined },
+    ]
+    const publicFlowers = flowers.filter((f) => f.isPublic === true)
+    expect(publicFlowers).toHaveLength(1)
+    expect(publicFlowers[0].id).toBe(1)
+  })
+
+  it('private product → excluded from sitemap', () => {
+    const flowers = [
+      { id: 1, isPublic: true },
+      { id: 2, isPublic: false },
+      { id: 3, isPublic: true },
+    ]
+    const sitemapFlowers = flowers.filter((f) => f.isPublic === true)
+    expect(sitemapFlowers).toHaveLength(2)
+    expect(sitemapFlowers.map((f) => f.id)).toEqual([1, 3])
+  })
+
+  it('category sitemap count uses strict isPublic filter', () => {
+    const flowers = [
+      { categoryId: 1, isPublic: true },
+      { categoryId: 1, isPublic: false },
+      { categoryId: 1, isPublic: true },
+      { categoryId: 1, isPublic: null },
+    ]
+    const count = flowers.filter((f) => f.categoryId === 1 && f.isPublic === true).length
+    expect(count).toBe(2) // 4 flowers total, only 2 are public
+  })
+
+  it('collection sitemap count uses strict isPublic filter', () => {
+    const flowers = [
+      { collectionId: 1, isPublic: true },
+      { collectionId: 1, isPublic: false },
+      { collectionId: 1, isPublic: true },
+    ]
+    const count = flowers.filter((f) => f.collectionId === 1 && f.isPublic === true).length
+    expect(count).toBe(2) // 3 flowers total, but 1 is private
+  })
+
+  it('false → blocked on direct URL (notFound/empty metadata)', () => {
+    // Simula a lógica actual — flower.isPublic !== true → blocked
+    const flowerFalse = { id: 2, isPublic: false, namePt: 'Flor de Teste' }
+    const metadata = flowerFalse.isPublic !== true ? {} : { title: flowerFalse.namePt }
+    expect(metadata).toEqual({})
+    const isBlocked = flowerFalse.isPublic !== true
+    expect(isBlocked).toBe(true)
+  })
+
+  it('null → blocked on direct URL', () => {
+    const flowerNull = { id: 3, isPublic: null, namePt: 'Teste Nulo' }
+    const metadata = flowerNull.isPublic !== true ? {} : { title: flowerNull.namePt }
+    expect(metadata).toEqual({})
+    const isBlocked = flowerNull.isPublic !== true
+    expect(isBlocked).toBe(true)
+  })
+
+  it('undefined → blocked on direct URL', () => {
+    const flowerUndef = { id: 4, isPublic: undefined, namePt: 'Teste Indef' }
+    const metadata = flowerUndef.isPublic !== true ? {} : { title: flowerUndef.namePt }
+    expect(metadata).toEqual({})
+    const isBlocked = flowerUndef.isPublic !== true
+    expect(isBlocked).toBe(true)
+  })
+
+  it('true → public product behaviour unchanged', () => {
+    const flower = { id: 1, isPublic: true, namePt: 'Brincos Rosa', price: 45 }
+    // Storefront listing allows it
+    const allowed = flower.isPublic === true
+    expect(allowed).toBe(true)
+    // Metadata is generated normally
+    const metadata = flower.isPublic !== true ? {} : { title: flower.namePt }
+    expect(metadata.title).toBe('Brincos Rosa')
+    // Product page is accessible
+    const isBlocked = flower.isPublic !== true
+    expect(isBlocked).toBe(false)
+  })
+
+  it('category with only private products does not appear in sitemap', () => {
+    const categories = [
+      { slug: 'testes', flowerCount: 0 },
+      { slug: 'brincos', flowerCount: 3 },
+    ]
+    const included = categories.filter((c) => c.flowerCount > 0)
+    expect(included).toHaveLength(1)
+    expect(included[0].slug).toBe('brincos')
+  })
+
+  it('collection with only private products does not appear in sitemap', () => {
+    const collections = [
+      { slug: 'colecao-teste', isActive: true, flowerCount: 0 },
+      { slug: 'primavera', isActive: true, flowerCount: 2 },
+    ]
+    const included = collections.filter((c) => c.isActive && c.flowerCount > 0)
+    expect(included).toHaveLength(1)
+    expect(included[0].slug).toBe('primavera')
   })
 })
 
