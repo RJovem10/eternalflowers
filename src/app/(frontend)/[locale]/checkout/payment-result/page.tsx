@@ -4,6 +4,7 @@ import { Suspense } from 'react'
 import { useSearchParams, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useEffect, useState, useRef } from 'react'
+import { useCart } from '@/components/CartProvider'
 import { getStripe } from '@/lib/stripe-client'
 import { getDictionary } from '@/i18n/dictionaries'
 
@@ -22,6 +23,8 @@ function PaymentResultInner() {
   const [status, setStatus] = useState<PaymentResultStatus>('loading')
   const [message, setMessage] = useState<string>('')
   const processedRef = useRef(false)
+  const cartClearedRef = useRef(false)
+  const { clear } = useCart()
 
   useEffect(() => {
     if (processedRef.current) return
@@ -41,6 +44,11 @@ function PaymentResultInner() {
       case 'succeeded':
         setStatus('succeeded')
         setMessage(dict.paymentResultSucceeded)
+        // Clear cart only on genuinely successful payment
+        if (!cartClearedRef.current) {
+          cartClearedRef.current = true
+          clear()
+        }
         break
       case 'processing':
         setStatus('processing')
@@ -66,6 +74,10 @@ function PaymentResultInner() {
           if (paymentIntent.status === 'succeeded') {
             setStatus('succeeded')
             setMessage(dict.paymentResultSucceeded)
+            if (!cartClearedRef.current) {
+              cartClearedRef.current = true
+              clear()
+            }
           } else if (paymentIntent.status === 'processing') {
             setStatus('processing')
             setMessage(dict.paymentResultProcessing)
@@ -76,7 +88,7 @@ function PaymentResultInner() {
         })
       })
     }
-  }, [searchParams, dict])
+  }, [searchParams, dict, clear])
 
   const icon: Record<PaymentResultStatus, string> = {
     succeeded: '✅',

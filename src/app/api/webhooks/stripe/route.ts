@@ -27,6 +27,8 @@ import {
   PaymentCurrencyMismatchError,
   StripeWebhookError,
 } from '@/services/payments/payment-types'
+import { processPendingEmailNotifications } from '@/services/email/email-notifications'
+import { getConfiguredEmailProvider } from '@/services/email/get-email-provider'
 
 export async function POST(req: NextRequest) {
   // ─── 1. Obter raw body e signature ──────────────────────────
@@ -81,6 +83,25 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
       case 'payment_intent.succeeded':
         result = await handlePaymentSucceededWithFallback(payload, paymentIntent)
+
+        // ─── Process order_confirmed email notification ─────
+        // The succeeded handler enqueued an order_confirmed notification
+        // inside its DB transaction. We process it here, OUTSIDE the
+        // transaction, so a slow/failed email does not roll back the
+        // payment confirmation.
+        if (result.orderId) {
+          try {
+            const provider = await getConfiguredEmailProvider()
+            await processPendingEmailNotifications(payload, {
+              provider,
+              batchLimit: 5,
+            })
+          } catch (emailErr: any) {
+            // Log but NEVER fail the webhook — Stripe would retry and
+            // the notification remains pending for a subsequent attempt.
+            console.error('[stripe-webhook] Email processing error:', emailErr.message)
+          }
+        }
         break
 
       case 'payment_intent.payment_failed':

@@ -51,6 +51,12 @@ vi.mock('@/lib/stripe-client', () => ({
   }),
 }))
 
+// ─── Mock CartProvider for PaymentResultPage ────────────
+
+vi.mock('@/components/CartProvider', () => ({
+  useCart: () => ({ clear: vi.fn() }),
+}))
+
 // ─── Mock i18n ────────────────────────────────────────────
 
 vi.mock('@/i18n/dictionaries', () => ({

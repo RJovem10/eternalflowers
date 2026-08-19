@@ -349,6 +349,8 @@ describe('Checkout Page', () => {
   })
 
   // ── 8. Success não limpa carrinho ─────────────────────
+  // (comportamento verificado em checkout — o cart só é limpo
+  //  no payment-result após pagamento bem-sucedido)
 
   it('8. sucesso não limpa carrinho (clear não é chamada)', async () => {
     const clearMock = vi.fn()
@@ -361,9 +363,10 @@ describe('Checkout Page', () => {
     await waitFor(() => expect(screen.getByText('Dados recebidos!')).toBeInTheDocument())
     expect(clearMock).not.toHaveBeenCalled()
     expect(screen.getByText(/EF-2026-ABCD/)).toBeInTheDocument()
-    expect(
-      screen.getByText('O cálculo de portes e continuação do checkout será o próximo passo.'),
-    ).toBeInTheDocument()
+    // The checkoutNextStep text was removed (fix 4) — standard orders
+    // now show server-authoritative totals directly without a separate message.
+    expect(screen.getByText('Subtotal')).toBeInTheDocument()
+    expect(screen.getByText('69.00 €')).toBeInTheDocument()
   })
 
   // ── 9. 400/409/500 tratados ───────────────────────────

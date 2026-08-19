@@ -7,57 +7,13 @@ import { useRef, useState, useCallback, useMemo } from 'react'
 import { getDictionary } from '@/i18n/dictionaries'
 import { couponErrorToDictKey, type CouponErrorCode, type CouponErrorDictKey } from '@/lib/coupon'
 import StripePaymentSection from '@/components/StripePaymentSection'
-
-// ─── Countries (ISO 3166-1 alpha-2) ────────────────────
-const COUNTRIES: [string, string][] = [
-  ['PT', 'Portugal'],
-  ['ES', 'Spain'],
-  ['FR', 'France'],
-  ['IT', 'Italy'],
-  ['DE', 'Germany'],
-  ['GB', 'United Kingdom'],
-  ['IE', 'Ireland'],
-  ['NL', 'Netherlands'],
-  ['BE', 'Belgium'],
-  ['CH', 'Switzerland'],
-  ['AT', 'Austria'],
-  ['SE', 'Sweden'],
-  ['NO', 'Norway'],
-  ['DK', 'Denmark'],
-  ['FI', 'Finland'],
-  ['PL', 'Poland'],
-  ['CZ', 'Czech Republic'],
-  ['LU', 'Luxembourg'],
-  ['GR', 'Greece'],
-  ['HU', 'Hungary'],
-  ['RO', 'Romania'],
-  ['BG', 'Bulgaria'],
-  ['HR', 'Croatia'],
-  ['SK', 'Slovakia'],
-  ['SI', 'Slovenia'],
-  ['LT', 'Lithuania'],
-  ['LV', 'Latvia'],
-  ['EE', 'Estonia'],
-  ['US', 'United States'],
-  ['CA', 'Canada'],
-  ['BR', 'Brazil'],
-  ['AU', 'Australia'],
-  ['NZ', 'New Zealand'],
-  ['JP', 'Japan'],
-  ['CN', 'China'],
-  ['IN', 'India'],
-  ['AE', 'United Arab Emirates'],
-  ['ZA', 'South Africa'],
-  ['SG', 'Singapore'],
-  ['IL', 'Israel'],
-]
+import { SHIPPING_COUNTRIES } from '@/services/shipping/country-whitelist'
 
 // ─── Types ─────────────────────────────────────────────
 type CustomerForm = {
   name: string
   email: string
   phone: string
-  companyName: string
   taxId: string
 }
 
@@ -89,7 +45,7 @@ type CheckoutStatus =
 
 // ─── Helpers ───────────────────────────────────────────
 function emptyCustomer(): CustomerForm {
-  return { name: '', email: '', phone: '', companyName: '', taxId: '' }
+  return { name: '', email: '', phone: '', taxId: '' }
 }
 
 function emptyAddress(recipientName = ''): AddressForm {
@@ -191,7 +147,6 @@ export default function Checkout() {
         name: customer.name,
         email: customer.email,
         phone: customer.phone,
-        ...(customer.companyName ? { companyName: customer.companyName } : {}),
         ...(customer.taxId ? { taxId: customer.taxId } : {}),
       },
       shippingAddress: {
@@ -323,7 +278,7 @@ export default function Checkout() {
             className="w-full border border-stone-300 rounded px-3 py-2 text-sm focus:border-brand-gold-dark focus:outline-none"
           >
             <option value="">{dict.selectCountry}</option>
-            {COUNTRIES.map(([code, name]) => (
+            {SHIPPING_COUNTRIES.map(([code, name]) => (
               <option key={code} value={code}>
                 {name}
               </option>
@@ -385,7 +340,6 @@ export default function Checkout() {
           </div>
         ) : status.orderStatus === 'pending_payment' ? (
           <>
-            <p className="text-sm text-stone-500 text-center">{dict.checkoutNextStep}</p>
             <div className="border-t pt-6">
               <StripePaymentSection
                 orderNumber={status.orderNumber}
@@ -491,7 +445,6 @@ export default function Checkout() {
           required: true,
           type: 'tel',
         })}
-        {renderField(dict.companyName, customer.companyName, (v) => setCustomerField('companyName', v))}
         {renderField(dict.taxId, customer.taxId, (v) => setCustomerField('taxId', v))}
       </section>
 
