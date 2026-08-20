@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { locales } from '@/i18n/dictionaries'
+import { landingSlugs } from '@/content/landing-pages'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,6 +23,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         url: `${siteUrl}/${locale}${route}`,
         changeFrequency: route === '' ? 'weekly' : 'weekly',
         priority: route === '' ? 1.0 : 0.8,
+      })
+    }
+  }
+
+  // ── Semantic landing pages (botanical + orchid) ────────────
+  for (const locale of locales) {
+    for (const type of Object.keys(landingSlugs) as Array<keyof typeof landingSlugs>) {
+      entries.push({
+        url: `${siteUrl}/${locale}/${landingSlugs[type][locale]}`,
+        changeFrequency: 'monthly',
+        priority: 0.7,
       })
     }
   }

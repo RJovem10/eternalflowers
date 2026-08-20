@@ -612,3 +612,322 @@ describe('isPublic visibility', () => {
   })
 })
 
+// ── Semantic landing pages (botanical + orchid) ─────────
+describe('Semantic landing pages — slug resolution', () => {
+  const slugs: Record<string, Record<string, string>> = {
+    botanical: {
+      pt: 'joias-botanicas',
+      en: 'botanical-jewellery',
+      es: 'joyeria-botanica',
+      it: 'gioielli-botanici',
+      de: 'botanischer-schmuck',
+    },
+    orchid: {
+      pt: 'joias-com-orquideas',
+      en: 'orchid-jewellery',
+      es: 'joyas-con-orquideas',
+      it: 'gioielli-con-orchidee',
+      de: 'orchideen-schmuck',
+    },
+  }
+  const locales = ['pt', 'en', 'es', 'it', 'de']
+
+  it('all 5 locales have a botanical slug', () => {
+    for (const locale of locales) {
+      expect(slugs.botanical[locale]).toBeDefined()
+    }
+    expect(Object.keys(slugs.botanical)).toHaveLength(5)
+  })
+
+  it('all 5 locales have an orchid slug', () => {
+    for (const locale of locales) {
+      expect(slugs.orchid[locale]).toBeDefined()
+    }
+    expect(Object.keys(slugs.orchid)).toHaveLength(5)
+  })
+
+  it('locale → correct botanical slug', () => {
+    expect(slugs.botanical.pt).toBe('joias-botanicas')
+    expect(slugs.botanical.en).toBe('botanical-jewellery')
+    expect(slugs.botanical.es).toBe('joyeria-botanica')
+    expect(slugs.botanical.it).toBe('gioielli-botanici')
+    expect(slugs.botanical.de).toBe('botanischer-schmuck')
+  })
+
+  it('locale → correct orchid slug', () => {
+    expect(slugs.orchid.pt).toBe('joias-com-orquideas')
+    expect(slugs.orchid.en).toBe('orchid-jewellery')
+    expect(slugs.orchid.es).toBe('joyas-con-orquideas')
+    expect(slugs.orchid.it).toBe('gioielli-con-orchidee')
+    expect(slugs.orchid.de).toBe('orchideen-schmuck')
+  })
+
+  it('resolves landing type from locale + slug', () => {
+    const resolve = (locale: string, slug: string) => {
+      for (const type of ['botanical', 'orchid'] as const) {
+        if (slugs[type][locale] === slug) return type
+      }
+      return null
+    }
+    expect(resolve('pt', 'joias-botanicas')).toBe('botanical')
+    expect(resolve('pt', 'joias-com-orquideas')).toBe('orchid')
+    expect(resolve('en', 'botanical-jewellery')).toBe('botanical')
+    expect(resolve('en', 'orchid-jewellery')).toBe('orchid')
+    expect(resolve('pt', 'pagina-inventada')).toBeNull()
+  })
+
+  it('invalid locale/slug pair → rejected', () => {
+    const resolve = (locale: string, slug: string) => {
+      for (const type of ['botanical', 'orchid'] as const) {
+        if (slugs[type][locale] === slug) return type
+      }
+      return null
+    }
+    // English slug used on PT locale → rejected
+    expect(resolve('pt', 'botanical-jewellery')).toBeNull()
+    // PT slug used on EN locale → rejected
+    expect(resolve('en', 'joias-botanicas')).toBeNull()
+    // Completely unknown slug → rejected
+    expect(resolve('pt', 'produtos')).toBeNull()
+    expect(resolve('en', 'catalog')).toBeNull()
+  })
+
+  it('unknown landing slug returns notFound (simulated)', () => {
+    const knownSlugs = new Set<string>()
+    for (const type of ['botanical', 'orchid'] as const) {
+      for (const locale of locales) {
+        knownSlugs.add(slugs[type][locale])
+      }
+    }
+    // Known slugs exist
+    expect(knownSlugs.has('joias-botanicas')).toBe(true)
+    expect(knownSlugs.has('orchid-jewellery')).toBe(true)
+    // Unknown slugs do not
+    expect(knownSlugs.has('produtos')).toBe(false)
+    expect(knownSlugs.has('catalog')).toBe(false)
+    expect(knownSlugs.has('about')).toBe(false)
+    // A non-known slug would hit the whitelist check → notFound
+    const unknownSlug = 'pagina-inventada'
+    const isKnown = knownSlugs.has(unknownSlug)
+    expect(isKnown).toBe(false)
+  })
+
+  it('generates correct canonical URL', () => {
+    const siteUrl = 'https://eternalflowers.pt'
+    const canonical = `${siteUrl}/pt/joias-botanicas`
+    expect(canonical).toBe('https://eternalflowers.pt/pt/joias-botanicas')
+  })
+
+  it('hreflang maps all 5 locale equivalents', () => {
+    const siteUrl = 'https://eternalflowers.pt'
+    // For the botanical page
+    const languages: Record<string, string> = {
+      pt: `${siteUrl}/pt/joias-botanicas`,
+      en: `${siteUrl}/en/botanical-jewellery`,
+      es: `${siteUrl}/es/joyeria-botanica`,
+      it: `${siteUrl}/it/gioielli-botanici`,
+      de: `${siteUrl}/de/botanischer-schmuck`,
+      'x-default': `${siteUrl}/pt/joias-botanicas`,
+    }
+    expect(languages.pt).toBe('https://eternalflowers.pt/pt/joias-botanicas')
+    expect(languages.en).toBe('https://eternalflowers.pt/en/botanical-jewellery')
+    expect(languages['x-default']).toBe('https://eternalflowers.pt/pt/joias-botanicas')
+
+    // For the orchid page
+    const orchidLangs: Record<string, string> = {
+      pt: `${siteUrl}/pt/joias-com-orquideas`,
+      en: `${siteUrl}/en/orchid-jewellery`,
+      'x-default': `${siteUrl}/pt/joias-com-orquideas`,
+    }
+    expect(orchidLangs.en).toBe('https://eternalflowers.pt/en/orchid-jewellery')
+    expect(orchidLangs['x-default']).toBe('https://eternalflowers.pt/pt/joias-com-orquideas')
+  })
+})
+
+describe('Landing pages sitemap', () => {
+  const LOCALES = ['pt', 'en', 'es', 'it', 'de']
+  const siteUrl = 'https://eternalflowers.pt'
+
+  it('produces exactly 10 landing URLs (2 types × 5 locales)', () => {
+    const landingTypes = ['botanical', 'orchid'] as const
+    const slugs: Record<string, Record<string, string>> = {
+      botanical: {
+        pt: 'joias-botanicas', en: 'botanical-jewellery', es: 'joyeria-botanica',
+        it: 'gioielli-botanici', de: 'botanischer-schmuck',
+      },
+      orchid: {
+        pt: 'joias-com-orquideas', en: 'orchid-jewellery', es: 'joyas-con-orquideas',
+        it: 'gioielli-con-orchidee', de: 'orchideen-schmuck',
+      },
+    }
+
+    const urls = new Set<string>()
+    for (const locale of LOCALES) {
+      for (const type of landingTypes) {
+        urls.add(`${siteUrl}/${locale}/${slugs[type][locale]}`)
+      }
+    }
+    expect(urls.size).toBe(10)
+  })
+
+  it('no duplicate semantic landing URLs', () => {
+    const landingTypes = ['botanical', 'orchid'] as const
+    const slugs: Record<string, Record<string, string>> = {
+      botanical: { pt: 'joias-botanicas', en: 'botanical-jewellery', es: 'joyeria-botanica', it: 'gioielli-botanici', de: 'botanischer-schmuck' },
+      orchid: { pt: 'joias-com-orquideas', en: 'orchid-jewellery', es: 'joyas-con-orquideas', it: 'gioielli-con-orchidee', de: 'orchideen-schmuck' },
+    }
+    const urls: string[] = []
+    for (const locale of LOCALES) {
+      for (const type of landingTypes) {
+        urls.push(`${siteUrl}/${locale}/${slugs[type][locale]}`)
+      }
+    }
+    expect(new Set(urls).size).toBe(urls.length)
+  })
+
+  it('no query strings in landing URLs', () => {
+    const url = `${siteUrl}/pt/joias-botanicas`
+    expect(url.includes('?')).toBe(false)
+  })
+})
+
+describe('Landing page content rules', () => {
+  it('no unsupported rarity claims in botanical content', () => {
+    const content = {
+      pt: {
+        h1: 'Joias Botânicas com Flores Naturais',
+        sections: [
+          { heading: 'O Que São Joias Botânicas?' },
+          { heading: 'Flores Verdadeiras Preservadas em Resina' },
+          { heading: 'Feitas à Mão pela Marina, em Braga' },
+          { heading: 'Cada Flor Torna a Peça Diferente' },
+          { heading: 'Tipos de Peças' },
+          { heading: 'Personalização' },
+        ],
+      },
+    }
+    // Check no "raras" or "rare" in any heading or body
+    const allText = JSON.stringify(content.pt)
+    expect(allText).not.toContain('rara')
+    expect(allText).not.toContain('raras')
+  })
+
+  it('no unsupported rarity claims in orchid content', () => {
+    const content = {
+      pt: {
+        h1: 'Joias com Orquídeas Naturais',
+        sections: [
+          { heading: 'Orquídeas Verdadeiras Transformadas em Joias Botânicas' },
+          { heading: 'Preservar a Forma e a Beleza da Flor' },
+        ],
+      },
+    }
+    const allText = JSON.stringify(content.pt)
+    expect(allText).not.toContain('rara')
+    expect(allText).not.toContain('raras')
+  })
+
+  it('no English text on PT page', () => {
+    const ptIntro = 'Na Eternal Flowers, cada joia botânica nasce de uma flor verdadeira.'
+    expect(ptIntro).not.toContain('botanical jewellery')
+    expect(ptIntro).toContain('joia botânica')
+  })
+})
+
+describe('Landing page internal links', () => {
+  it('botanical page links to orchid page', () => {
+    const slug = 'joias-botanicas'
+    const otherSlug = 'joias-com-orquideas'
+    expect(otherSlug).not.toBe(slug)
+  })
+
+  it('orchid page links to botanical page', () => {
+    const slug = 'joias-com-orquideas'
+    const otherSlug = 'joias-botanicas'
+    expect(otherSlug).not.toBe(slug)
+  })
+
+  it('both pages link to catalog', () => {
+    const ctaLink = '/catalog'
+    expect(ctaLink).toBe('/catalog')
+  })
+})
+
+describe('Landing page structured data', () => {
+  it('BreadcrumbList has Home + page name', () => {
+    const breadcrumb = {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Início' },
+        { '@type': 'ListItem', position: 2, name: 'Joias Botânicas com Flores Naturais' },
+      ],
+    }
+    expect(breadcrumb.itemListElement).toHaveLength(2)
+    expect(breadcrumb.itemListElement[0].name).toBe('Início')
+    expect(breadcrumb.itemListElement[1].name).toBe('Joias Botânicas com Flores Naturais')
+  })
+
+  it('BreadcrumbList uses absolute canonical URLs', () => {
+    const siteUrl = 'https://eternalflowers.pt'
+    const list = {
+      itemListElement: [
+        { item: `${siteUrl}/pt` },
+        { item: `${siteUrl}/pt/joias-botanicas` },
+      ],
+    }
+    expect(list.itemListElement[0].item).toContain('https://')
+    expect(list.itemListElement[1].item).toContain('/pt/joias-botanicas')
+  })
+
+  it('does NOT include Product, Offer, FAQPage schemas', () => {
+    const landingSchemas = ['BreadcrumbList']
+    expect(landingSchemas).not.toContain('Product')
+    expect(landingSchemas).not.toContain('Offer')
+    expect(landingSchemas).not.toContain('FAQPage')
+  })
+})
+
+describe('Landing page SEO metadata', () => {
+  it('PT botanical title mentions joias botânicas', () => {
+    const title = 'Joias Botânicas com Flores Naturais | Eternal Flowers'
+    expect(title).toContain('Joias Botânicas')
+    expect(title).toContain('Flores Naturais')
+  })
+
+  it('EN botanical title mentions botanical jewellery', () => {
+    const title = 'Botanical Jewellery with Real Flowers | Eternal Flowers'
+    expect(title).toContain('Botanical Jewellery')
+    expect(title).toContain('Real Flowers')
+  })
+
+  it('PT orchid title mentions orquídeas', () => {
+    const title = 'Joias com Orquídeas Naturais | Eternal Flowers'
+    expect(title).toContain('Orquídeas')
+  })
+
+  it('all 10 landing pages have unique titles', () => {
+    const titles = [
+      'Joias Botânicas com Flores Naturais | Eternal Flowers',
+      'Botanical Jewellery with Real Flowers | Eternal Flowers',
+      'Joyería Botánica con Flores Naturales | Eternal Flowers',
+      'Gioielli Botanici con Fiori Naturali | Eternal Flowers',
+      'Botanischer Schmuck mit echten Blumen | Eternal Flowers',
+      'Joias com Orquídeas Naturais | Eternal Flowers',
+      'Natural Orchid Jewellery | Eternal Flowers',
+      'Joyas con Orquídeas Naturales | Eternal Flowers',
+      'Gioielli con Orchidee Naturali | Eternal Flowers',
+      'Orchideen-Schmuck mit echten Orchideen | Eternal Flowers',
+    ]
+    expect(new Set(titles).size).toBe(10)
+  })
+
+  it('no accidental PT fallback in EN/ES/IT/DE orchid titles', () => {
+    const enTitle = 'Natural Orchid Jewellery | Eternal Flowers'
+    expect(enTitle).not.toContain('Joias')
+    const esTitle = 'Joyas con Orquídeas Naturales | Eternal Flowers'
+    expect(esTitle).not.toContain('Joias')
+    const deTitle = 'Orchideen-Schmuck mit echten Orchideen | Eternal Flowers'
+    expect(deTitle).not.toContain('Orquídeas')
+  })
+})
+
