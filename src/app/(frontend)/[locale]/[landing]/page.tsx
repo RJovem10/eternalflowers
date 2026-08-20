@@ -38,7 +38,8 @@ export async function generateMetadata({
     'https://eternalflowers.pt'
 
   const content =
-    landingType === 'botanical' ? botanicalContent[locale] || botanicalContent.pt : orchidContent[locale] || orchidContent.pt
+    landingType === 'botanical' ? botanicalContent[locale] : orchidContent[locale]
+  if (!content) return {}
 
   // ── hreflang alternatives for this semantic page ────
   const languages: Record<string, string> = {}
@@ -83,7 +84,8 @@ export default async function LandingPage({
     'https://eternalflowers.pt'
 
   const content =
-    landingType === 'botanical' ? botanicalContent[locale] || botanicalContent.pt : orchidContent[locale] || orchidContent.pt
+    landingType === 'botanical' ? botanicalContent[locale] : orchidContent[locale]
+  if (!content) notFound()
 
   // Cross-ref: slug for the other landing type in this locale
   const otherType: 'botanical' | 'orchid' = landingType === 'botanical' ? 'orchid' : 'botanical'

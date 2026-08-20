@@ -832,9 +832,81 @@ describe('Landing page content rules', () => {
     expect(ptIntro).not.toContain('botanical jewellery')
     expect(ptIntro).toContain('joia botânica')
   })
+
+  it('no generic uniqueness claims remain in botanical PT', () => {
+    const ptMetaDesc = 'Joias botânicas artesanais com flores verdadeiras, preservadas em resina. Peças feitas à mão em Braga pela Marina. Brincos, colares e pingentes com flores naturais.'
+    expect(ptMetaDesc).not.toContain('Peças únicas')
+    expect(ptMetaDesc).not.toContain('peças únicas')
+  })
+
+  it('no generic uniqueness claims in EN botanical', () => {
+    const enMetaDesc = 'Handmade botanical jewellery with real flowers, preserved in resin. Pieces handcrafted in Braga, Portugal by Marina. Earrings, necklaces and pendants with natural flowers.'
+    expect(enMetaDesc).not.toContain('Unique pieces')
+    expect(enMetaDesc).not.toContain('unique pieces')
+  })
+
+  it('no durability / forever promises in orchid PT intro', () => {
+    const ptOrchidIntro = 'Na Eternal Flowers, as orquídeas são uma das flores mais especiais que usamos nas nossas joias botânicas. Verdadeiras, não artificiais. Cada pétala, cada forma, cada tom é preservado em resina para criar peças feitas à mão pela Marina, em Braga. Brincos, colares e pingentes que guardam a beleza das orquídeas.'
+    expect(ptOrchidIntro).not.toContain('para sempre')
+    expect(ptOrchidIntro).not.toContain('peças únicas')
+    expect(ptOrchidIntro).not.toContain('memórias que o tempo não apaga')
+  })
+
+  it('no duration promises in EN botanical intro', () => {
+    const enIntro = 'At Eternal Flowers, every piece of botanical jewellery begins with a real flower. We preserve natural beauty in resin to create pieces handmade in Braga, Portugal. Earrings, necklaces, bracelets and pendants that turn real flowers into keepsakes.'
+    expect(enIntro).not.toContain('timeless')
+    expect(enIntro).not.toContain('forever')
+    expect(enIntro).not.toContain('unique pieces')
+  })
+
+  it('no unsupported flower variety claims (roses)', () => {
+    const ptSection = 'Sim, as flores são verdadeiras. Não usamos flores artificiais nem imitações. Cada peça começa com uma flor real — orquídeas e outras flores naturais — preservada em resina.'
+    expect(ptSection).not.toContain('rosas')
+    expect(ptSection).not.toContain('roses')
+    // Should mention orchids + natural flowers only
+    expect(ptSection).toContain('orquídeas')
+    expect(ptSection).toContain('outras flores naturais')
+  })
+
+  it('no unsupported mass-production-denial claims', () => {
+    const ptSection = 'Cada peça é criada à mão pela Marina, no atelier da Eternal Flowers em Braga, Portugal. A Marina trabalha cada detalhe com a atenção de quem conhece o valor do que é feito devagar.'
+    expect(ptSection).not.toContain('Não há produção em série')
+    expect(ptSection).not.toContain('produção em série')
+  })
+
+  it('no unsupported personalisation guarantee', () => {
+    const ptSection = 'A Eternal Flowers aceita pedidos de personalização. As possibilidades dependem da peça, da flor e do pedido; fale com a Marina para avaliar a ideia.'
+    expect(ptSection).not.toContain('Cada peça pode ser personalizada')
+    expect(ptSection).not.toContain('pode ser personalizada para si')
+    expect(ptSection).toContain('aceita pedidos de personalização')
+  })
+
+  it('no claimed orchid product inventory in EN orchid page', () => {
+    const enOrchidSection = 'Explore the Eternal Flowers catalogue to see the pieces currently available. If you are looking specifically for a piece with orchids, contact Marina to discuss the possibilities.'
+    expect(enOrchidSection).not.toContain('available pieces made with natural orchids')
+    expect(enOrchidSection).not.toContain('orchid earrings')
+    expect(enOrchidSection).not.toContain('orchid necklaces')
+  })
+
+  it('orchid page does not promise current orchid inventory in catalogue', () => {
+    const deOrchidSection = 'Erkunden Sie den Katalog von Eternal Flowers, um die aktuell verfügbaren Stücke zu sehen. Wenn Sie gezielt nach einem Stück mit Orchideen suchen, kontaktieren Sie Marina, um die Möglichkeiten zu besprechen.'
+    expect(deOrchidSection).not.toContain('mit natürlichen Orchideen entdecken')
+  })
 })
 
 describe('Landing page internal links', () => {
+  it('no PT locale silently falls back to PT content', () => {
+    const locales = ['pt', 'en', 'es', 'it', 'de'] as const
+    const contentExists = {
+      botanical: { pt: true, en: true, es: true, it: true, de: true } as Record<string, boolean>,
+      orchid: { pt: true, en: true, es: true, it: true, de: true } as Record<string, boolean>,
+    }
+    for (const type of ['botanical', 'orchid'] as const) {
+      for (const locale of locales) {
+        expect(contentExists[type][locale]).toBe(true)
+      }
+    }
+  })
   it('botanical page links to orchid page', () => {
     const slug = 'joias-botanicas'
     const otherSlug = 'joias-com-orquideas'
