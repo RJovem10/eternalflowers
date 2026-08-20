@@ -530,9 +530,10 @@ describe('backup.sh — PG verification via container (ISSUE-41)', () => {
     expect(content).toContain('verify_pg_dump')
   })
 
-  it('verify_pg_dump function exists — container-first approach', () => {
+  it('verify_pg_dump function exists — container-first approach (copy to container)', () => {
     expect(content).toContain('verify_pg_dump()')
-    expect(content).toContain('pg_restore --list /dev/stdin')
+    expect(content).toContain('pg_restore --list')
+    expect(content).toContain('cp "${dump_file}" "postgres:')
   })
 
   it('no path that skips PG verification exists', () => {
@@ -779,10 +780,12 @@ describe('backup.sh — flock persistent lock (ISSUE-41)', () => {
 describe('backup.sh — verify_pg_dump container fallback chain (ISSUE-41)', () => {
   const content = fs.readFileSync(BACKUP_SH, 'utf-8')
 
-  it('verify_pg_dump tenta container primeiro, depois host', () => {
+  it('verify_pg_dump tenta container primeiro (copy + list), depois host', () => {
     const funcSection = content.substring(content.indexOf('verify_pg_dump()'))
-    // Container path
-    expect(funcSection).toContain('pg_restore --list /dev/stdin <')
+    // Container path: copy dump into container, then --list
+    expect(funcSection).toContain('pg_restore --list')
+    expect(funcSection).toContain('cp "${dump_file}"')
+    expect(funcSection).toContain('"postgres:${tmp_verify}"')
     // Host fallback
     expect(funcSection).toContain('command -v pg_restore')
   })
