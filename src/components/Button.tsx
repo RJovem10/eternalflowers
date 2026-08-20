@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { forwardRef, type ButtonHTMLAttributes, type AnchorHTMLAttributes } from 'react'
 
+const EXTERNAL_RE = /^https?:\/\//i
+
 type Variant = 'primary' | 'secondary' | 'ghost'
 
 interface ButtonBaseProps {
@@ -34,6 +36,20 @@ const Button = forwardRef<HTMLButtonElement | HTMLAnchorElement, ButtonProps>(
 
     if ('href' in props && props.href) {
       const { href, ...rest } = props as ButtonAsLink
+
+      if (EXTERNAL_RE.test(href)) {
+        return (
+          <a
+            ref={ref as React.Ref<HTMLAnchorElement>}
+            href={href}
+            className={classes}
+            {...(rest as Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'className'>)}
+          >
+            {children}
+          </a>
+        )
+      }
+
       return (
         <Link
           ref={ref as React.Ref<HTMLAnchorElement>}
