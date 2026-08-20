@@ -249,7 +249,7 @@ const startProcessingHandler: PayloadHandler = async (req) => {
   const orderId = getFulfillmentId(req)
   if (orderId === null) return fulfillmentError('ID de encomenda inválido.', 400)
   try {
-    const { startOrderProcessing } = require('@/services/order-fulfillment')
+    const { startOrderProcessing } = await import('@/services/order-fulfillment')
     const result = await startOrderProcessing(req.payload, { orderId, req })
     return fulfillmentJson(result)
   } catch (err: any) {
@@ -270,7 +270,7 @@ const markShippedHandler: PayloadHandler = async (req) => {
     }
   } catch { /* no body or invalid — ignore */ }
   try {
-    const { markOrderShipped } = require('@/services/order-fulfillment')
+    const { markOrderShipped } = await import('@/services/order-fulfillment')
     const result = await markOrderShipped(req.payload, { orderId, trackingNumber, req })
     return fulfillmentJson(result)
   } catch (err: any) {
@@ -284,7 +284,7 @@ const completeHandler: PayloadHandler = async (req) => {
   const orderId = getFulfillmentId(req)
   if (orderId === null) return fulfillmentError('ID de encomenda inválido.', 400)
   try {
-    const { completeOrder } = require('@/services/order-fulfillment')
+    const { completeOrder } = await import('@/services/order-fulfillment')
     const result = await completeOrder(req.payload, { orderId, req })
     return fulfillmentJson(result)
   } catch (err: any) {
@@ -299,7 +299,7 @@ const cancelHandler: PayloadHandler = async (req) => {
   const orderId = getFulfillmentId(req)
   if (orderId === null) return fulfillmentError('ID de encomenda inválido.', 400)
   try {
-    const { cancelOrder } = require('@/services/order-cancellation')
+    const { cancelOrder } = await import('@/services/order-cancellation')
     const result = await cancelOrder(req.payload, { orderId, req })
     return fulfillmentJson(result)
   } catch (err: any) {
