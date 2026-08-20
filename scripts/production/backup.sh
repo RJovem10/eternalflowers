@@ -65,13 +65,17 @@ verify_pg_dump() {
 
 # ─── Flags ────────────────────────────────────────────────────────────────
 VERIFY_MODE=false; VERIFY_DIR=''; PG_ONLY=false; MEDIA_ONLY=false
-for arg in "$@"; do
-    case "$arg" in
-        --pg-only)        PG_ONLY=true ;;
-        --media-only)     MEDIA_ONLY=true ;;
-        --verify)         VERIFY_MODE=true ;;
-        --verify=*)       VERIFY_MODE=true; VERIFY_DIR="${arg#*=}" ;;
-        *) echo "Opção desconhecida: $arg"; exit 1 ;;
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --pg-only)    PG_ONLY=true; shift ;;
+        --media-only) MEDIA_ONLY=true; shift ;;
+        --verify)     VERIFY_MODE=true; shift
+                      # Consume next arg only if present and not another option
+                      if [ $# -gt 0 ] && [[ "$1" != -* ]]; then
+                          VERIFY_DIR="$1"; shift
+                      fi ;;
+        --verify=*)   VERIFY_MODE=true; VERIFY_DIR="${1#*=}"; shift ;;
+        *) echo "Opção desconhecida: $1"; exit 1 ;;
     esac
 done
 if $PG_ONLY && $MEDIA_ONLY; then
@@ -236,9 +240,14 @@ pg_backup() {
     local tmp_dump="/tmp/backup-pg-dump.$$.dump"
     echo ""; echo "  PostgreSQL dump (custom format)..."
 
-    if "${COMPOSE_WRAPPER}" exec -T postgres pg_dump \
-        -U "$POSTGRES_USER" --no-owner --no-acl --format=custom \
-        --file="${tmp_dump}" "$POSTGRES_DB" >/dev/null 2>&1; then
+    # NOTE: POSTGRES_USER and POSTGRES_DB are resolved INSIDE the postgres
+    # container via sh -ec. The host shell NEVER references these variables,
+    # so backup.sh works correctly under systemd where they are not exported.
+    if "${COMPOSE_WRAPPER}" exec -T postgres sh -ec '
+        pg_dump \
+            -U "$POSTGRES_USER" --no-owner --no-acl --format=custom \
+            --file="$1" "$POSTGRES_DB"
+    ' sh "${tmp_dump}" >/dev/null 2>&1; then
 
         if "${COMPOSE_WRAPPER}" cp "postgres:${tmp_dump}" "${PG_DUMP}" >/dev/null 2>&1; then
             log_ok "PostgreSQL dump copiado"

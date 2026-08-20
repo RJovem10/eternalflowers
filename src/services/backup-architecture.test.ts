@@ -675,11 +675,26 @@ describe('restore.sh — ISSUE-41 fixes', () => {
 
   it('usa container pg_restore (POSTGRES_USER/POSTGRES_DB do container)', () => {
     // Must use POSTGRES_USER and POSTGRES_DB from container environment
+    // The sh -ec single-quoted shell string keeps these as container-resolved vars
+    expect(content).toContain('sh -ec')
     expect(content).toContain('"$POSTGRES_USER"')
     expect(content).toContain('"$POSTGRES_DB"')
     // Should NOT use host-side PGUSER/PGDATABASE fallback
     expect(content).not.toContain('${PGUSER:-')
     expect(content).not.toContain('${PGDATABASE:-')
+  })
+
+  it('POSTGRES_USER/DB resolved inside container shell, not host env', () => {
+    // The pg_restore call wraps variables in sh -ec '...' single quotes
+    // so the host shell (with set -u) never expands them.
+    const pgSection = content.substring(
+      content.indexOf('tmp_restore='),
+      content.indexOf('# ── Media')
+    )
+    // Verify the sh -ec wrapper encloses the POSTGRES_* references
+    expect(pgSection).toContain("sh -ec '")
+    expect(pgSection).toContain('-U "$POSTGRES_USER"')
+    expect(pgSection).toContain('-d "$POSTGRES_DB"')
   })
 
   it('CONFIRMAR mantido', () => {
@@ -776,5 +791,111 @@ describe('backup.sh — verify_pg_dump container fallback chain (ISSUE-41)', () 
     const funcSection = content.substring(content.indexOf('verify_pg_dump()'))
     // The final return 1 when both paths fail
     expect(funcSection).toContain('return 1')
+  })
+})
+
+// ══════════════════════════════════════════════════════════════════
+// 29. ISSUE-41 fix: POSTGRES_USER/DB expanded inside container
+// ══════════════════════════════════════════════════════════════════
+
+describe('backup.sh — container-side env expansion (ISSUE-41 fix)', () => {
+  const content = fs.readFileSync(BACKUP_SH, 'utf-8')
+
+  it('pg_dump postgres env vars are inside sh -ec container shell', () => {
+    const pgSection = content.substring(content.indexOf('pg_backup()'))
+    // pg_dump wrapped in sh -ec with POSTGRES_ vars inside single quotes
+    expect(pgSection).toContain("sh -ec '")
+    expect(pgSection).toContain('"$POSTGRES_USER"')
+    expect(pgSection).toContain('"$POSTGRES_DB"')
+    // Host shell must NOT expand these vars directly
+    expect(pgSection).not.toContain('\\$POSTGRES_USER')
+  })
+
+  it('pg_dump does not reference POSTGRES_USER/DB on the host shell', () => {
+    // Verify the pg_dump line contains NO host-level $POSTGRES_USER/DB
+    const pgSection = content.substring(content.indexOf('pg_backup()'))
+    const lines = pgSection.split('\n')
+    // Find the exec line that has pg_dump — it must be the sh -ec line
+    const execLine = lines.find(l => l.includes('exec -T postgres sh'))
+    expect(execLine).toBeTruthy()
+    // Ensure the exec line is the single-quoted version
+    expect(execLine).toContain("sh -ec '")
+    // No bare $POSTGRES_USER outside quotes on the exec line
+    expect(execLine).not.toMatch(/\$POSTGRES_USER[^"]/)
+  })
+})
+
+// ══════════════════════════════════════════════════════════════════
+// 30. ISSUE-41 fix: --verify argument parsing
+// ══════════════════════════════════════════════════════════════════
+
+describe('backup.sh — --verify argument parsing (ISSUE-41 fix)', () => {
+  const content = fs.readFileSync(BACKUP_SH, 'utf-8')
+
+  it('usa while-shift parser em vez de for-arg loop plano', () => {
+    // Must use while [ $# -gt 0 ]; do case "$1" ... shift
+    expect(content).toContain('while [ $# -gt 0 ]')
+    expect(content).toContain('case "$1" in')
+    // Must NOT use the old for-arg pattern
+    expect(content).not.toContain('for arg in "$@"')
+  })
+
+  it('--verify suporta tres formas sintaticas', () => {
+    // --verify (no arg, uses default latest full)
+    expect(content).toContain('--verify)')
+    // --verify=<dir> (inline value with =)
+    expect(content).toContain('--verify=*)')
+    // --verify <dir> (next arg consumed)
+    // Check that the --verify) case consumes next arg if not another option
+    const verifyBlock = content.substring(content.indexOf('--verify)'), content.indexOf('--verify=*)'))
+    expect(verifyBlock).toContain('VERIFY_DIR="$1"')
+    expect(verifyBlock).toContain('shift')
+  })
+
+  it('--verify only consumes next arg if not another option flag', () => {
+    const verifyBlock = content.substring(content.indexOf('--verify)'), content.indexOf('--verify=*)'))
+    expect(verifyBlock).toContain('[[ "$1" != -* ]]')
+  })
+
+  it('erro em opcao desconhecida com shift parser', () => {
+    // The catch-all uses $1 instead of $arg
+    expect(content).toContain('Opção desconhecida: $1')
+  })
+
+  it('mantem --pg-only e --media-only no parser', () => {
+    expect(content).toContain('--pg-only)')
+    expect(content).toContain('--media-only)')
+  })
+})
+
+// ══════════════════════════════════════════════════════════════════
+// 31. Runtime shell test: unset POSTGRES_USER/POSTGRES_DB
+// ══════════════════════════════════════════════════════════════════
+
+describe('runtime — unset host env (ISSUE-41 fix)', () => {
+  it('backup.sh nao crasha com POSTGRES_USER e POSTGRES_DB unset (--verify path)', () => {
+    // Run backup.sh with --verify pointing to a non-existent dir,
+    // in an environment where POSTGRES_USER and POSTGRES_DB are unset.
+    // The script must NOT hit "unbound variable" from set -u.
+    // Expected: "Diretório não encontrado" — clean error, not crash.
+    const { execSync } = require('child_process')
+    const projectDir = path.resolve(__dirname, '..', '..')
+    const result = execSync(
+      'bash scripts/production/backup.sh --verify /dev/null/does-not-exist 2>&1 || true',
+      {
+        cwd: projectDir,
+        timeout: 10000,
+        encoding: 'utf-8',
+        env: Object.assign({}, process.env, {
+          POSTGRES_USER: undefined,
+          POSTGRES_DB: undefined,
+        }),
+      }
+    )
+    // Should NOT contain "unbound variable" or "POSTGRES_USER"
+    expect(result).not.toContain('unbound variable')
+    expect(result).not.toContain('POSTGRES_USER')
+    // Should reach the verify path and fail with directory-not-found
+    expect(result).toContain('Diretório não encontrado')
   })
 })

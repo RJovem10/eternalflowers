@@ -93,10 +93,14 @@ if [ "$RESTORE_TYPE" = "pg" ]; then
         docker cp "$RESTORE_FILE" "${local_cid}:${tmp_restore}" >/dev/null 2>&1
     }
 
-    if "${COMPOSE_WRAPPER}" exec -T postgres pg_restore \
-        --verbose --clean --if-exists --no-owner --no-acl \
-        -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
-        "${tmp_restore}" 2>&1; then
+    # NOTE: POSTGRES_USER and POSTGRES_DB are resolved INSIDE the postgres
+    # container via sh -ec. The host shell NEVER references these variables.
+    if "${COMPOSE_WRAPPER}" exec -T postgres sh -ec '
+        pg_restore \
+            --verbose --clean --if-exists --no-owner --no-acl \
+            -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+            "$1"
+    ' sh "${tmp_restore}" 2>&1; then
         echo -e "${GREEN}✅ Restore PostgreSQL concluído${NC}"
     else
         echo -e "${RED}❌ Restore PostgreSQL falhou${NC}"
