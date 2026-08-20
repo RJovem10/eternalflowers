@@ -194,11 +194,11 @@ describe('maintenance-loop.sh — script behaviour', () => {
     expect(content).toContain("HEALTH_URL='http://app:3000/api/health'")
     // Startup loop must use health URL
     expect(content).toContain('${HEALTH_URL}')
-    // Startup must NOT POST to maintenance endpoint
-    expect(content).not.toContain('--request POST')
-    // Startup must not use the maintenance URL as probe
-    const startupSection = content.split('run_cycle')[0] // before first cycle
+    // The startup section (before first call to run_cycle) must use GET,
+    // not POST — the POST is only in run_cycle() for the maintenance endpoint
+    const startupSection = content.substring(0, content.indexOf('run_cycle'))
     expect(startupSection).toContain('api/health')
+    expect(startupSection).not.toContain('--request POST')
   })
 
   it('20. startup retry loop com ~60s de espera', () => {
@@ -228,13 +228,15 @@ describe('maintenance-loop.sh — script behaviour', () => {
 
   it('22. primeira execução de maintenance ocorre APÓS readiness', () => {
     const content = fs.readFileSync(SCHEDULER_SCRIPT_PATH, 'utf-8')
-    // A chamada run_cycle deve estar DEPOIS do loop while de startup
-    const breakIndex = content.indexOf('break')
-    const runCycleIndex = content.indexOf('run_cycle')
+    // Encontrar a chamada a run_cycle que ocorre DEPOIS do loop de startup
+    // (não confundir com a definição da função run_cycle())
+    const afterFunctionDef = content.substring(content.indexOf('esac\n}'))
+    const breakIndex = afterFunctionDef.indexOf('break\n')
+    const runCycleIndex = afterFunctionDef.indexOf('run_cycle')
     expect(runCycleIndex).toBeGreaterThan(breakIndex)
     // Deve haver exactamente um run_cycle fora do while true
     const runCycleCount = (content.match(/\brun_cycle\b/g) || []).length
-    expect(runCycleCount).toBeGreaterThanOrEqual(2) // one immediate + loop
+    expect(runCycleCount).toBeGreaterThanOrEqual(2) // one immediate + in while loop
   })
 
   it('23. curl 000 failure handling — garante "000" em vez de ambiguidade || echo', () => {
