@@ -1,10 +1,12 @@
 import Image from 'next/image'
+import Link from 'next/link'
 import Section from './Section'
 
 interface RealFlowersProps {
   title: string
   subtitle?: string | null
   dict: any
+  locale?: string
 }
 
 const flowers = [
@@ -16,7 +18,23 @@ const flowers = [
   { name: 'Cattleya', species: 'Cattleya spp.', color: 'from-[#E8B4B8] to-[#C9B1D0]', emoji: '🩷', image: '/instagram/3949769286870927720.jpg' },
 ]
 
-export default function RealFlowers({ title, subtitle }: RealFlowersProps) {
+const landingSlug: Record<string, string> = {
+  pt: 'joias-botanicas',
+  en: 'botanical-jewellery',
+  es: 'joyeria-botanica',
+  it: 'gioielli-botanici',
+  de: 'botanischer-schmuck',
+}
+
+const linkLabel: Record<string, string> = {
+  pt: 'Saber mais sobre joias botânicas →',
+  en: 'Learn more about botanical jewellery →',
+  es: 'Saber más sobre joyería botánica →',
+  it: 'Scopri di più sui gioielli botanici →',
+  de: 'Mehr über botanischen Schmuck →',
+}
+
+export default function RealFlowers({ title, subtitle, dict, locale }: RealFlowersProps) {
   return (
     <Section
       title={title}
@@ -49,6 +67,18 @@ export default function RealFlowers({ title, subtitle }: RealFlowersProps) {
           </div>
         ))}
       </div>
+
+      {/* Contextual internal link to botanical jewellery pillar page */}
+      {locale && landingSlug[locale] && (
+        <div className="mt-10 text-center">
+          <Link
+            href={`/${locale}/${landingSlug[locale]}`}
+            className="inline-flex items-center text-xs uppercase tracking-[0.2em] text-brand-gold hover:text-brand-gold-dark transition-colors duration-300 font-body font-medium"
+          >
+            {linkLabel[locale] || linkLabel.pt}
+          </Link>
+        </div>
+      )}
     </Section>
   )
 }

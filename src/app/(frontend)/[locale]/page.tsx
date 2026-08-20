@@ -187,6 +187,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
         title={realFlowers?.title || dict.realFlowersTitle}
         subtitle={realFlowers?.subtitle}
         dict={dict}
+        locale={locale}
       />
 
       {/* ─── ATO 3: UTILIDADE ─── */}
