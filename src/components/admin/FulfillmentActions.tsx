@@ -122,6 +122,7 @@ export function FulfillmentActions() {
       )}
 
       <button
+        type="button"
         className={STYLES.button}
         onClick={handleAction}
         disabled={isDisabled}

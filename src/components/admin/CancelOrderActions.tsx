@@ -128,6 +128,7 @@ export function CancelOrderActions() {
         <h3 className={STYLES.title}>Cancelamento</h3>
 
         <button
+          type="button"
           className={`${STYLES.button} ${buttonConfig.isRefund ? STYLES.refundButton : STYLES.cancelButton}`}
           onClick={handleClick}
           disabled={isDisabled}
@@ -153,6 +154,7 @@ export function CancelOrderActions() {
             </p>
             <div className={STYLES.confirmActions}>
               <button
+                type="button"
                 className={STYLES.confirmCancel}
                 onClick={() => setShowConfirm(false)}
                 disabled={isDisabled}
@@ -160,6 +162,7 @@ export function CancelOrderActions() {
                 Voltar
               </button>
               <button
+                type="button"
                 className={`${STYLES.confirmButton} bg-red-600 hover:bg-red-700`}
                 onClick={callEndpoint}
                 disabled={isDisabled}
