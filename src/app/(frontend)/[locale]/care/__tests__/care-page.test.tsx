@@ -13,15 +13,22 @@ import { dictionaries, locales } from '@/i18n/dictionaries'
 import Footer from '@/components/Footer'
 
 // ═══════════════════════════════════════════════════════════════
-// 1. Asset PNG existe
+// 1. Assets PNG — todos os 5 existem
 // ═══════════════════════════════════════════════════════════════
 
-describe('Care guide asset', () => {
-  it('PNG existe no directório public', () => {
-    const pngPath = path.resolve(
-      __dirname,
-      '../../../../../../public/images/guides/eternal-flowers-care-guide-pt.png'
-    )
+const posters: Record<string, string> = {
+  pt: 'eternal-flowers-care-guide-pt.png',
+  en: 'eternal-flowers-care-guide-en.png',
+  es: 'eternal-flowers-care-guide-es.png',
+  it: 'eternal-flowers-care-guide-it.png',
+  de: 'eternal-flowers-care-guide-de.png',
+}
+
+const guidesDir = path.resolve(__dirname, '../../../../../../public/images/guides')
+
+describe('Care guide assets — all 5 PNGs exist', () => {
+  it.each(Object.entries(posters))('%s → %s existe', (locale, filename) => {
+    const pngPath = path.join(guidesDir, filename)
     expect(fs.existsSync(pngPath)).toBe(true)
   })
 })
@@ -174,7 +181,7 @@ describe('Care page route existence', () => {
 })
 
 // ═══════════════════════════════════════════════════════════════
-// 8. Conteúdo textual na página — traduzido via dicionário
+// 8. Conteúdo textual na página — poster i18n
 // ═══════════════════════════════════════════════════════════════
 
 describe('Page content (source-level checks)', () => {
@@ -209,16 +216,47 @@ describe('Page content (source-level checks)', () => {
     expect(pageContent).toContain('text: dict.careFaq1A')
   })
 
-  it('poster PT renderizado condicionalmente com isPt', () => {
-    expect(pageContent).toContain('{isPt && (')
-    expect(pageContent).toContain('eternal-flowers-care-guide-pt.png')
+  it('JÁ NÃO usa {isPt && ( — poster é mostrado em todos os locales', () => {
+    expect(pageContent).not.toContain('{isPt && (')
   })
 
-  it('link "Guardar guia" aponta para o PNG original', () => {
-    expect(pageContent).toContain('download="guia-cuidados-eternal-flowers.png"')
-    expect(pageContent).toContain(
-      'href="/images/guides/eternal-flowers-care-guide-pt.png"'
-    )
+  it('poster é selecionado dinamicamente via posterMap', () => {
+    expect(pageContent).toContain('const posterMap')
+    expect(pageContent).toContain('const poster = posterMap[locale] || posterMap.pt')
+  })
+
+  it('posterMap contém todos os 5 locales', () => {
+    expect(pageContent).toContain("pt: { file: 'eternal-flowers-care-guide-pt.png'")
+    expect(pageContent).toContain("en: { file: 'eternal-flowers-care-guide-en.png'")
+    expect(pageContent).toContain("es: { file: 'eternal-flowers-care-guide-es.png'")
+    expect(pageContent).toContain("it: { file: 'eternal-flowers-care-guide-it.png'")
+    expect(pageContent).toContain("de: { file: 'eternal-flowers-care-guide-de.png'")
+  })
+
+  it('posterMap contém download filenames por locale', () => {
+    expect(pageContent).toContain("download: 'guia-cuidados-eternal-flowers.png'")
+    expect(pageContent).toContain("download: 'care-guide-eternal-flowers.png'")
+    expect(pageContent).toContain("download: 'guida-cura-eternal-flowers.png'")
+    expect(pageContent).toContain("download: 'pflegeleitfaden-eternal-flowers.png'")
+  })
+
+  it('Image src usa template string com poster.file', () => {
+    expect(pageContent).toContain("src={`/images/guides/${poster.file}`}")
+  })
+
+  it('link Save (download) usa template string com poster.file e poster.download', () => {
+    expect(pageContent).toContain("href={`/images/guides/${poster.file}`}")
+    expect(pageContent).toContain('download={poster.download}')
+  })
+
+  it('link Open (target=_blank) usa template string com poster.file', () => {
+    // Part of the two href lines with poster.file
+    const hrefMatches = (pageContent.match(/href={`\/images\/guides\/\$\{poster\.file\}`}/g) || []).length
+    expect(hrefMatches).toBeGreaterThanOrEqual(2) // save + open
+  })
+
+  it('não contém href hardcoded PT para o poster (usa template)', () => {
+    expect(pageContent).not.toContain("href=\"/images/guides/eternal-flowers-care-guide-pt.png\"")
   })
 
   it('não contém texto hardcoded PT nos cuidados (usa dict)', () => {
@@ -243,10 +281,7 @@ describe('Page content (source-level checks)', () => {
     expect(pageContent).toContain('export default async function CarePage')
   })
 
-  it('imagens futuras referidas em comentário', () => {
-    expect(pageContent).toContain('eternal-flowers-care-guide-en.png')
-    expect(pageContent).toContain('eternal-flowers-care-guide-es.png')
-    expect(pageContent).toContain('eternal-flowers-care-guide-it.png')
-    expect(pageContent).toContain('eternal-flowers-care-guide-de.png')
+  it('comentário com futuras locales foi substituído', () => {
+    expect(pageContent).not.toContain('The poster image files for future locale')
   })
 })
