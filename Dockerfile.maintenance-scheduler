@@ -1,0 +1,24 @@
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║  Dockerfile.maintenance-scheduler — Eternal Flowers             ║
+# ║                                                                ║
+# ║  Imagem mínima: Alpine + curl para chamadas HTTP internas.      ║
+# ║  Chama apenas URL interna da app. Nenhuma porta pública.        ║
+# ║  NÃO recebe credenciais de base de dados, Stripe, Resend,      ║
+# ║  ou Instagram — única variável necessária é MAINTENANCE_SECRET  ║
+# ║  fornecida via environment no Compose (nunca env_file).         ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
+FROM alpine:3.20
+
+RUN apk add --no-cache curl
+
+COPY scripts/production/maintenance-loop.sh /usr/local/bin/maintenance-loop.sh
+
+RUN chmod +x /usr/local/bin/maintenance-loop.sh
+
+# A única variável necessária em runtime é MAINTENANCE_SECRET,
+# fornecida via environment no Compose (não env_file).
+
+USER nobody
+
+CMD ["sh", "/usr/local/bin/maintenance-loop.sh"]

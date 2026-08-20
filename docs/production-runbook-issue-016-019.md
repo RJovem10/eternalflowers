@@ -57,6 +57,7 @@
 | **Caddy v2** | Reverse proxy + TLS automático (Let's Encrypt) | Sim (Docker) | ✅ :80 + :443 |
 | **Next.js / Payload** | Aplicação web + CMS headless | Sim (Docker) | ❌ Rede interna |
 | **PostgreSQL 16** | Base de dados | Sim (Docker) | ❌ Rede interna |
+| **Maintenance Scheduler** | Ciclo automático de manutenção (5 min) | Sim (Docker) | ❌ Rede interna |
 | **Volume `postgres_data`** | Dados persistentes da BD | — | ❌ |
 | **Volume `media_data`** | Ficheiros de upload (imagens) | — | ❌ |
 | **Volume `caddy_data`** | Certificados TLS (Let's Encrypt) | — | ❌ |
@@ -112,6 +113,7 @@ cp .env.production.example .env.production
 
 # 2. Preencher .env.production (NUNCA versionar)
 #    Gerar PAYLOAD_SECRET: openssl rand -hex 32
+#    Gerar MAINTENANCE_SECRET: openssl rand -hex 32
 #    Gerar POSTGRES_PASSWORD: openssl rand -hex 16
 
 # 3. Garantir que DNS aponta para o VPS antes de arrancar
@@ -126,13 +128,20 @@ cp .env.production.example .env.production
 # 5. Preflight
 ./scripts/production/preflight.sh
 
-# 6. Arrancar
-docker compose -f docker-compose.production.yml --env-file .env.production up -d
+# 6. Arrancar (PREFERIDO — usa wrapper que garante --env-file)
+./scripts/production/compose.sh up -d --build
+
+#    Equivalente manual (obrigatório --env-file .env.production):
+#    docker compose -f docker-compose.production.yml --env-file .env.production up -d
 
 # 7. Verificar certificados TLS (Caddy obtém Let's Encrypt automaticamente)
-docker compose -f docker-compose.production.yml logs caddy
+./scripts/production/compose.sh logs caddy
 
-# 8. Smoke tests
+# 8. Verificar scheduler (logs + status do container)
+./scripts/production/compose.sh ps
+./scripts/production/compose.sh logs maintenance-scheduler
+
+# 9. Smoke tests
 BASE_URL=https://<DOMINIO> ./scripts/production/smoke-test.sh
 ```
 
@@ -300,9 +309,9 @@ O restore exige confirmação explícita (`CONFIRMAR`). Protege contra:
 
 | Passo | Comando / Ação | Duração | Validação | Aborto | Rollback |
 |-------|---------------|---------|-----------|--------|----------|
-| J1 | Build da imagem | 5 min | `docker compose build` → exit 0 | Build error | Corrigir e rebuild |
-| J2 | Arranque completo | 1 min | `docker compose up -d` → healthy | PG ou app não healthy | Ver logs |
-| J3 | Verificar logs | 1 min | Sem erros fatais | Erro | `docker compose logs` |
+| J1 | Build da imagem | 5 min | `./scripts/production/compose.sh build` → exit 0 | Build error | Corrigir e rebuild |
+| J2 | Arranque completo | 1 min | `./scripts/production/compose.sh up -d` → healthy | PG ou app não healthy | Ver logs |
+| J3 | Verificar logs | 1 min | Sem erros fatais | Erro | `./scripts/production/compose.sh logs` |
 
 ### Fase K — Smoke tests
 
@@ -344,7 +353,7 @@ O restore exige confirmação explícita (`CONFIRMAR`). Protege contra:
 Se o PostgreSQL não arrancar ou a baseline falhar:
 
 ```bash
-docker compose -f docker-compose.production.yml down -v
+./scripts/production/compose.sh down -v
 # Corrigir configuração e recomeçar da Fase D
 ```
 
@@ -374,7 +383,7 @@ Se E2–E4 falharem ou as traduções não forem importadas:
 ./scripts/production/restore.sh --pg backups/pg-pre-e2.dump
 
 # Opção B: recomeçar do zero
-docker compose down -v
+./scripts/production/compose.sh down -v
 # Recomeçar da Fase D
 ```
 
@@ -387,8 +396,8 @@ Se o site estiver público e algo falhar:
 #    (TTL anterior determina a velocidade)
 #
 # 2. Se o problema for na aplicação (não na BD):
-docker compose -f docker-compose.production.yml down app
-docker compose -f docker-compose.production.yml up -d --build app
+./scripts/production/compose.sh down app
+./scripts/production/compose.sh up -d --build app
 
 # 3. Se o problema for na BD:
 #    a) Parar app
@@ -396,7 +405,7 @@ docker compose -f docker-compose.production.yml up -d --build app
 #    c) Reconstruir app
 
 # 4. Se o problema for no proxy:
-docker compose -f docker-compose.production.yml restart caddy
+./scripts/production/compose.sh restart caddy
 ```
 
 ### 6.5 Media incompletos
@@ -410,11 +419,11 @@ docker compose -f docker-compose.production.yml restart caddy
 
 ```bash
 # Verificar logs da app
-docker compose -f docker-compose.production.yml logs app
+./scripts/production/compose.sh logs app
 
 # Recriar admin via seed se necessário
 cd /opt/loja-flores
-docker compose -f docker-compose.production.yml exec app \
+./scripts/production/compose.sh exec app \
   npx tsx scripts/seed.py
 # (requer SEED_ADMIN_EMAIL e SEED_ADMIN_PASSWORD definidos)
 ```

@@ -3,15 +3,23 @@
 # Configuração de deployment production versionada.
 # NÃO contém secrets — todas as variáveis vêm de .env.production em runtime.
 #
-# Uso:
-#   cp .env.production.example .env.production
+# Uso (PREFERIDO — garante --env-file):
+#   ./scripts/production/compose.sh up -d
+#
+# Equivalente manual:
 #   docker compose -f docker-compose.production.yml --env-file .env.production up -d
+#
+# ⚠️  NUNCA omitir --env-file .env.production.
+#     Sem ele, variáveis como DATABASE_URI e PAYLOAD_SECRET resolvem
+#     como string vazia, quebrando o arranque do container.
 #
 # .env.production está em .gitignore — NUNCA versionar com secrets reais.
 #
-# Arquitetura de rede:
+# Arquitectura de rede:
 #   Internet → Caddy (:80/:443) → App (:3000) → PostgreSQL (:5432)
-#   Apenas Caddy expõe portas ao host. App e Postgres são rede interna.
+#   └─ maintenance-scheduler (HTTP interno, sem porta pública)
+#   Apenas Caddy expõe portas ao host. App, Postgres e Scheduler
+#   são rede interna.
 # =============================================================================
 
 services:
@@ -93,6 +101,38 @@ services:
           memory: 1G
         reservations:
           memory: 512M
+
+  # ─── Maintenance Scheduler ─────────────────────────────────────
+  # Serviço autónomo que invoca POST /api/internal/maintenance a cada 5 minutos.
+  # Chama apenas a URL interna da app (http://app:3000).
+  # Nenhuma porta pública exposta.
+  # NÃO recebe credenciais de base de dados, Stripe, Resend, ou Instagram.
+  # A única variável de ambiente recebida é MAINTENANCE_SECRET.
+  # A imagem é mínima (Alpine + curl).
+  maintenance-scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile.maintenance-scheduler
+    container_name: eternal-flowers-maintenance-scheduler
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_started
+    # NÃO usa env_file — recebe apenas MAINTENANCE_SECRET via environment.
+    # Isto impede a injeção acidental de DATABASE_URI, PAYLOAD_SECRET,
+    # STRIPE_SECRET_KEY, RESEND_API_KEY, INSTAGRAM_ACCESS_TOKEN,
+    # e outros secrets de produção desnecessários ao scheduler.
+    environment:
+      MAINTENANCE_SECRET: ${MAINTENANCE_SECRET:?MAINTENANCE_SECRET is required}
+    networks:
+      - eternal-flowers-net
+    # Sem expose. Sem ports. Sem volumes.
+    deploy:
+      resources:
+        limits:
+          memory: 32M
+        reservations:
+          memory: 16M
 
   caddy:
     image: caddy:2-alpine
