@@ -125,7 +125,15 @@ export default async function CarePage({
 }) {
   const { locale } = await params
   const dict = getDictionary(locale)
-  const isPt = locale === 'pt'
+
+  const posterMap: Record<string, { file: string; download: string }> = {
+    pt: { file: 'eternal-flowers-care-guide-pt.png', download: 'guia-cuidados-eternal-flowers.png' },
+    en: { file: 'eternal-flowers-care-guide-en.png', download: 'care-guide-eternal-flowers.png' },
+    es: { file: 'eternal-flowers-care-guide-es.png', download: 'guia-cuidados-eternal-flowers.png' },
+    it: { file: 'eternal-flowers-care-guide-it.png', download: 'guida-cura-eternal-flowers.png' },
+    de: { file: 'eternal-flowers-care-guide-de.png', download: 'pflegeleitfaden-eternal-flowers.png' },
+  }
+  const poster = posterMap[locale] || posterMap.pt
 
   return (
     <>
@@ -193,49 +201,41 @@ export default async function CarePage({
       </section>
 
       {/* ─── GUIA VISUAL / POSTER ─────────────────────── */}
-      {/* Only show the poster for PT; other locales show the translated HTML content only.
-          The poster image files for future locale editions are prepared at:
-            public/images/guides/eternal-flowers-care-guide-en.png
-            public/images/guides/eternal-flowers-care-guide-es.png
-            public/images/guides/eternal-flowers-care-guide-it.png
-            public/images/guides/eternal-flowers-care-guide-de.png
-      */}
-      {isPt && (
-        <Section className="bg-white">
-          <SectionTitle>{dict.careVisualGuideTitle}</SectionTitle>
-          <div className="max-w-3xl mx-auto">
-            <div className="relative overflow-hidden rounded-sm border border-brand-sage-light/20 bg-brand-cream/30">
-              <Image
-                src="/images/guides/eternal-flowers-care-guide-pt.png"
-                alt={dict.careVisualGuideTitle}
-                width={1200}
-                height={1697}
-                className="w-full h-auto"
-                priority
-              />
-            </div>
-
-            {/* Save / Open buttons */}
-            <div className="mt-6 flex flex-wrap gap-4 justify-center">
-              <a
-                href="/images/guides/eternal-flowers-care-guide-pt.png"
-                download="guia-cuidados-eternal-flowers.png"
-                className="inline-flex items-center px-6 py-3 bg-brand-gold text-white text-sm font-medium tracking-wider uppercase hover:bg-brand-gold-dark transition-all duration-300 font-body"
-              >
-                {dict.careSaveButton}
-              </a>
-              <a
-                href="/images/guides/eternal-flowers-care-guide-pt.png"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center px-6 py-3 bg-transparent border border-brand-gold/40 text-brand-gold text-sm font-medium tracking-wider uppercase hover:bg-brand-gold/10 hover:border-brand-gold transition-all duration-300 font-body"
-              >
-                {dict.careOpenButton}
-              </a>
-            </div>
+      {/* Poster traduzido por locale */}
+      <Section className="bg-white">
+        <SectionTitle>{dict.careVisualGuideTitle}</SectionTitle>
+        <div className="max-w-3xl mx-auto">
+          <div className="relative overflow-hidden rounded-sm border border-brand-sage-light/20 bg-brand-cream/30">
+            <Image
+              src={`/images/guides/${poster.file}`}
+              alt={dict.careVisualGuideTitle}
+              width={1200}
+              height={1697}
+              className="w-full h-auto"
+              priority
+            />
           </div>
-        </Section>
-      )}
+
+          {/* Save / Open buttons */}
+          <div className="mt-6 flex flex-wrap gap-4 justify-center">
+            <a
+              href={`/images/guides/${poster.file}`}
+              download={poster.download}
+              className="inline-flex items-center px-6 py-3 bg-brand-gold text-white text-sm font-medium tracking-wider uppercase hover:bg-brand-gold-dark transition-all duration-300 font-body"
+            >
+              {dict.careSaveButton}
+            </a>
+            <a
+              href={`/images/guides/${poster.file}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center px-6 py-3 bg-transparent border border-brand-gold/40 text-brand-gold text-sm font-medium tracking-wider uppercase hover:bg-brand-gold/10 hover:border-brand-gold transition-all duration-300 font-body"
+            >
+              {dict.careOpenButton}
+            </a>
+          </div>
+        </div>
+      </Section>
 
       {/* ─── 5 CUIDADOS ESSENCIAIS ────────────────────── */}
       <Section className="bg-brand-cream">
