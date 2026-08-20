@@ -13,6 +13,7 @@ import InternationalPresence from '@/components/InternationalPresence'
 import InstagramSection from '@/components/InstagramSection'
 import CTAFinal from '@/components/CTAFinal'
 import Footer from '@/components/Footer'
+import { getCachedReels } from '@/services/instagram'
 
 export async function generateMetadata({
   params,
@@ -131,6 +132,9 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
       ...payloadLocaleOptions(locale as Locale),
     }),
   ])
+
+  // Fetch Instagram Reels (cached server-side, 30 min TTL)
+  const reels = await getCachedReels()
 
   const hero = homepage.hero
   const realFlowers = homepage.realFlowers
@@ -251,6 +255,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
         title={instagram?.title || dict.instagramTitle}
         handle={instagram?.handle || 'eternal.flowers.pt'}
         text={instagram?.text || dict.instagramText}
+        reels={reels}
         dict={dict}
       />
 
