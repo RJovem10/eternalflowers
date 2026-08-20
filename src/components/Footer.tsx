@@ -98,6 +98,15 @@ export default function Footer({
                 </li>
               )}
             </ul>
+            <div className="mt-6 pt-6 border-t border-white/8">
+              <a
+                href={`/${locale}/care`}
+                className="group inline-flex items-center gap-2 text-white/45 hover:text-white/80 transition-colors duration-300 font-body font-light text-sm"
+              >
+                {dict.careGuide}
+                <span className="text-brand-gold/40 group-hover:text-brand-gold/80 transition-colors duration-300">→</span>
+              </a>
+            </div>
           </div>
         </div>
 
