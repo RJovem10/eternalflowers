@@ -253,12 +253,15 @@ async function paidRefundCancel(
   }
 
   // ─── A. Criar REFUND INTEGRAL FORA da transacção DB ─────────
+  console.log('[order-cancel] stage=create-refund:start orderId=' + orderId)
   const refund = await createAdminCancelRefund(payload, paymentIntentId, orderId, order)
+  console.log('[order-cancel] stage=create-refund:done orderId=' + orderId + ' refundId=' + refund.id)
 
   const refundId = refund.id
   const refundReason: RefundReason = 'admin_order_cancelled'
 
   // ─── B. Transaction DB curta ────────────────────────────────
+  console.log('[order-cancel] stage=db-transaction:start orderId=' + orderId)
   return runInTransaction(payload, undefined, async (ctx) => {
     // Revalidar estado
     const freshOrder = await payload.findByID({
@@ -285,7 +288,9 @@ async function paidRefundCancel(
     }
 
     // Restaurar stock físico (unique/reproducible)
+    console.log('[order-cancel] stage=stock-restore:start orderId=' + orderId)
     const stockRestored = await restoreConfirmedOrderStock(ctx, payload, orderId)
+    console.log('[order-cancel] stage=stock-restore:done orderId=' + orderId + ' restored=' + stockRestored)
 
     if (freshOrder.stripeRefundId && freshOrder.stripeRefundId !== refundId) {
       // Já tem outro refund — não sobrepor
@@ -293,6 +298,7 @@ async function paidRefundCancel(
 
     const now = new Date().toISOString()
 
+    console.log('[order-cancel] stage=order-update:start orderId=' + orderId)
     await payload.update({
       collection: 'orders',
       id: orderId,
@@ -306,10 +312,12 @@ async function paidRefundCancel(
       req: ctx.req,
       overrideAccess: true,
     })
+    console.log('[order-cancel] stage=order-update:done orderId=' + orderId)
 
     // ─── Enqueue order_cancelled email notification (mesma transacção) ──
     // Falha ao persistir a notification faz rollback da transacção de domínio.
     const customer = (freshOrder.customer || {}) as any
+    console.log('[order-cancel] stage=email-enqueue:start orderId=' + orderId)
     await enqueueEmailNotification(payload, {
       type: 'order_cancelled',
       orderId: orderId,
@@ -329,6 +337,7 @@ async function paidRefundCancel(
       },
       req: ctx.req,
     })
+    console.log('[order-cancel] stage=email-enqueue:done orderId=' + orderId)
 
     return {
       kind: 'paid_refund_cancelled',
