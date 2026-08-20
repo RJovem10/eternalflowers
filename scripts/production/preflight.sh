@@ -103,6 +103,85 @@ else
     check "NEXT_PUBLIC_SERVER_URL = SITE_URL" "pass"
 fi
 
+# ── 1b. Stripe ──────────────────────────────────────────────────────
+echo ""
+echo "💳 1b. Stripe"
+
+# STRIPE_SECRET_KEY
+SSK="${STRIPE_SECRET_KEY:-}"
+if [ -z "$SSK" ]; then
+    if [ "$MODE" = "cutover" ]; then
+        check "STRIPE_SECRET_KEY definida" "fail" "Variável STRIPE_SECRET_KEY não definida"
+    else
+        check "STRIPE_SECRET_KEY definida (definir no cutover)" "warn"
+    fi
+elif echo "$SSK" | grep -qiE '<DEFINIR|<GERAR|placeholder|change_me|muda_isto|dev-secret|sk_test_'; then
+    if echo "$SSK" | grep -q '^sk_test_'; then
+        check "STRIPE_SECRET_KEY — chave de TESTE" "warn" "Usa sk_test_ em vez de sk_live_ (esperada em produção)"
+    else
+        check "STRIPE_SECRET_KEY sem placeholder" "fail" "STRIPE_SECRET_KEY contém placeholder"
+    fi
+elif [ "$MODE" = "cutover" ]; then
+    if echo "$SSK" | grep -q '^sk_live_'; then
+        check "STRIPE_SECRET_KEY prefixo sk_live_" "pass"
+    else
+        # Não imprimir o valor — apenas prefixo inválido
+        PREFIX=$(echo "$SSK" | cut -c1-8)
+        check "STRIPE_SECRET_KEY prefixo inválido" "fail" "Esperado sk_live_, obtido $PREFIX..." 
+    fi
+else
+    check "STRIPE_SECRET_KEY definida" "pass"
+fi
+unset SSK PREFIX
+
+# NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+NPK="${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}"
+if [ -z "$NPK" ]; then
+    if [ "$MODE" = "cutover" ]; then
+        check "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY definida" "fail" "Variável NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY não definida"
+    else
+        check "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY definida (definir no cutover)" "warn"
+    fi
+elif echo "$NPK" | grep -qiE '<DEFINIR|<GERAR|placeholder|change_me|muda_isto|dev-secret|pk_test_'; then
+    if echo "$NPK" | grep -q '^pk_test_'; then
+        check "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY — chave de TESTE" "warn" "Usa pk_test_ em vez de pk_live_ (esperada em produção)"
+    else
+        check "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY sem placeholder" "fail" "Contém placeholder"
+    fi
+elif [ "$MODE" = "cutover" ]; then
+    if echo "$NPK" | grep -q '^pk_live_'; then
+        check "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY prefixo pk_live_" "pass"
+    else
+        PREFIX=$(echo "$NPK" | cut -c1-8)
+        check "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY prefixo inválido" "fail" "Esperado pk_live_, obtido $PREFIX..."
+    fi
+else
+    check "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY definida" "pass"
+fi
+unset NPK PREFIX
+
+# STRIPE_WEBHOOK_SECRET
+SWS="${STRIPE_WEBHOOK_SECRET:-}"
+if [ -z "$SWS" ]; then
+    if [ "$MODE" = "cutover" ]; then
+        check "STRIPE_WEBHOOK_SECRET definida" "fail" "Variável STRIPE_WEBHOOK_SECRET não definida"
+    else
+        check "STRIPE_WEBHOOK_SECRET definida (definir no cutover)" "warn"
+    fi
+elif echo "$SWS" | grep -qiE '<DEFINIR|<GERAR|placeholder|change_me|muda_isto|dev-secret'; then
+    check "STRIPE_WEBHOOK_SECRET sem placeholder" "fail" "STRIPE_WEBHOOK_SECRET contém placeholder"
+elif [ "$MODE" = "cutover" ]; then
+    if echo "$SWS" | grep -q '^whsec_'; then
+        check "STRIPE_WEBHOOK_SECRET prefixo whsec_" "pass"
+    else
+        PREFIX=$(echo "$SWS" | cut -c1-7)
+        check "STRIPE_WEBHOOK_SECRET prefixo inválido" "fail" "Esperado whsec_, obtido $PREFIX..."
+    fi
+else
+    check "STRIPE_WEBHOOK_SECRET definida" "pass"
+fi
+unset SWS PREFIX
+
 # ── 2. Docker ──────────────────────────────────────────────────────────
 echo ""
 echo "🐳 2. Docker"
