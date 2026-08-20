@@ -22,4 +22,7 @@ tsconfig.tsbuildinfo
 .env.staging.local
 media-staging/
 backups/staging-*
+# backup-* naming convention — todos os backups de produção
+backups/backup-*
+backups/.tmp-*
 # docker-compose.production.yml está tracked — não esconder
