@@ -304,6 +304,13 @@ const cancelHandler: PayloadHandler = async (req) => {
     return fulfillmentJson(result)
   } catch (err: any) {
     const isKnown = err.code === 'CANCEL_NOT_ALLOWED' || err.code === 'CANCEL_ORDER_NOT_FOUND' || err.code === 'CANCEL_STRIPE_ERROR' || err.code === 'CANCEL_REFUND_ERROR'
+    console.error('[orders/cancel] unhandled error', {
+      orderId,
+      name: err.name,
+      message: err.message,
+      code: err.code,
+      stack: err.stack,
+    })
     return fulfillmentJson({ error: err.message, code: err.code }, isKnown ? 409 : 500)
   }
 }
