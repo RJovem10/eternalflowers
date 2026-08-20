@@ -13,5 +13,14 @@ www.eternalflowers.pt {
 # Domínio principal — reverse proxy para a app Next.js/Payload
 eternalflowers.pt {
 	encode zstd gzip
+
+	# Security headers (não incluir CSP — testado separadamente)
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+	}
+
 	reverse_proxy app:3000
 }
