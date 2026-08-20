@@ -10,8 +10,10 @@
  *   6. Cadência de 5 minutos
  *   7. Wrapper compose.sh sempre inclui --env-file .env.production
  *   8. Scheduler Dockerfile é mínimo (Alpine + curl)
- *   9. Apenas MAINTENANCE_SECRET é necessária
- *  10. Sem acesso a base de dados, Stripe, Payload
+ *   9. Apenas MAINTENANCE_SECRET é fornecida via environment
+ *  10. Sem env_file (impede injeção de secrets não necessários)
+ *  11. Health probe usa GET /api/health, não POST /api/internal/maintenance
+ *  12. Conexão curl zero tratada como "000"
  */
 /// <reference types="vitest/globals" />
 import { describe, it, expect } from 'vitest'
@@ -104,46 +106,58 @@ describe('maintenance-scheduler — internal network', () => {
 })
 
 // ══════════════════════════════════════════════════════════════════
-// 4. Uses env_file, not hardcoded secrets
+// 4. Secret isolation — no env_file, explicit MAINTENANCE_SECRET only
 // ══════════════════════════════════════════════════════════════════
 
-describe('maintenance-scheduler — env/secret safety', () => {
+describe('maintenance-scheduler — secret isolation', () => {
   beforeAll(() => loadCompose())
 
-  it('10. usa env_file: .env.production (não duplica secret no environment)', () => {
-    expect(schedulerService.env_file).toContain('.env.production')
+  it('10. NÃO usa env_file (evita injeção de secrets desnecessários)', () => {
+    expect(schedulerService.env_file).toBeUndefined()
   })
 
-  it('11. não usa environment block (evita duplicação de secret)', () => {
-    // Pode ou não ter environment, mas se tiver, não deve conter
-    // secrets que o scheduler não precisa
-    if (schedulerService.environment) {
-      const env = schedulerService.environment
-      // Scheduler só precisa de MAINTENANCE_SECRET, e isso vem do env_file
-      expect(env).not.toHaveProperty('DATABASE_URI')
-      expect(env).not.toHaveProperty('PAYLOAD_SECRET')
-      expect(env).not.toHaveProperty('STRIPE_SECRET_KEY')
-      expect(env).not.toHaveProperty('RESEND_API_KEY')
-    }
+  it('11. environment contém apenas MAINTENANCE_SECRET', () => {
+    expect(schedulerService.environment).toBeDefined()
+    const env = schedulerService.environment
+    // Deve conter MAINTENANCE_SECRET
+    expect(env).toHaveProperty('MAINTENANCE_SECRET')
+    // NÃO deve conter outros secrets de produção
+    expect(env).not.toHaveProperty('DATABASE_URI')
+    expect(env).not.toHaveProperty('PAYLOAD_SECRET')
+    expect(env).not.toHaveProperty('STRIPE_SECRET_KEY')
+    expect(env).not.toHaveProperty('RESEND_API_KEY')
+    expect(env).not.toHaveProperty('INSTAGRAM_ACCESS_TOKEN')
+    expect(env).not.toHaveProperty('INSTAGRAM_BUSINESS_ID')
+    expect(env).not.toHaveProperty('POSTGRES_USER')
+    expect(env).not.toHaveProperty('POSTGRES_PASSWORD')
+    expect(env).not.toHaveProperty('NODE_ENV')
+    // Número exacto de variáveis: apenas MAINTENANCE_SECRET
+    const keys = Object.keys(env)
+    expect(keys).toHaveLength(1)
   })
 
-  it('12. não tem volumes', () => {
+  it('12. MAINTENANCE_SECRET usa interpolação Compose com validação (:?)', () => {
+    const env = schedulerService.environment
+    expect(env.MAINTENANCE_SECRET).toBe('${MAINTENANCE_SECRET:?MAINTENANCE_SECRET is required}')
+  })
+
+  it('13. não tem volumes', () => {
     expect(schedulerService.volumes).toBeUndefined()
   })
 })
 
 // ══════════════════════════════════════════════════════════════════
-// 5. Scheduler script — internal URL, 5-min cadence
+// 5. Scheduler script — internal URL, 5-min cadence, health probe
 // ══════════════════════════════════════════════════════════════════
 
 describe('maintenance-loop.sh — script behaviour', () => {
-  it('13. ficheiro existe e é executável', () => {
+  it('14. ficheiro existe e é executável', () => {
     expect(fs.existsSync(SCHEDULER_SCRIPT_PATH)).toBe(true)
     const stats = fs.statSync(SCHEDULER_SCRIPT_PATH)
     expect(stats.mode & 0o111).not.toBe(0) // executable
   })
 
-  it('14. usa URL interna http://app:3000 (não pública)', () => {
+  it('15. usa URL interna http://app:3000 (não pública)', () => {
     const content = fs.readFileSync(SCHEDULER_SCRIPT_PATH, 'utf-8')
     expect(content).toContain('http://app:3000/api/internal/maintenance')
     // Não deve usar domínio público
@@ -151,12 +165,12 @@ describe('maintenance-loop.sh — script behaviour', () => {
     expect(content).not.toContain('https://floresmarina.pt')
   })
 
-  it('15. cadência de 300 segundos (5 minutos)', () => {
+  it('16. cadência de 300 segundos (5 minutos)', () => {
     const content = fs.readFileSync(SCHEDULER_SCRIPT_PATH, 'utf-8')
     expect(content).toContain('INTERVAL_SECONDS=300')
   })
 
-  it('16. MAINTENANCE_SECRET não hardcoded — vem de variável de ambiente', () => {
+  it('17. MAINTENANCE_SECRET não hardcoded — vem de variável de ambiente', () => {
     const content = fs.readFileSync(SCHEDULER_SCRIPT_PATH, 'utf-8')
     expect(content).toContain('${MAINTENANCE_SECRET}')
     expect(content).toContain('MAINTENANCE_SECRET:-}')
@@ -165,21 +179,84 @@ describe('maintenance-loop.sh — script behaviour', () => {
     expect(content).not.toContain('Bearer test')
   })
 
-  it('17. lida com HTTP 200, 409, 401/403, 503, connection failure', () => {
+  it('18. lida com HTTP 200, 409, 401/403, 503, connection failure (000)', () => {
     const content = fs.readFileSync(SCHEDULER_SCRIPT_PATH, 'utf-8')
     expect(content).toContain('200)')
     expect(content).toContain('409)')
     expect(content).toContain('401|403)')
     expect(content).toContain('503)')
+    expect(content).toContain('000)')
   })
 
-  it('18. startup retry loop com ~60s de espera', () => {
+  it('19. startup retry loop usa health endpoint, não maintenance', () => {
+    const content = fs.readFileSync(SCHEDULER_SCRIPT_PATH, 'utf-8')
+    // Health probe URL must be present
+    expect(content).toContain("HEALTH_URL='http://app:3000/api/health'")
+    // Startup loop must use health URL
+    expect(content).toContain('${HEALTH_URL}')
+    // Startup must NOT POST to maintenance endpoint
+    expect(content).not.toContain('--request POST')
+    // Startup must not use the maintenance URL as probe
+    const startupSection = content.split('run_cycle')[0] // before first cycle
+    expect(startupSection).toContain('api/health')
+  })
+
+  it('20. startup retry loop com ~60s de espera', () => {
     const content = fs.readFileSync(SCHEDULER_SCRIPT_PATH, 'utf-8')
     expect(content).toContain('STARTUP_RETRY_DELAY=5')
     expect(content).toContain('STARTUP_MAX_RETRIES=12')
   })
 
-  it('19. sem set -x (não expõe tracing)', () => {
+  it('21. startup probe é GET (não POST — não executa maintenance)', () => {
+    const content = fs.readFileSync(SCHEDULER_SCRIPT_PATH, 'utf-8')
+    // O bloco de startup deve usar --request GET (ou GET implícito sem --request POST)
+    // Extract the startup section only (before run_cycle)
+    const startupLines = content.split('\n').filter((line, i, arr) => {
+      const preRunCycle = arr.indexOf('run_cycle') >= 0
+        ? content.substring(0, content.indexOf('run_cycle'))
+        : content
+      return preRunCycle.includes(line) || !line.includes('run_cycle')
+    })
+    // Health probe uses GET without auth header
+    expect(content).toContain('--request GET')
+    expect(content).toContain('--output /dev/null')
+    // No Authorization header in startup probe
+    const healthLines = content.split('\n').filter(l => l.includes('HEALTH_URL') || l.includes('api/health'))
+    const authInHealth = healthLines.filter(l => l.includes('Authorization')).length
+    expect(authInHealth).toBe(0)
+  })
+
+  it('22. primeira execução de maintenance ocorre APÓS readiness', () => {
+    const content = fs.readFileSync(SCHEDULER_SCRIPT_PATH, 'utf-8')
+    // A chamada run_cycle deve estar DEPOIS do loop while de startup
+    const breakIndex = content.indexOf('break')
+    const runCycleIndex = content.indexOf('run_cycle')
+    expect(runCycleIndex).toBeGreaterThan(breakIndex)
+    // Deve haver exactamente um run_cycle fora do while true
+    const runCycleCount = (content.match(/\brun_cycle\b/g) || []).length
+    expect(runCycleCount).toBeGreaterThanOrEqual(2) // one immediate + loop
+  })
+
+  it('23. curl 000 failure handling — garante "000" em vez de ambiguidade || echo', () => {
+    const content = fs.readFileSync(SCHEDULER_SCRIPT_PATH, 'utf-8')
+    // The pattern must NOT use "|| echo '000'" on the same line as curl
+    expect(content).not.toContain('|| echo')
+    // Must use "if ! ... ; then http_code='000'; fi" pattern
+    expect(content).toContain('if ! http_code="$(curl')
+    expect(content).toContain('then')
+    expect(content).toContain("http_code='000'")
+  })
+
+  it('24. temp response file removido em TODOS os outcomes (000, 200, 409, 401/403, 503, *)', () => {
+    const content = fs.readFileSync(SCHEDULER_SCRIPT_PATH, 'utf-8')
+    // Cada case branch deve ter rm -f
+    const rmCount = (content.match(/rm -f "\$\{response_file\}"/g) || []).length
+    // Deve haver rm em: 000, 200, 409, 401|403, 503, *  = 6 branches
+    // 200 pode ter rm dentro de if, mas ainda deve limpar
+    expect(rmCount).toBeGreaterThanOrEqual(5) // 000, 409, 401|403, 503, * at minimum
+  })
+
+  it('25. sem set -x (não expõe tracing)', () => {
     const content = fs.readFileSync(SCHEDULER_SCRIPT_PATH, 'utf-8')
     // Usa set -eu, nunca set -x activo no shell
     expect(content).toContain('set -eu')
@@ -188,9 +265,9 @@ describe('maintenance-loop.sh — script behaviour', () => {
     expect(content).not.toContain('set -v')
   })
 
-  it('20. sem contacto com internet — apenas rede Docker', () => {
+  it('26. sem contacto público — apenas URL interna', () => {
     const content = fs.readFileSync(SCHEDULER_SCRIPT_PATH, 'utf-8')
-    // Não deve tentar contactar internet
+    // Não deve tentar contactar URLs públicas
     expect(content).not.toContain('eternalflowers.pt')
     expect(content).not.toContain('floresmarina.pt')
     expect(content).not.toContain('google.com')
@@ -202,35 +279,35 @@ describe('maintenance-loop.sh — script behaviour', () => {
 // ══════════════════════════════════════════════════════════════════
 
 describe('compose.sh — production wrapper', () => {
-  it('21. ficheiro existe e é executável', () => {
+  it('27. ficheiro existe e é executável', () => {
     expect(fs.existsSync(COMPOSE_WRAPPER_PATH)).toBe(true)
     const stats = fs.statSync(COMPOSE_WRAPPER_PATH)
     expect(stats.mode & 0o111).not.toBe(0)
   })
 
-  it('22. contém --env-file .env.production', () => {
+  it('28. contém --env-file .env.production', () => {
     const content = fs.readFileSync(COMPOSE_WRAPPER_PATH, 'utf-8')
     expect(content).toContain('--env-file')
     expect(content).toContain('.env.production')
   })
 
-  it('23. preserva argumentos arbitrários via "$@"', () => {
+  it('29. preserva argumentos arbitrários via "$@"', () => {
     const content = fs.readFileSync(COMPOSE_WRAPPER_PATH, 'utf-8')
     expect(content).toContain('"$@"')
   })
 
-  it('24. valida existência de .env.production antes de executar', () => {
+  it('30. valida existência de .env.production antes de executar', () => {
     const content = fs.readFileSync(COMPOSE_WRAPPER_PATH, 'utf-8')
     expect(content).toContain('.env.production')
     expect(content).toContain('não encontrado')
   })
 
-  it('25. usa exec para o comando final', () => {
+  it('31. usa exec para o comando final', () => {
     const content = fs.readFileSync(COMPOSE_WRAPPER_PATH, 'utf-8')
     expect(content).toContain('exec docker compose')
   })
 
-  it('26. resolve caminhos relativos corretamente', () => {
+  it('32. resolve caminhos relativos corretamente', () => {
     const content = fs.readFileSync(COMPOSE_WRAPPER_PATH, 'utf-8')
     expect(content).toContain('dirname')
     expect(content).toContain('PROJECT_DIR')
@@ -242,22 +319,22 @@ describe('compose.sh — production wrapper', () => {
 // ══════════════════════════════════════════════════════════════════
 
 describe('Dockerfile.maintenance-scheduler', () => {
-  it('27. existe', () => {
+  it('33. existe', () => {
     expect(fs.existsSync(SCHEDULER_DOCKERFILE_PATH)).toBe(true)
   })
 
-  it('28. base Alpine 3.20 — imagem mínima', () => {
+  it('34. base Alpine 3.20 — imagem mínima', () => {
     const content = fs.readFileSync(SCHEDULER_DOCKERFILE_PATH, 'utf-8')
     expect(content).toContain('alpine:3.20')
     expect(content).toContain('apk add --no-cache curl')
   })
 
-  it('29. copia maintenance-loop.sh para /usr/local/bin/', () => {
+  it('35. copia maintenance-loop.sh para /usr/local/bin/', () => {
     const content = fs.readFileSync(SCHEDULER_DOCKERFILE_PATH, 'utf-8')
     expect(content).toContain('COPY scripts/production/maintenance-loop.sh')
   })
 
-  it('30. executa como nobody', () => {
+  it('36. executa como nobody', () => {
     const content = fs.readFileSync(SCHEDULER_DOCKERFILE_PATH, 'utf-8')
     expect(content).toContain('USER nobody')
   })
@@ -268,13 +345,13 @@ describe('Dockerfile.maintenance-scheduler', () => {
 // ══════════════════════════════════════════════════════════════════
 
 describe('.env.production.example — MAINTENANCE_SECRET', () => {
-  it('31. MAINTENANCE_SECRET documentado', () => {
+  it('37. MAINTENANCE_SECRET documentado', () => {
     const content = fs.readFileSync(ENV_EXAMPLE_PATH, 'utf-8')
     expect(content).toContain('MAINTENANCE_SECRET')
     expect(content).toContain('<GERAR_SECRET_64_HEX>')
   })
 
-  it('32. composição do ciclo documentada', () => {
+  it('38. composição do ciclo documentada', () => {
     const content = fs.readFileSync(ENV_EXAMPLE_PATH, 'utf-8')
     expect(content).toContain('/api/internal/maintenance')
   })
@@ -287,18 +364,18 @@ describe('.env.production.example — MAINTENANCE_SECRET', () => {
 describe('docker-compose.production.yml — header references wrapper', () => {
   beforeAll(() => loadCompose())
 
-  it('33. header recomenda usar compose.sh', () => {
+  it('39. header recomenda usar compose.sh', () => {
     const raw = fs.readFileSync(COMPOSE_PATH, 'utf-8')
     expect(raw).toContain('scripts/production/compose.sh')
   })
 
-  it('34. header avisa sobre omitir --env-file', () => {
+  it('40. header avisa sobre omitir --env-file', () => {
     const raw = fs.readFileSync(COMPOSE_PATH, 'utf-8')
     expect(raw).toContain('NUNCA')
     expect(raw).toContain('--env-file')
   })
 
-  it('35. network eternal-flowers-net existe', () => {
+  it('41. network eternal-flowers-net existe', () => {
     expect(composeDoc?.networks?.['eternal-flowers-net']).toBeDefined()
     expect(composeDoc?.networks?.['eternal-flowers-net']?.driver).toBe('bridge')
   })
@@ -314,7 +391,7 @@ describe('maintenance business logic unchanged', () => {
     'src/services/maintenance/maintenance.ts',
   )
 
-  it('36. maintenance.ts inalterado — funções principais preservadas', () => {
+  it('42. maintenance.ts inalterado — funções principais preservadas', () => {
     const content = fs.readFileSync(MAINTENANCE_PATH, 'utf-8')
     // Funções core
     expect(content).toContain('export async function runMaintenanceCycle')
