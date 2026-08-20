@@ -22,7 +22,11 @@ tsconfig.tsbuildinfo
 .env.staging.local
 media-staging/
 backups/staging-*
-# backup-* naming convention — todos os backups de produção
-backups/backup-*
+# backup naming convention — todos os backups de produção
+backups/backup-[0-9]*/
+backups/backup-pg-[0-9]*/
+backups/backup-media-[0-9]*/
 backups/.tmp-*
+# Persistent flock lock file
+backups/.backup.lock
 # docker-compose.production.yml está tracked — não esconder

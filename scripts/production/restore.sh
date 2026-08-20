@@ -11,7 +11,11 @@
 #
 # Destino:
 #   PostgreSQL: via pg_restore --clean contra o container postgres
-#   Media:      via tar extraído e copiado para app:/app/media
+#   Media:      via tar extraído e copiado para app:/app/media (overlay)
+#
+# ⚠️  O restore de media repõe/sobrescreve os ficheiros contidos no backup.
+#     Ficheiros extra atualmente em /app/media NÃO são apagados automaticamente.
+#     Para uma limpeza completa, remover manualmente antes do restore.
 # =============================================================================
 set -euo pipefail
 
@@ -65,25 +69,33 @@ fi
 if [ "$RESTORE_TYPE" = "pg" ]; then
     echo ""; echo "📦 Restore PostgreSQL..."
 
-    # Validar dump
-    if command -v pg_restore &>/dev/null; then
-        pg_restore --list "$RESTORE_FILE" >/dev/null 2>&1 && echo "  ✅ Dump válido" || {
-            echo -e "  ${YELLOW}⚠️  Não foi possível validar o dump${NC}"
-        }
+    # Validar dump — FAIL CLOSED: se não for validado, ABORTAR
+    echo "  Validar dump via pg_restore --list..."
+    verify_ok=false
+    if "${COMPOSE_WRAPPER}" exec -T postgres pg_restore --list /dev/stdin < "$RESTORE_FILE" >/dev/null 2>&1; then
+        verify_ok=true
+    elif command -v pg_restore &>/dev/null && pg_restore --list "$RESTORE_FILE" >/dev/null 2>&1; then
+        verify_ok=true
     fi
+    if [ "$verify_ok" != "true" ]; then
+        echo -e "${RED}❌ Validação estrutural do dump falhou — ABORTAR.${NC}"
+        echo "  Não é possível continuar com um dump não verificado."
+        exit 1
+    fi
+    echo "  ✅ Dump válido (pg_restore --list)"
 
     # Restore via container usando compose wrapper
     # Copiar dump para o container e executar pg_restore
-    local tmp_restore="/tmp/restore-pg.$$.dump"
+    tmp_restore="/tmp/restore-pg.$$.dump"
     "${COMPOSE_WRAPPER}" cp "$RESTORE_FILE" "postgres:${tmp_restore}" 2>/dev/null || {
         # Fallback: docker cp directly
-        local cid; cid=$("${COMPOSE_WRAPPER}" ps -q postgres 2>/dev/null)
-        docker cp "$RESTORE_FILE" "${cid}:${tmp_restore}" >/dev/null 2>&1
+        local_cid=$("${COMPOSE_WRAPPER}" ps -q postgres 2>/dev/null)
+        docker cp "$RESTORE_FILE" "${local_cid}:${tmp_restore}" >/dev/null 2>&1
     }
 
     if "${COMPOSE_WRAPPER}" exec -T postgres pg_restore \
         --verbose --clean --if-exists --no-owner --no-acl \
-        -U "${PGUSER:-loja}" -d "${PGDATABASE:-loja_flores}" \
+        -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
         "${tmp_restore}" 2>&1; then
         echo -e "${GREEN}✅ Restore PostgreSQL concluído${NC}"
     else
@@ -97,9 +109,10 @@ fi
 # ── Media ──────────────────────────────────────────────────────────────
 if [ "$RESTORE_TYPE" = "media" ]; then
     echo ""; echo "📁 Restore Media para app:/app/media..."
+    echo "  ⚠️  Este restore faz overlay/sobrescreve ficheiros contidos no backup."
+    echo "     Ficheiros extra atualmente em /app/media NÃO são apagados."
 
     # Extrair para diretório temporário no host
-    local tmp_media_dir
     tmp_media_dir=$(mktemp -d)
     tar xzf "$RESTORE_FILE" -C "$tmp_media_dir" 2>&1 && echo "  Media extraída" || {
         echo -e "${RED}❌ Falha ao extrair archive${NC}"; rm -rf "$tmp_media_dir"; exit 1
@@ -109,9 +122,9 @@ if [ "$RESTORE_TYPE" = "media" ]; then
     "${COMPOSE_WRAPPER}" cp "${tmp_media_dir}/media/." "app:/app/media/" 2>/dev/null && {
         echo -e "${GREEN}✅ Restore Media concluído${NC}"
     } || {
-        local cid; cid=$("${COMPOSE_WRAPPER}" ps -q app 2>/dev/null)
-        if [ -n "$cid" ]; then
-            docker cp "${tmp_media_dir}/media/." "${cid}:/app/media/" >/dev/null 2>&1 && {
+        local_cid=$("${COMPOSE_WRAPPER}" ps -q app 2>/dev/null)
+        if [ -n "$local_cid" ]; then
+            docker cp "${tmp_media_dir}/media/." "${local_cid}:/app/media/" >/dev/null 2>&1 && {
                 echo -e "${GREEN}✅ Restore Media concluído (fallback docker cp)${NC}"
             } || {
                 echo -e "${RED}❌ Restore Media falhou${NC}"

@@ -5,7 +5,6 @@ Documentation=https://github.com/RJovem10/eternalflowers
 [Timer]
 OnCalendar=*-*-* 03:30:00 Europe/Lisbon
 Persistent=true
-RandomizedDelaySec=120
 
 [Install]
 WantedBy=timers.target

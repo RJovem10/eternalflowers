@@ -2,20 +2,23 @@
 # =============================================================================
 # Eternal Flowers — Backup de Produção
 # =============================================================================
-# Uso:  ./scripts/production/backup.sh
-#       ./scripts/production/backup.sh --pg-only
-#       ./scripts/production/backup.sh --media-only
-#       ./scripts/production/backup.sh --verify [<backup-dir>]
+# Uso:  ./scripts/production/backup.sh                      (full)
+#       ./scripts/production/backup.sh --pg-only             (PostgreSQL only)
+#       ./scripts/production/backup.sh --media-only          (media only)
+#       ./scripts/production/backup.sh --verify              (latest full)
+#       ./scripts/production/backup.sh --verify <dir>        (specific set)
 #
 # Arquitectura:
 #   Host → compose-wrapper.sh → PostgreSQL container  → pg_dump (custom format)
 #                              → App container         → /app/media  (tar.gz)
 #
 #   Staging:     backups/.tmp-<timestamp>/
-#   Publicado:   backups/backup-<timestamp>/
+#   Publicado:   backups/backup-<timestamp>/         (full)
+#                backups/backup-pg-<timestamp>/       (--pg-only)
+#                backups/backup-media-<timestamp>/    (--media-only)
 #   Manifesto:   manifest.sha256 (postgres.dump + media.tar.gz)
-#   Retenção:    14 dias / mínimo 3 conjuntos completos
-#   Concorrência: flock com timeout de 5 minutos
+#   Retenção:    14 dias / mínimo 3 conjuntos COMPLETOS
+#   Concorrência: flock sem bloqueio (persistente)
 #
 # ⚠️  BACKUPS LOCAIS NO VPS NÃO PROTEGEM CONTRA PERDA DO VPS.
 #     Off-site backup é uma issue futura separada.
@@ -41,8 +44,24 @@ log_ok()   { echo -e "  ${GREEN}OK${NC} $1"; }
 log_err()  { echo -e "  ${RED}ERRO${NC} $1"; }
 log_warn() { echo -e "  ${YELLOW}⚠${NC} $1"; }
 
-cleanup() { rm -f "${LOCK_FILE}"; }
-trap cleanup EXIT
+# ─── PostgreSQL structural verification ──────────────────────────────────
+# Verifica a integridade de um dump custom-format via pg_restore --list.
+# Tenta primeiro dentro do container postgres (sempre disponível);
+# falha para host pg_restore apenas se presente em PATH.
+# NUNCA imprime "verificado" sem ter executado pg_restore --list com sucesso.
+verify_pg_dump() {
+    local dump_file="$1"
+    if "${COMPOSE_WRAPPER}" exec -T postgres pg_restore --list /dev/stdin < "${dump_file}" >/dev/null 2>&1; then
+        return 0
+    fi
+    # Fallback: host pg_restore
+    if command -v pg_restore &>/dev/null; then
+        if pg_restore --list "${dump_file}" >/dev/null 2>&1; then
+            return 0
+        fi
+    fi
+    return 1
+}
 
 # ─── Flags ────────────────────────────────────────────────────────────────
 VERIFY_MODE=false; VERIFY_DIR=''; PG_ONLY=false; MEDIA_ONLY=false
@@ -70,15 +89,56 @@ do_verify() {
     local media_archive="${target_dir}/media.tar.gz"
     local manifest="${target_dir}/manifest.sha256"
 
-    for f in "${pg_dump}" "${media_archive}" "${manifest}"; do
-        if [ ! -f "$f" ]; then
-            log_err "Ficheiro em falta: $f"; errors=$((errors + 1))
-        elif [ ! -s "$f" ]; then
-            log_err "Ficheiro vazio: $f"; errors=$((errors + 1))
+    # Determine backup type from directory name
+    local bname; bname="$(basename "${target_dir}")"
+    local backup_type="full"
+    case "${bname}" in
+        backup-pg-*)    backup_type="pg-only" ;;
+        backup-media-*) backup_type="media-only" ;;
+        backup-*)       backup_type="full" ;;
+        *)              log_err "Tipo de backup indeterminado: ${bname}"; return 1 ;;
+    esac
+
+    echo "═══ Verificar: ${bname} (${backup_type}) ═══"
+    echo ""
+
+    if [ "$backup_type" = "full" ] || [ "$backup_type" = "pg-only" ]; then
+        # Required for full and pg-only: postgres.dump + manifest.sha256
+        for f in "${pg_dump}" "${manifest}"; do
+            if [ ! -f "$f" ]; then
+                log_err "Ficheiro em falta: $f"; errors=$((errors + 1))
+            elif [ ! -s "$f" ]; then
+                log_err "Ficheiro vazio: $f"; errors=$((errors + 1))
+            else
+                log_ok "$(basename "$f") existe ($(du -h "$f" | cut -f1))"
+            fi
+        done
+    fi
+
+    if [ "$backup_type" = "full" ] || [ "$backup_type" = "media-only" ]; then
+        # Required for full and media-only: media.tar.gz + manifest.sha256
+        # For full, manifest is already checked above — just add media check
+        if [ "$backup_type" = "media-only" ]; then
+            for f in "${media_archive}" "${manifest}"; do
+                if [ ! -f "$f" ]; then
+                    log_err "Ficheiro em falta: $f"; errors=$((errors + 1))
+                elif [ ! -s "$f" ]; then
+                    log_err "Ficheiro vazio: $f"; errors=$((errors + 1))
+                else
+                    log_ok "$(basename "$f") existe ($(du -h "$f" | cut -f1))"
+                fi
+            done
         else
-            log_ok "$(basename "$f") existe ($(du -h "$f" | cut -f1))"
+            # Full: check media in addition to pg_dump + manifest (already checked)
+            if [ ! -f "${media_archive}" ]; then
+                log_err "Ficheiro em falta: media.tar.gz"; errors=$((errors + 1))
+            elif [ ! -s "${media_archive}" ]; then
+                log_err "Ficheiro vazio: media.tar.gz"; errors=$((errors + 1))
+            else
+                log_ok "media.tar.gz existe ($(du -h "${media_archive}" | cut -f1))"
+            fi
         fi
-    done
+    fi
 
     if [ $errors -gt 0 ]; then return 1; fi
 
@@ -89,26 +149,26 @@ do_verify() {
         log_err "SHA-256 verification FAILED"; errors=$((errors + 1))
     fi
 
-    echo ""; echo "  pg_restore --list:"
-    if command -v pg_restore &>/dev/null; then
-        if pg_restore --list "${pg_dump}" >/dev/null 2>&1; then
+    if [ "$backup_type" = "full" ] || [ "$backup_type" = "pg-only" ]; then
+        echo ""; echo "  pg_restore --list:"
+        if verify_pg_dump "${pg_dump}"; then
             local tcount
             tcount=$(pg_restore --list "${pg_dump}" 2>/dev/null | grep -cE '^[0-9]+;.*TABLE DATA' || true)
             log_ok "Dump PostgreSQL válido (${tcount} tabelas com dados)"
         else
-            log_err "pg_restore --list falhou"; errors=$((errors + 1))
+            log_err "pg_restore --list falhou (host e container)"; errors=$((errors + 1))
         fi
-    else
-        log_warn "pg_restore não disponível no host (salte verificação pg)"
     fi
 
-    echo ""; echo "  tar -tzf:"
-    if tar -tzf "${media_archive}" >/dev/null 2>&1; then
-        local mcount
-        mcount=$(tar -tzf "${media_archive}" 2>/dev/null | wc -l)
-        log_ok "Archive media válido (${mcount} entradas)"
-    else
-        log_err "Archive media corrompido"; errors=$((errors + 1))
+    if [ "$backup_type" = "full" ] || [ "$backup_type" = "media-only" ]; then
+        echo ""; echo "  tar -tzf:"
+        if tar -tzf "${media_archive}" >/dev/null 2>&1; then
+            local mcount
+            mcount=$(tar -tzf "${media_archive}" 2>/dev/null | wc -l)
+            log_ok "Archive media válido (${mcount} entradas)"
+        else
+            log_err "Archive media corrompido"; errors=$((errors + 1))
+        fi
     fi
 
     echo ""
@@ -118,9 +178,10 @@ do_verify() {
 
 if $VERIFY_MODE; then
     if [ -z "$VERIFY_DIR" ]; then
-        VERIFY_DIR=$(ls -d "${BACKUP_DIR}"/backup-* 2>/dev/null | sort -r | head -1)
+        # Default: latest FULL backup only (not partial)
+        VERIFY_DIR=$(ls -d "${BACKUP_DIR}"/backup-[0-9]*_*/ 2>/dev/null | sort -r | head -1)
         if [ -z "$VERIFY_DIR" ]; then
-            log_err "Nenhum backup encontrado em ${BACKUP_DIR}/backup-*"; exit 1
+            log_err "Nenhum backup completo encontrado em ${BACKUP_DIR}/backup-<timestamp>/"; exit 1
         fi
     fi
     if [ ! -d "$VERIFY_DIR" ]; then
@@ -132,15 +193,13 @@ if $VERIFY_MODE; then
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
-# CONCURRENCY LOCK
+# CONCURRENCY LOCK (persistent — DO NOT unlink on exit)
 # ═══════════════════════════════════════════════════════════════════════════
 mkdir -p "${BACKUP_DIR}"
 exec 200>"${LOCK_FILE}"
 if ! flock -n 200; then
-    if ! flock -w 300 200; then
-        log_err "Outro backup em execução (timeout 5 min). A sair."
-        exit 1
-    fi
+    log_err "Outro backup em execução. A sair."
+    exit 1
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -148,7 +207,14 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 STAGING_DIR="${BACKUP_DIR}/.tmp-${TIMESTAMP}"
-FINAL_DIR="${BACKUP_DIR}/backup-${TIMESTAMP}"
+if $PG_ONLY; then
+    FINAL_PREFIX="backup-pg"
+elif $MEDIA_ONLY; then
+    FINAL_PREFIX="backup-media"
+else
+    FINAL_PREFIX="backup"
+fi
+FINAL_DIR="${BACKUP_DIR}/${FINAL_PREFIX}-${TIMESTAMP}"
 PG_DUMP="${STAGING_DIR}/postgres.dump"
 MEDIA_ARCHIVE="${STAGING_DIR}/media.tar.gz"
 MANIFEST="${STAGING_DIR}/manifest.sha256"
@@ -158,6 +224,10 @@ ERRORS=0
 echo "═══════════════════════════════════════════════"
 echo "  Eternal Flowers — Backup"
 echo "  ${TIMESTAMP}"
+if $PG_ONLY; then     echo "  Modo: PostgreSQL apenas"
+elif $MEDIA_ONLY; then echo "  Modo: Media apenas"
+else                   echo "  Modo: Completo"
+fi
 echo "═══════════════════════════════════════════════"
 mkdir -p "${STAGING_DIR}"
 
@@ -167,8 +237,8 @@ pg_backup() {
     echo ""; echo "  PostgreSQL dump (custom format)..."
 
     if "${COMPOSE_WRAPPER}" exec -T postgres pg_dump \
-        -U "${PGUSER:-loja}" --no-owner --no-acl --format=custom \
-        --file="${tmp_dump}" "${PGDATABASE:-loja_flores}" >/dev/null 2>&1; then
+        -U "$POSTGRES_USER" --no-owner --no-acl --format=custom \
+        --file="${tmp_dump}" "$POSTGRES_DB" >/dev/null 2>&1; then
 
         if "${COMPOSE_WRAPPER}" cp "postgres:${tmp_dump}" "${PG_DUMP}" >/dev/null 2>&1; then
             log_ok "PostgreSQL dump copiado"
@@ -190,26 +260,27 @@ pg_backup() {
     [ -s "${PG_DUMP}" ] || { log_err "Dump vazio"; return 1; }
     echo "  Tamanho: $(du -h "${PG_DUMP}" | cut -f1)"
 
-    # Verify
-    if command -v pg_restore &>/dev/null; then
-        pg_restore --list "${PG_DUMP}" >/dev/null 2>&1 || { log_err "pg_restore --list falhou"; return 1; }
+    # Structural verification — MUST pass before proceeding
+    # Uses container pg_restore first, fallback host pg_restore
+    if verify_pg_dump "${PG_DUMP}"; then
+        log_ok "Dump PostgreSQL verificado (pg_restore --list)"
+    else
+        log_err "pg_restore --list falhou — dump não verificado"
+        return 1
     fi
-    log_ok "Dump PostgreSQL verificado"
     sha256sum "${PG_DUMP}" | awk '{print $1 "  postgres.dump"}' >> "${MANIFEST}"
 }
 
 # ─── Media (from app:/app/media) ──────────────────────────────────────────
 media_backup() {
     echo ""; echo "  Media archive from app:/app/media..."
+    # tar exit 0 is required. Non-zero exit = FAIL regardless of file content.
     if "${COMPOSE_WRAPPER}" exec -T app tar czf - -C /app media > "${MEDIA_ARCHIVE}" 2>/dev/null; then
         log_ok "Media archive concluído"
     else
-        # tar can exit 0 even with stderr messages; check the file
-        if [ -s "${MEDIA_ARCHIVE}" ]; then
-            log_ok "Media archive concluído"
-        else
-            log_err "Falha ao criar media archive"; return 1
-        fi
+        log_err "Falha ao criar media archive (tar exit non-zero)"
+        rm -f "${MEDIA_ARCHIVE}" 2>/dev/null || true
+        return 1
     fi
 
     [ -s "${MEDIA_ARCHIVE}" ] || { log_err "Archive media vazio"; return 1; }
@@ -248,17 +319,20 @@ publish() {
 
 # ─── Retention ────────────────────────────────────────────────────────────
 run_retention() {
-    echo ""; echo "  Retenção: máximo ${RETENTION_DAYS} dias, mínimo ${MIN_SETS} conjuntos..."
+    echo ""; echo "  Retenção: máximo ${RETENTION_DAYS} dias, mínimo ${MIN_SETS} conjuntos COMPLETOS..."
 
     local all=(); local candidates=(); local now_epoch
     now_epoch=$(date '+%s')
 
-    # Gather all valid backup sets
-    for d in "${BACKUP_DIR}"/backup-*; do
+    # Gather only FULL backup sets (backup-<timestamp>/, must contain both files)
+    for d in "${BACKUP_DIR}"/backup-[0-9]*_*/; do
         [ -d "$d" ] || continue
-        local bname="${d##*/}"
+        local bname="${d%%/}"; bname="${bname##*/}"
+        # Must match full backup pattern: backup-YYYYMMDD_HHMMSS (no prefix)
+        [[ "${bname}" =~ ^backup-[0-9]{8}_[0-9]{6}$ ]] || continue
+        # Require both postgres.dump and media.tar.gz for full set consideration
+        [ -f "${d}/postgres.dump" ] && [ -f "${d}/media.tar.gz" ] || continue
         local stamp="${bname#backup-}"
-        [[ "$stamp" =~ ^[0-9]{8}_[0-9]{6}$ ]] || continue
         local dir_epoch
         dir_epoch=$(date -d "${stamp:0:8} ${stamp:9:2}:${stamp:11:2}:${stamp:13:2}" '+%s' 2>/dev/null || echo "0")
         [ "$dir_epoch" -gt 0 ] || continue
@@ -267,7 +341,7 @@ run_retention() {
     done
 
     local total=${#all[@]}
-    [ "$total" -le "$MIN_SETS" ] && { log_warn "Apenas ${total} conjunto(s) — mínimo ${MIN_SETS}. Nada removido."; return; }
+    [ "$total" -le "$MIN_SETS" ] && { log_warn "Apenas ${total} conjunto(s) completo(s) — mínimo ${MIN_SETS}. Nada removido."; return; }
 
     # Sort by epoch (oldest first)
     IFS=$'\n' sorted=($(sort -t'|' -k2 -n <<<"${all[*]}")); unset IFS
