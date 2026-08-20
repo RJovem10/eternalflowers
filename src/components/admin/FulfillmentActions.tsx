@@ -10,15 +10,12 @@
  *   shipped + paid → "Marcar como concluída"
  *
  * All actions call the secure Payload custom endpoints, never direct updates.
+ *
+ * NOTA: beforeDocumentControls não recebe props (BeforeDocumentControlsClientProps = {}).
+ * O document id é obtido via useDocumentInfo() e os field values via useFormFields().
  */
+import { useDocumentInfo, useFormFields } from '@payloadcms/ui'
 import React, { useCallback, useState } from 'react'
-
-interface Props {
-  // Data injected by Payload server-side
-  data?: Record<string, any>
-  collectionSlug?: string
-  id?: number | string
-}
 
 const STYLES = {
   button:
@@ -33,16 +30,23 @@ const STYLES = {
     'mt-2 text-sm',
 }
 
-export function FulfillmentActions({ data, id }: Props) {
+export function FulfillmentActions() {
+  const { id } = useDocumentInfo()
+
+  // Use selectors específicos para evitar rerenders desnecessários
+  const orderStatus = useFormFields(
+    ([fields, _siblings]) => fields?.orderStatus?.value as string | undefined,
+  )
+
+  const paymentStatus = useFormFields(
+    ([fields, _siblings]) => fields?.paymentStatus?.value as string | undefined,
+  )
+
   const [trackingNumber, setTrackingNumber] = useState('')
   const [loading, setLoading] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null)
 
-  const orderStatus = data?.orderStatus as string | undefined
-  const paymentStatus = data?.paymentStatus as string | undefined
   const isPaid = paymentStatus === 'paid'
-
-  const clearFeedback = useCallback(() => setFeedback(null), [])
 
   const callEndpoint = useCallback(async (action: string, body?: Record<string, any>) => {
     if (!id) return
