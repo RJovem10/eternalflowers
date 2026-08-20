@@ -82,20 +82,20 @@ export const botanicalContent: Record<string, LandingContent> = {
         heading: 'O Que São Joias Botânicas?',
         body: [
           'Joias botânicas são criações artesanais que incorporam elementos naturais — flores verdadeiras, folhas e pétalas — transformando-os em peças de joalharia. Diferente das joias convencionais, cada peça botânica carrega consigo a história de uma flor real, preservada em resina.',
-          'Na Eternal Flowers, usamos exclusivamente flores naturais. As pétalas, as formas e as cores de cada flor são mantidas através de um processo artesanal de preservação em resina, que convive com a flor sem perder a sua autenticidade.',
+          'As flores naturais são incorporadas e preservadas em resina como parte da peça botânica.',
         ],
       },
       {
         heading: 'Flores Verdadeiras Preservadas em Resina',
         body: [
           'Sim, as flores são verdadeiras. Não usamos flores artificiais nem imitações. Cada peça começa com uma flor real — orquídeas e outras flores naturais — preservada em resina.',
-          'A resina transparente envolve cada flor. Este processo permite que a beleza natural da flor seja apreciada ao longo do tempo, transformando algo efémero numa peça para o dia a dia.',
+          'As flores naturais são preservadas em resina como parte da peça botânica acabada.',
         ],
       },
       {
         heading: 'Feitas à Mão pela Marina, em Braga',
         body: [
-          'Cada peça é criada à mão pela Marina, no atelier da Eternal Flowers em Braga, Portugal. A Marina trabalha cada detalhe com a atenção de quem conhece o valor do que é feito devagar.',
+          'Cada peça é criada à mão pela Marina, no atelier da Eternal Flowers em Braga, Portugal.',
           'Este cuidado artesanal significa que cada joia botânica recebe atenção individual.',
         ],
       },
@@ -103,7 +103,7 @@ export const botanicalContent: Record<string, LandingContent> = {
         heading: 'Cada Flor Torna a Peça Diferente',
         body: [
           'Por usarmos flores naturais, cada peça tem as suas próprias características — a posição das pétalas, os tons de cor, a forma da flor. Esta variação natural é parte do que torna cada criação especial.',
-          'Ao escolher uma joia botânica da Eternal Flowers, leva consigo uma flor que existiu e foi transformada numa peça que pode guardar.',
+          'Ao escolher uma joia botânica da Eternal Flowers, leva consigo uma flor natural que foi transformada numa peça que pode guardar.',
         ],
       },
       {
@@ -116,8 +116,8 @@ export const botanicalContent: Record<string, LandingContent> = {
       {
         heading: 'Personalização',
         body: [
-          'A Eternal Flowers aceita pedidos de personalização. As possibilidades dependem da peça, da flor e do pedido; fale com a Marina para avaliar a ideia. Se tem uma flor favorita ou uma ideia em mente, a Marina pode criar uma peça pensada especialmente para si.',
-          'Entre em contacto para conversarmos sobre a sua joia botânica ideal.',
+          'A Eternal Flowers aceita pedidos de personalização. As possibilidades dependem da peça, da flor e do pedido; fale com a Marina para avaliar o que poderá ser possível.',
+          'Entre em contacto para conversarmos sobre a sua ideia.',
         ],
       },
     ],
@@ -140,7 +140,7 @@ export const botanicalContent: Record<string, LandingContent> = {
       },
       {
         q: 'É possível personalizar uma peça?',
-        a: 'Sim. A Eternal Flowers valoriza o contacto direto com cada cliente. Fale connosco para sabermos o que tem em mente.',
+        a: 'Fale connosco para sabermos o que tem em mente. As possibilidades dependem da peça, da flor e do pedido.',
       },
       {
         q: 'Que tipos de joias botânicas existem?',
@@ -172,20 +172,20 @@ export const botanicalContent: Record<string, LandingContent> = {
         heading: 'What Is Botanical Jewellery?',
         body: [
           'Botanical jewellery is handcrafted work that incorporates natural elements — real flowers, leaves and petals — transforming them into wearable pieces. Unlike conventional jewellery, each botanical piece carries the story of a real flower, preserved in resin.',
-          'At Eternal Flowers we use only natural flowers. The petals, shapes and colours of each flower are preserved through a handcrafted resin process that coexists with the flower while keeping its authenticity.',
+          'Natural flowers are incorporated and preserved in resin as part of the botanical piece.',
         ],
       },
       {
         heading: 'Real Flowers Preserved in Resin',
         body: [
           'Yes, the flowers are real. We do not use artificial flowers or imitations. Each piece begins with a real flower — orchids and other natural flowers — preserved in resin.',
-          'The clear resin encases each flower. This process lets the natural beauty of the flower be enjoyed over time, turning something ephemeral into an everyday piece.',
+          'Natural flowers are preserved in resin as part of the finished botanical piece.',
         ],
       },
       {
         heading: 'Handmade by Marina in Braga',
         body: [
-          'Every piece is handcrafted by Marina at the Eternal Flowers atelier in Braga, Portugal. Marina attends to every detail with the care that comes from knowing the value of slow, deliberate work.',
+          'Every piece is handcrafted by Marina at the Eternal Flowers atelier in Braga, Portugal.',
           'This handmade approach means each piece of botanical jewellery receives individual attention.',
         ],
       },
@@ -193,7 +193,7 @@ export const botanicalContent: Record<string, LandingContent> = {
         heading: 'Each Flower Makes the Piece Different',
         body: [
           'Because we use natural flowers, each piece has its own character — the position of the petals, the shades of colour, the shape of the flower. This natural variation is part of what makes each creation special.',
-          'When you choose a piece of botanical jewellery from Eternal Flowers, you take home a flower that was carefully selected and transformed into something you can keep.',
+          'When you choose a piece of botanical jewellery from Eternal Flowers, you take home a natural flower that has been transformed into something you can keep.',
         ],
       },
       {
@@ -206,8 +206,8 @@ export const botanicalContent: Record<string, LandingContent> = {
       {
         heading: 'Personalisation',
         body: [
-          'Eternal Flowers accepts personalisation requests. Possibilities depend on the piece, the flower and the request; speak with Marina to discuss your idea. If you have a favourite flower or an idea in mind, Marina can create a piece designed especially for you.',
-          'Get in touch so we can talk about your ideal botanical jewellery piece.',
+          'Eternal Flowers accepts personalisation requests. Possibilities depend on the piece, the flower and the request; speak with Marina to discuss what may be possible.',
+          'Get in touch to tell us about your idea.',
         ],
       },
     ],
@@ -230,7 +230,7 @@ export const botanicalContent: Record<string, LandingContent> = {
       },
       {
         q: 'Can I personalise a piece?',
-        a: 'Yes. Eternal Flowers values direct contact with each customer. Get in touch and tell us what you have in mind.',
+        a: 'Get in touch and tell us what you have in mind. Possibilities depend on the piece, the flower and the request.',
       },
       {
         q: 'What types of botanical jewellery are available?',
@@ -262,20 +262,20 @@ export const botanicalContent: Record<string, LandingContent> = {
         heading: '¿Qué Es la Joyería Botánica?',
         body: [
           'La joyería botánica son creaciones artesanales que incorporan elementos naturales — flores verdaderas, hojas y pétalos — transformándolos en piezas de joyería. A diferencia de las joyas convencionales, cada pieza botánica lleva consigo la historia de una flor real, preservada en resina.',
-          'En Eternal Flowers usamos exclusivamente flores naturales. Los pétalos, formas y colores de cada flor se mantienen mediante un proceso artesanal de preservación en resina, que convive con la flor sin perder su autenticidad.',
+          'Las flores naturales se incorporan y preservan en resina como parte de la pieza botánica.',
         ],
       },
       {
         heading: 'Flores Verdaderas Preservadas en Resina',
         body: [
           'Sí, las flores son verdaderas. No usamos flores artificiales ni imitaciones. Cada pieza comienza con una flor real — orquídeas y otras flores naturales — preservada en resina.',
-          'La resina transparente envuelve cada flor. Este proceso permite que la belleza natural de la flor se aprecie con el tiempo, transformando algo efímero en una pieza para el día a día.',
+          'Las flores naturales se preservan en resina como parte de la pieza botánica acabada.',
         ],
       },
       {
         heading: 'Hechas a Mano por Marina en Braga',
         body: [
-          'Cada pieza es creada a mano por Marina, en el taller de Eternal Flowers en Braga, Portugal. Marina trabaja cada detalle con la atención de quien conoce el valor de lo hecho despacio.',
+          'Cada pieza es creada a mano por Marina, en el taller de Eternal Flowers en Braga, Portugal.',
           'Este cuidado artesanal significa que cada joya botánica recibe atención individual.',
         ],
       },
@@ -283,7 +283,7 @@ export const botanicalContent: Record<string, LandingContent> = {
         heading: 'Cada Flor Hace la Pieza Diferente',
         body: [
           'Al usar flores naturales, cada pieza tiene sus propias características: la posición de los pétalos, los tonos de color, la forma de la flor. Esta variación natural es parte de lo que hace especial cada creación.',
-          'Al elegir una joya botánica de Eternal Flowers, lleva consigo una flor que existió y fue transformada en una pieza que puede guardar.',
+          'Al elegir una joya botánica de Eternal Flowers, lleva consigo una flor natural que fue transformada en una pieza que puede guardar.',
         ],
       },
       {
@@ -296,8 +296,8 @@ export const botanicalContent: Record<string, LandingContent> = {
       {
         heading: 'Personalización',
         body: [
-          'Eternal Flowers acepta pedidos de personalización. Las posibilidades dependen de la pieza, la flor y el pedido; hable con Marina para evaluar la idea. Si tiene una flor favorita o una idea en mente, Marina puede crear una pieza pensada especialmente para usted.',
-          'Póngase en contacto para hablar sobre su joya botánica ideal.',
+          'Eternal Flowers acepta pedidos de personalización. Las posibilidades dependen de la pieza, la flor y el pedido; hable con Marina para evaluar lo que podría ser posible.',
+          'Póngase en contacto para contarnos su idea.',
         ],
       },
     ],
@@ -320,7 +320,7 @@ export const botanicalContent: Record<string, LandingContent> = {
       },
       {
         q: '¿Se puede personalizar una pieza?',
-        a: 'Sí. Eternal Flowers valora el contacto directo con cada cliente. Contáctenos para contarnos lo que tiene en mente.',
+        a: 'Contáctenos para contarnos lo que tiene en mente. Las posibilidades dependen de la pieza, la flor y el pedido.',
       },
       {
         q: '¿Qué tipos de joyería botánica ofrecen?',
@@ -352,20 +352,20 @@ export const botanicalContent: Record<string, LandingContent> = {
         heading: 'Cosa Sono i Gioielli Botanici?',
         body: [
           'I gioielli botanici sono creazioni artigianali che incorporano elementi naturali — fiori veri, foglie e petali — trasformandoli in preziosi. Diversamente dai gioielli convenzionali, ogni pezzo botanico porta con sé la storia di un fiore vero, preservato nella resina.',
-          'Da Eternal Flowers usiamo esclusivamente fiori naturali. I petali, le forme e i colori di ogni fiore sono mantenuti attraverso un processo artigianale di preservazione nella resina, che convive con il fiore senza perderne lautenticità.',
+          'I fiori naturali sono incorporati e preservati nella resina come parte del pezzo botanico.',
         ],
       },
       {
         heading: 'Fiori Veri Preservati nella Resina',
         body: [
           'Sì, i fiori sono veri. Non usiamo fiori artificiali né imitazioni. Ogni pezzo inizia con un fiore vero — orchidee e altri fiori naturali — preservato nella resina.',
-          'La resina trasparente avvolge ogni fiore. Questo processo permette di apprezzare la bellezza naturale del fiore nel tempo, trasformando qualcosa di effimero in un pezzo per tutti i giorni.',
+          'I fiori naturali sono preservati nella resina come parte del pezzo botanico finito.',
         ],
       },
       {
         heading: 'Fatti a Mano da Marina a Braga',
         body: [
-          'Ogni pezzo è creato a mano da Marina, nellatelier di Eternal Flowers a Braga, Portogallo. Marina cura ogni dettaglio con lattenzione di chi conosce il valore del lavoro lento.',
+          'Ogni pezzo è creato a mano da Marina, nellatelier di Eternal Flowers a Braga, Portogallo.',
           'Questa cura artigianale significa che ogni gioiello botanico riceve attenzione individuale.',
         ],
       },
@@ -373,7 +373,7 @@ export const botanicalContent: Record<string, LandingContent> = {
         heading: 'Ogni Fiore Rende il Pezzo Diverso',
         body: [
           'Usando fiori naturali, ogni pezzo ha le sue caratteristiche: la posizione dei petali, le sfumature di colore, la forma del fiore. Questa variazione naturale è parte di ciò che rende speciale ogni creazione.',
-          'Scegliendo un gioiello botanico di Eternal Flowers, porta con sé un fiore che è esistito ed è stato trasformato in un pezzo che può custodire.',
+          'Scegliendo un gioiello botanico di Eternal Flowers, porta con sé un fiore naturale che è stato trasformato in un pezzo che può custodire.',
         ],
       },
       {
@@ -386,8 +386,8 @@ export const botanicalContent: Record<string, LandingContent> = {
       {
         heading: 'Personalizzazione',
         body: [
-          'Eternal Flowers accetta richieste di personalizzazione. Le possibilità dipendono dal pezzo, dal fiore e dalla richiesta; parlate con Marina per valutare lidea. Se avete un fiore preferito o unidea in mente, Marina può creare un pezzo pensato appositamente per voi.',
-          'Contattateci per parlare del vostro gioiello botanico ideale.',
+          'Eternal Flowers accetta richieste di personalizzazione. Le possibilità dipendono dal pezzo, dal fiore e dalla richiesta; parlate con Marina per valutare cosa potrebbe essere possibile.',
+          'Contattateci per raccontarci la vostra idea.',
         ],
       },
     ],
@@ -410,7 +410,7 @@ export const botanicalContent: Record<string, LandingContent> = {
       },
       {
         q: 'È possibile personalizzare un pezzo?',
-        a: 'Sì. Eternal Flowers valorizza il contatto diretto con ogni cliente. Contattateci per raccontarci cosa avete in mente.',
+        a: 'Contattateci per raccontarci cosa avete in mente. Le possibilità dipendono dal pezzo, dal fiore e dalla richiesta.',
       },
       {
         q: 'Quali tipi di gioielli botanici offrite?',
@@ -442,20 +442,20 @@ export const botanicalContent: Record<string, LandingContent> = {
         heading: 'Was Ist Botanischer Schmuck?',
         body: [
           'Botanischer Schmuck sind handgefertigte Kreationen, die natürliche Elemente — echte Blumen, Blätter und Blütenblätter — in tragbare Schmuckstücke verwandeln. Anders als herkömmlicher Schmuck trägt jedes botanische Stück die Geschichte einer echten Blume in sich, konserviert in Harz.',
-          'Bei Eternal Flowers verwenden wir ausschließlich natürliche Blumen. Die Blütenblätter, Formen und Farben jeder Blume werden durch einen handwerklichen Prozess der Konservierung in Harz bewahrt, der mit der Blume lebt ohne ihre Authentizität zu verlieren.',
+          'Die natürlichen Blumen werden in Harz eingearbeitet und konserviert als Teil des botanischen Stücks.',
         ],
       },
       {
         heading: 'Echte Blumen in Harz Konserviert',
         body: [
           'Ja, die Blumen sind echt. Wir verwenden keine künstlichen Blumen oder Imitationen. Jedes Stück beginnt mit einer echten Blume — Orchideen und andere natürliche Blumen — konserviert in Harz.',
-          'Das klare Harz umschließt jede Blume. Dieser Prozess ermöglicht es, die natürliche Schönheit der Blume über die Zeit zu genießen und etwas Vergängliches in ein Stück für den Alltag zu verwandeln.',
+          'Natürliche Blumen werden in Harz konserviert als Teil des fertigen botanischen Stücks.',
         ],
       },
       {
         heading: 'Handgefertigt von Marina in Braga',
         body: [
-          'Jedes Stück wird von Marina im Atelier von Eternal Flowers in Braga, Portugal, handgefertigt. Marina widmet sich jedem Detail mit der Sorgfalt, die den Wert langsamer, bewusster Arbeit kennt.',
+          'Jedes Stück wird von Marina im Atelier von Eternal Flowers in Braga, Portugal, handgefertigt.',
           'Diese handwerkliche Sorgfalt bedeutet, dass jedes botanische Schmuckstück individuelle Aufmerksamkeit erhält.',
         ],
       },
@@ -463,7 +463,7 @@ export const botanicalContent: Record<string, LandingContent> = {
         heading: 'Jede Blume Macht das Stück Anders',
         body: [
           'Durch die Verwendung natürlicher Blumen hat jedes Stück seine eigenen Merkmale — die Position der Blütenblätter, die Farbnuancen, die Form der Blume. Diese natürliche Variation ist Teil dessen, was jede Schöpfung besonders macht.',
-          'Wenn Sie sich für ein botanisches Schmuckstück von Eternal Flowers entscheiden, nehmen Sie eine Blume mit, die sorgfältig ausgewählt und in etwas verwandelt wurde, das Sie bewahren können.',
+          'Wenn Sie sich für ein botanisches Schmuckstück von Eternal Flowers entscheiden, nehmen Sie eine natürliche Blume mit, die in etwas verwandelt wurde, das Sie bewahren können.',
         ],
       },
       {
@@ -476,8 +476,8 @@ export const botanicalContent: Record<string, LandingContent> = {
       {
         heading: 'Personalisierung',
         body: [
-          'Eternal Flowers nimmt Personalisierungsanfragen an. Die Möglichkeiten hängen vom Stück, der Blume und der Anfrage ab; sprechen Sie mit Marina, um die Idee zu besprechen. Wenn Sie eine Lieblingsblume oder eine Idee im Kopf haben, kann Marina ein speziell für Sie entworfenes Stück anfertigen.',
-          'Nehmen Sie Kontakt auf, damit wir über Ihr ideales botanisches Schmuckstück sprechen können.',
+          'Eternal Flowers nimmt Personalisierungsanfragen an. Die Möglichkeiten hängen vom Stück, der Blume und der Anfrage ab; sprechen Sie mit Marina, um zu besprechen, was möglich sein könnte.',
+          'Kontaktieren Sie uns und erzählen Sie uns von Ihrer Idee.',
         ],
       },
     ],
@@ -500,7 +500,7 @@ export const botanicalContent: Record<string, LandingContent> = {
       },
       {
         q: 'Kann ich ein Stück personalisieren?',
-        a: 'Ja. Eternal Flowers schätzt den direkten Kontakt mit jedem Kunden. Kontaktieren Sie uns und erzählen Sie uns, was Sie im Sinn haben.',
+        a: 'Kontaktieren Sie uns und erzählen Sie uns, was Sie im Sinn haben. Die Möglichkeiten hängen vom Stück, der Blume und der Anfrage ab.',
       },
       {
         q: 'Welche Arten von botanischem Schmuck bieten Sie an?',
@@ -528,33 +528,33 @@ export const orchidContent: Record<string, LandingContent> = {
     },
     h1: 'Joias com Orquídeas Naturais',
     intro:
-      'Na Eternal Flowers, as orquídeas são uma das flores mais especiais que usamos nas nossas joias botânicas. Verdadeiras, não artificiais. Cada pétala, cada forma, cada tom é preservado em resina para criar peças feitas à mão pela Marina, em Braga. Brincos, colares e pingentes que guardam a beleza das orquídeas.',
+      'Na Eternal Flowers, as orquídeas são uma das flores mais especiais que usamos nas nossas joias botânicas. Verdadeiras, não artificiais. São preservadas em resina para criar peças feitas à mão pela Marina, em Braga. Brincos, colares e pingentes com orquídeas reais.',
     sections: [
       {
         heading: 'Orquídeas Verdadeiras Transformadas em Joias Botânicas',
         body: [
-          'As orquídeas que usamos na Eternal Flowers são flores verdadeiras. Não são artificiais nem imitações. Cada peça começa com uma orquídea real, que é transformada numa joia botânica através de um processo artesanal de preservação em resina.',
+          'As orquídeas que usamos na Eternal Flowers são flores verdadeiras. Não são artificiais nem imitações. As orquídeas naturais são incorporadas em resina na criação das peças botânicas.',
           'A estrutura das orquídeas — as pétalas, o labelo, as cores — torna-as especialmente bonitas quando preservadas em resina. Cada variedade traz a sua própria personalidade à peça.',
         ],
       },
       {
         heading: 'Preservar a Forma e a Beleza da Flor',
         body: [
-          'Quando uma orquídea é incorporada numa joia, a sua forma natural é mantida. A resina envolve a flor como parte da peça botânica final.',
-          'É um processo que exige cuidado e paciência: cada flor é posicionada para que a sua estrutura e cor fiquem visíveis na peça final.',
+          'As orquídeas naturais são preservadas em resina como parte da peça botânica final.',
+          'Cada flor natural é incorporada na peça de forma a mostrar as suas características naturais.',
         ],
       },
       {
         heading: 'Da Flor à Peça Artesanal',
         body: [
-          'A Marina trabalha cada orquídea à mão. O trabalho artesanal significa que cada orquídea tem a sua forma, e cada peça é feita individualmente.',
+          'A Marina trabalha cada orquídea à mão. Cada peça é feita individualmente.',
           'Este processo manual é o que distingue as joias botânicas da Eternal Flowers: o cuidado de quem faz cada peça com atenção.',
         ],
       },
       {
         heading: 'Criadas pela Marina em Braga',
         body: [
-          'Todas as peças são criadas pela Marina no atelier da Eternal Flowers em Braga, Portugal. É aqui que as orquídeas são transformadas em joias, num trabalho que combina sensibilidade artística e rigor artesanal.',
+          'Todas as peças são criadas pela Marina no atelier da Eternal Flowers em Braga, Portugal. É aqui que as orquídeas são transformadas em joias.',
           'O atelier em Braga é o coração da Eternal Flowers — o lugar onde as flores encontram a resina e se tornam joias.',
         ],
       },
@@ -577,7 +577,7 @@ export const orchidContent: Record<string, LandingContent> = {
       },
       {
         q: 'É possível personalizar uma peça com orquídeas?',
-        a: 'Sim. A Eternal Flowers valoriza o contacto direto com cada cliente. Fale connosco para conversarmos sobre a sua ideia.',
+        a: 'Fale connosco para conversarmos sobre a sua ideia. As possibilidades dependem da peça, da flor e do pedido.',
       },
       {
         q: 'Todas as peças com orquídeas são iguais?',
@@ -599,33 +599,33 @@ export const orchidContent: Record<string, LandingContent> = {
     },
     h1: 'Natural Orchid Jewellery',
     intro:
-      'At Eternal Flowers, orchids are among the most special flowers we use in our botanical jewellery. Real, not artificial. Every petal, every shape, every tone is preserved in resin to create pieces handmade by Marina in Braga. Earrings, necklaces and pendants that hold the beauty of orchids.',
+      'At Eternal Flowers, orchids are among the most special flowers we use in our botanical jewellery. Real, not artificial. They are preserved in resin to create pieces handmade by Marina in Braga. Earrings, necklaces and pendants that hold the beauty of orchids.',
     sections: [
       {
         heading: 'Real Orchids Transformed into Botanical Jewellery',
         body: [
-          'The orchids we use at Eternal Flowers are real flowers. They are not artificial or imitations. Each piece begins with a real orchid, transformed into botanical jewellery through a handcrafted resin preservation process.',
+          'The orchids we use at Eternal Flowers are real flowers. They are not artificial or imitations. Natural orchids are incorporated in resin in the creation of botanical pieces.',
           'The structure of orchids — the petals, the lip, the colours — makes them especially beautiful when preserved in resin. Each variety brings its own personality to the piece.',
         ],
       },
       {
         heading: 'Preserving the Form and Beauty of the Flower',
         body: [
-          'When an orchid is incorporated into a piece of jewellery, its natural form is maintained. The resin is part of the finished botanical piece.',
-          'It is a process that requires care and patience: each flower is positioned so that its structure and colour are visible in the final piece.',
+          'Natural orchids are preserved in resin as part of the finished botanical piece.',
+          'Each natural flower is incorporated into the piece in a way that shows its natural characteristics.',
         ],
       },
       {
         heading: 'From Flower to Handcrafted Piece',
         body: [
-          'Marina works each orchid by hand. The handcrafted approach means each orchid has its own form, and each piece is made individually.',
+          'Marina works each orchid by hand. Each piece is made individually.',
           'This handmade process is what sets Eternal Flowers botanical jewellery apart: the care of someone who makes each piece with attention.',
         ],
       },
       {
         heading: 'Created by Marina in Braga',
         body: [
-          'All pieces are created by Marina at the Eternal Flowers atelier in Braga, Portugal. This is where the orchids are transformed into jewellery, in work that combines artistic sensitivity and handcrafted precision.',
+          'All pieces are created by Marina at the Eternal Flowers atelier in Braga, Portugal. This is where the orchids are transformed into jewellery.',
           'The atelier in Braga is the heart of Eternal Flowers — the place where flowers meet resin and become jewellery.',
         ],
       },
@@ -648,7 +648,7 @@ export const orchidContent: Record<string, LandingContent> = {
       },
       {
         q: 'Can I personalise an orchid piece?',
-        a: 'Yes. Eternal Flowers values direct contact with each customer. Get in touch to tell us about your idea.',
+        a: 'Get in touch to tell us about your idea. Possibilities depend on the piece, the flower and the request.',
       },
       {
         q: 'Are all orchid pieces the same?',
@@ -670,33 +670,33 @@ export const orchidContent: Record<string, LandingContent> = {
     },
     h1: 'Joyas con Orquídeas Naturales',
     intro:
-      'En Eternal Flowers, las orquídeas son una de las flores más especiales que usamos en nuestras joyas botánicas. Verdaderas, no artificiales. Cada pétalo, cada forma, cada tono es preservado en resina para crear piezas hechas a mano por Marina en Braga. Pendientes, collares y colgantes que guardan la belleza de las orquídeas.',
+      'En Eternal Flowers, las orquídeas son una de las flores más especiales que usamos en nuestras joyas botánicas. Verdaderas, no artificiales. Se preservan en resina para crear piezas hechas a mano por Marina en Braga. Pendientes, collares y colgantes que guardan la belleza de las orquídeas.',
     sections: [
       {
         heading: 'Orquídeas Verdaderas Transformadas en Joyas Botánicas',
         body: [
-          'Las orquídeas que usamos en Eternal Flowers son flores verdaderas. No son artificiales ni imitaciones. Cada pieza comienza con una orquídea real, transformada en una joya botánica mediante un proceso artesanal de preservación en resina.',
+          'Las orquídeas que usamos en Eternal Flowers son flores verdaderas. No son artificiales ni imitaciones. Las orquídeas naturales se incorporan en resina en la creación de las piezas botánicas.',
           'La estructura de las orquídeas — los pétalos, el labelo, los colores — las hace especialmente bellas al preservarlas en resina. Cada variedad aporta su propia personalidad a la pieza.',
         ],
       },
       {
         heading: 'Preservar la Forma y la Belleza de la Flor',
         body: [
-          'Cuando una orquídea se incorpora a una joya, su forma natural se mantiene. La resina forma parte de la pieza botánica final.',
-          'Es un proceso que requiere cuidado y paciencia: cada flor se coloca para que su estructura y color sean visibles en la pieza final.',
+          'Las orquídeas naturales se preservan en resina como parte de la pieza botánica final.',
+          'Cada flor natural se incorpora en la pieza de forma que muestra sus características naturales.',
         ],
       },
       {
         heading: 'De la Flor a la Pieza Artesanal',
         body: [
-          'Marina trabaja cada orquídea a mano. El trabajo artesanal significa que cada orquídea tiene su forma, y cada pieza se hace individualmente.',
+          'Marina trabaja cada orquídea a mano. Cada pieza se hace individualmente.',
           'Este proceso manual es lo que distingue a las joyas botánicas de Eternal Flowers: el cuidado de quien hace cada pieza con atención.',
         ],
       },
       {
         heading: 'Creadas por Marina en Braga',
         body: [
-          'Todas las piezas son creadas por Marina en el taller de Eternal Flowers en Braga, Portugal. Aquí es donde las orquídeas se transforman en joyas, en un trabajo que combina sensibilidad artística y precisión artesanal.',
+          'Todas las piezas son creadas por Marina en el taller de Eternal Flowers en Braga, Portugal. Aquí es donde las orquídeas se transforman en joyas.',
           'El taller en Braga es el corazón de Eternal Flowers — el lugar donde las flores encuentran la resina y se convierten en joyas.',
         ],
       },
@@ -719,7 +719,7 @@ export const orchidContent: Record<string, LandingContent> = {
       },
       {
         q: '¿Se puede personalizar una pieza con orquídeas?',
-        a: 'Sí. Eternal Flowers valora el contacto directo con cada cliente. Contáctenos para contarnos su idea.',
+        a: 'Contáctenos para contarnos su idea. Las posibilidades dependen de la pieza, la flor y el pedido.',
       },
       {
         q: '¿Todas las piezas con orquídeas son iguales?',
@@ -741,33 +741,33 @@ export const orchidContent: Record<string, LandingContent> = {
     },
     h1: 'Gioielli con Orchidee Naturali',
     intro:
-      'Da Eternal Flowers, le orchidee sono tra i fiori più speciali che usiamo nei nostri gioielli botanici. Vere, non artificiali. Ogni petalo, ogni forma, ogni tono è preservato nella resina per creare pezzi fatti a mano da Marina a Braga. Orecchini, collane e pendenti che custodiscono la bellezza delle orchidee.',
+      'Da Eternal Flowers, le orchidee sono tra i fiori più speciali che usiamo nei nostri gioielli botanici. Vere, non artificiali. Sono preservate nella resina per creare pezzi fatti a mano da Marina a Braga. Orecchini, collane e pendenti che custodiscono la bellezza delle orchidee.',
     sections: [
       {
         heading: 'Orchidee Vere Trasformate in Gioielli Botanici',
         body: [
-          'Le orchidee che usiamo da Eternal Flowers sono fiori veri. Non sono artificiali né imitazioni. Ogni pezzo inizia con unorchidea vera, trasformata in un gioiello botanico attraverso un processo artigianale di preservazione nella resina.',
+          'Le orchidee che usiamo da Eternal Flowers sono fiori veri. Non sono artificiali né imitazioni. Le orchidee naturali sono incorporate nella resina nella creazione dei pezzi botanici.',
           'La struttura delle orchidee — i petali, il labello, i colori — le rende particolarmente belle quando preservate nella resina. Ogni varietà porta la propria personalità al pezzo.',
         ],
       },
       {
         heading: 'Preservare la Forma e la Bellezza del Fiore',
         body: [
-          'Quando unorchidea è incorporata in un gioiello, la sua forma naturale è mantenuta. La resina fa parte del pezzo botanico finito.',
-          'È un processo che richiede cura e pazienza: ogni fiore è posizionato affinché la sua struttura e il suo colore siano visibili nel pezzo finale.',
+          'Le orchidee naturali sono preservate nella resina come parte del pezzo botanico finito.',
+          'Ogni fiore naturale è incorporato nel pezzo in modo da mostrare le sue caratteristiche naturali.',
         ],
       },
       {
         heading: 'Dal Fiore al Pezzo Artigianale',
         body: [
-          'Marina lavora ogni orchidea a mano. Il lavoro artigianale significa che ogni orchidea ha la sua forma e ogni pezzo è realizzato individualmente.',
+          'Marina lavora ogni orchidea a mano. Ogni pezzo è realizzato individualmente.',
           'Questo processo manuale è ciò che distingue i gioielli botanici di Eternal Flowers: la cura di chi realizza ogni pezzo con attenzione.',
         ],
       },
       {
         heading: 'Creati da Marina a Braga',
         body: [
-          'Tutti i pezzi sono creati da Marina nellatelier di Eternal Flowers a Braga, Portogallo. È qui che le orchidee vengono trasformate in gioielli, in un lavoro che unisce sensibilità artistica e precisione artigianale.',
+          'Tutti i pezzi sono creati da Marina nellatelier di Eternal Flowers a Braga, Portogallo. È qui che le orchidee vengono trasformate in gioielli.',
           'Latelier di Braga è il cuore di Eternal Flowers — il luogo dove i fiori incontrano la resina e diventano gioielli.',
         ],
       },
@@ -790,7 +790,7 @@ export const orchidContent: Record<string, LandingContent> = {
       },
       {
         q: 'È possibile personalizzare un pezzo con orchidee?',
-        a: 'Sì. Eternal Flowers valorizza il contatto diretto con ogni cliente. Contattateci per raccontarci la vostra idea.',
+        a: 'Contattateci per raccontarci la vostra idea. Le possibilità dipendono dal pezzo, dal fiore e dalla richiesta.',
       },
       {
         q: 'Tutti i pezzi con orchidee sono uguali?',
@@ -812,33 +812,33 @@ export const orchidContent: Record<string, LandingContent> = {
     },
     h1: 'Orchideen-Schmuck mit echten Orchideen',
     intro:
-      'Bei Eternal Flowers sind Orchideen eine der besonderen Blumen, die wir in unserem botanischen Schmuck verwenden. Echt, nicht künstlich. Jedes Blütenblatt, jede Form, jeder Farbton wird in Harz konserviert, um Stücke zu schaffen, handgefertigt von Marina in Braga. Ohrringe, Halsketten und Anhänger, die die Schönheit der Orchideen bewahren.',
+      'Bei Eternal Flowers sind Orchideen eine der besonderen Blumen, die wir in unserem botanischen Schmuck verwenden. Echt, nicht künstlich. Sie werden in Harz konserviert, um Stücke zu schaffen, handgefertigt von Marina in Braga. Ohrringe, Halsketten und Anhänger, die die Schönheit der Orchideen bewahren.',
     sections: [
       {
         heading: 'Echte Orchideen Verwandelt in Botanischen Schmuck',
         body: [
-          'Die Orchideen, die wir bei Eternal Flowers verwenden, sind echte Blumen. Sie sind weder künstlich noch Nachahmungen. Jedes Stück beginnt mit einer echten Orchidee, die durch einen handwerklichen Harzkonservierungsprozess in botanischen Schmuck verwandelt wird.',
+          'Die Orchideen, die wir bei Eternal Flowers verwenden, sind echte Blumen. Sie sind weder künstlich noch Nachahmungen. Die natürlichen Orchideen werden in Harz eingearbeitet bei der Herstellung der botanischen Stücke.',
           'Die Struktur der Orchideen — die Blütenblätter, die Lippe, die Farben — macht sie besonders schön, wenn sie in Harz konserviert werden. Jede Sorte bringt ihre eigene Persönlichkeit in das Stück ein.',
         ],
       },
       {
         heading: 'Die Form und Schönheit der Blume Bewahren',
         body: [
-          'Wenn eine Orchidee in ein Schmuckstück eingearbeitet wird, bleibt ihre natürliche Form erhalten. Das Harz ist Teil des fertigen botanischen Stücks.',
-          'Es ist ein Prozess, der Sorgfalt und Geduld erfordert: jede Blume wird positioniert, damit ihre Struktur und Farbe im endgültigen Stück sichtbar sind.',
+          'Natürliche Orchideen werden in Harz konserviert als Teil des fertigen botanischen Stücks.',
+          'Jede natürliche Blume wird so in das Stück eingearbeitet, dass ihre natürlichen Merkmale sichtbar sind.',
         ],
       },
       {
         heading: 'Von der Blume zum Handgefertigten Stück',
         body: [
-          'Marina bearbeitet jede Orchidee von Hand. Die handwerkliche Herstellung bedeutet, dass jede Orchidee ihre eigene Form hat und jedes Stück einzeln angefertigt wird.',
+          'Marina bearbeitet jede Orchidee von Hand. Jedes Stück wird einzeln angefertigt.',
           'Dieser handgefertigte Prozess zeichnet den botanischen Schmuck von Eternal Flowers aus: die Sorgfalt einer Person, die jedes Stück mit Aufmerksamkeit anfertigt.',
         ],
       },
       {
         heading: 'Hergestellt von Marina in Braga',
         body: [
-          'Alle Stücke werden von Marina im Atelier von Eternal Flowers in Braga, Portugal, hergestellt. Hier werden die Orchideen in Schmuck verwandelt, in einer Arbeit, die künstlerische Sensibilität und handwerkliche Präzision vereint.',
+          'Alle Stücke werden von Marina im Atelier von Eternal Flowers in Braga, Portugal, hergestellt. Hier werden die Orchideen in Schmuck verwandelt.',
           'Das Atelier in Braga ist das Herz von Eternal Flowers — der Ort, an dem Blumen auf Harz treffen und zu Schmuck werden.',
         ],
       },
@@ -861,7 +861,7 @@ export const orchidContent: Record<string, LandingContent> = {
       },
       {
         q: 'Kann ich ein Stück mit Orchideen personalisieren?',
-        a: 'Ja. Eternal Flowers schätzt den direkten Kontakt mit jedem Kunden. Kontaktieren Sie uns und erzählen Sie uns von Ihrer Idee.',
+        a: 'Kontaktieren Sie uns und erzählen Sie uns von Ihrer Idee. Die Möglichkeiten hängen vom Stück, der Blume und der Anfrage ab.',
       },
       {
         q: 'Sind alle Orchideenstücke gleich?',

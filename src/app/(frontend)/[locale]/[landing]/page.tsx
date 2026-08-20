@@ -260,11 +260,11 @@ export default async function LandingPage({
                   es: 'Explore nuestras joyas botánicas por tipo de pieza en el catálogo.',
                   it: 'Esplorate i nostri gioielli botanici per tipo di pezzo nel catalogo.',
                   de: 'Entdecken Sie unseren botanischen Schmuck nach Stücktyp im Katalog.' } as Record<string, string>)[locale]
-              : ({ pt: 'Explore as nossas joias com orquídeas no catálogo.',
-                  en: 'Explore our orchid jewellery in the catalogue.',
-                  es: 'Explore nuestras joyas con orquídeas en el catálogo.',
-                  it: 'Esplorate i nostri gioielli con orchidee nel catalogo.',
-                  de: 'Entdecken Sie unseren Orchideen-Schmuck im Katalog.' } as Record<string, string>)[locale]
+              : ({ pt: 'Explore o catálogo da Eternal Flowers para ver as peças atualmente disponíveis.',
+                  en: 'Explore the Eternal Flowers catalogue to see the pieces currently available.',
+                  es: 'Explore el catálogo de Eternal Flowers para ver las piezas actualmente disponibles.',
+                  it: 'Esplorate il catalogo di Eternal Flowers per vedere i pezzi attualmente disponibili.',
+                  de: 'Erkunden Sie den Katalog von Eternal Flowers, um die aktuell verfügbaren Stücke zu sehen.' } as Record<string, string>)[locale]
             }
           </p>
           <div className="mt-4">
