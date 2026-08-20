@@ -184,47 +184,79 @@ O script `scripts/production/preflight.sh` valida, sem modificar o sistema:
 
 ## 4. Backup e Restore
 
-### 4.1 Scripts
+### 4.1 Arquitectura
 
-| Script | Função |
-|--------|--------|
-| `scripts/production/backup.sh` | pg_dump + tar.gz dos Media + manifesto SHA-256 |
-| `scripts/production/restore.sh` | pg_restore + extrair Media (com confirmação explícita) |
-
-### 4.2 Tipos de backup
-
-| Tipo | Quando | Conteúdo | Comando |
-|------|--------|----------|---------|
-| **Pré-cutover** | Antes de qualquer alteração | SQLite final + Media | `./scripts/production/backup.sh` |
-| **Pós-migração** | Após dados no PG | PostgreSQL dump + Media | `./scripts/production/backup.sh` |
-| **Recorrente** | Diário (cron) | PostgreSQL dump apenas | `./scripts/production/backup.sh --pg-only` |
-
-### 4.3 Backup pré-cutover (SQLite + Media)
-
-```bash
-# Backup da SQLite original (fora do Docker)
-cp loja.sqlite "backups/pre-cutover-$(date +%Y%m%d_%H%M%S).sqlite"
-sha256sum loja.sqlite > "backups/pre-cutover-manifest.txt"
-
-# Backup dos Media
-tar czf "backups/media-pre-cutover-$(date +%Y%m%d_%H%M%S).tar.gz" media/
-sha256sum media/* >> "backups/pre-cutover-manifest.txt"
+```
+systemd timer (03:30 Europe/Lisbon)
+        |
+        v
+scripts/production/backup.sh          ← usa compose.sh (nunca docker compose directo)
+        |
+        ├── postgres container → pg_dump --format=custom
+        |
+        └── app container → /app/media → tar.gz
+        |
+        v
+backups/backup-<YYYYMMDD_HHMMSS>/
+    ├── postgres.dump
+    ├── media.tar.gz
+    ├── manifest.sha256
+    └── metadata.txt
 ```
 
-### 4.4 Backup pós-migração
+Staging: `backups/.tmp-<timestamp>/` → publicado apenas após SHA-256 + pg_restore + tar verification.
 
-```bash
-DATABASE_URI="postgresql://loja:***@localhost:5432/loja_flores" \
-  ./scripts/production/backup.sh
-```
+### 4.2 Fonte oficial dos dados
 
-### 4.5 Segurança de restore
+| Componente | Origem | Método |
+|-----------|--------|--------|
+| PostgreSQL | Container `postgres` (DB `loja_flores`, user `loja`) | `compose.sh exec postgres pg_dump` |
+| Media | Container `app:/app/media` (volume `media_data`) | `compose.sh exec app tar czf - -C /app media` |
+
+### 4.3 Comandos
+
+| Operação | Comando |
+|----------|---------|
+| Backup completo manual | `./scripts/production/backup.sh` |
+| Apenas PostgreSQL | `./scripts/production/backup.sh --pg-only` |
+| Apenas Media | `./scripts/production/backup.sh --media-only` |
+| Verificar um backup | `./scripts/production/backup.sh --verify` (mais recente) |
+| Verificar específico | `./scripts/production/backup.sh --verify=backups/backup-20260820_033000` |
+| Restore PostgreSQL | `./scripts/production/restore.sh --pg backups/backup-<ts>/postgres.dump` |
+| Restore Media | `./scripts/production/restore.sh --media backups/backup-<ts>/media.tar.gz` |
+
+### 4.4 Retenção automática
+
+- **14 dias** por omissão (configurável via `RETENTION_DAYS`)
+- **Mínimo 3 conjuntos completos** — nunca reduz abaixo disto
+- Executada automaticamente após cada backup completo bem-sucedido
+- Remove apenas diretórios com nome `backup-<YYYYMMDD_HHMMSS>` — nunca apaga ficheiros não reconhecidos
+
+### 4.5 Backup diário automático
+
+| Parâmetro | Valor |
+|-----------|-------|
+| Scheduler | systemd timer |
+| Hora | 03:30 Europe/Lisbon |
+| Serviço | `eternalflowers-backup.service` (Type=oneshot) |
+| Timer | `eternalflowers-backup.timer` |
+| Instalar | `sudo ./scripts/production/install-backup-timer.sh` |
+| Persistent | `true` (executa após downtime) |
+| Comandos úteis | `systemctl status eternalflowers-backup.timer` |
+| | `systemctl list-timers eternalflowers-backup.timer` |
+| | `systemctl start eternalflowers-backup.service` |
+
+### 4.6 Segurança de restore
 
 O restore exige confirmação explícita (`CONFIRMAR`). Protege contra:
 
 - Restore contra produção por engano
 - Ficheiro de dump corrompido
 - Destino não verificado
+
+### 4.7 Limitação
+
+⚠️ **BACKUPS LOCAIS NO VPS NÃO PROTEGEM CONTRA PERDA DO VPS.** Off-site backup é uma issue futura separada.
 
 ---
 

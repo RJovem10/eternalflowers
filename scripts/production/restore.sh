@@ -2,60 +2,56 @@
 # =============================================================================
 # Eternal Flowers — Restore de Produção
 # =============================================================================
-# Uso:  ./scripts/production/restore.sh <ficheiro.dump>
-#       ./scripts/production/restore.sh --pg backups/pg-20260802_123000.dump
-#       ./scripts/production/restore.sh --media backups/media-20260802_123000.tar.gz
+# Uso:
+#   ./scripts/production/restore.sh --pg <dump.dump>
+#   ./scripts/production/restore.sh --media <archive.tar.gz>
+#
+# NÃO EXECUTAR AUTOMATICAMENTE.
+# Requer confirmação explícita "CONFIRMAR".
+#
+# Destino:
+#   PostgreSQL: via pg_restore --clean contra o container postgres
+#   Media:      via tar extraído e copiado para app:/app/media (overlay)
+#
+# ⚠️  O restore de media repõe/sobrescreve os ficheiros contidos no backup.
+#     Ficheiros extra atualmente em /app/media NÃO são apagados automaticamente.
+#     Para uma limpeza completa, remover manualmente antes do restore.
 # =============================================================================
 set -euo pipefail
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+COMPOSE_WRAPPER="${SCRIPT_DIR}/compose.sh"
+
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 
 RESTORE_TYPE=""
 RESTORE_FILE=""
 
-# Parse args
 while [ $# -gt 0 ]; do
     case "$1" in
-        --pg) RESTORE_TYPE="pg"; shift; RESTORE_FILE="${1:-}"; shift ;;
+        --pg)    RESTORE_TYPE="pg"; shift; RESTORE_FILE="${1:-}"; shift ;;
         --media) RESTORE_TYPE="media"; shift; RESTORE_FILE="${1:-}"; shift ;;
         -h|--help)
-            echo "Uso: $0 [--pg <dump.dump>] [--media <archive.tar.gz>]"
-            echo "     $0 <dump.dump>  (restore PG implícito)"
-            exit 0
-            ;;
+            echo "Uso: $0 --pg <dump.dump>"
+            echo "     $0 --media <archive.tar.gz>"
+            exit 0 ;;
         *)
             if [ -f "$1" ]; then
-                RESTORE_TYPE="pg"
-                RESTORE_FILE="$1"
-            else
-                echo "ERRO: Argumento desconhecido: $1"
-                exit 1
-            fi
-            shift
-            ;;
+                RESTORE_TYPE="pg"; RESTORE_FILE="$1"
+            else echo "ERRO: $1"; exit 1; fi
+            shift ;;
     esac
 done
 
-if [ -z "$RESTORE_TYPE" ] || [ -z "$RESTORE_FILE" ]; then
+if [ -z "$RESTORE_TYPE" ] || [ -z "$RESTORE_FILE" ] || [ ! -f "$RESTORE_FILE" ]; then
     echo "ERRO: Especificar --pg <dump.dump> ou --media <archive.tar.gz>"
-    echo "Uso:  $0 --pg backups/pg-20260802_123000.dump"
-    echo "      $0 --media backups/media-20260802_123000.tar.gz"
-    exit 1
-fi
-
-if [ ! -f "$RESTORE_FILE" ]; then
-    echo "ERRO: Ficheiro não encontrado: $RESTORE_FILE"
     exit 1
 fi
 
 echo "═══════════════════════════════════════════════"
 echo "  Eternal Flowers — Restore"
 echo "═══════════════════════════════════════════════"
-
-# ── Confirmação explícita ────────────────────────────────────────────
 echo ""
 echo "⚠️  ATENÇÃO: Esta operação SUBSTITUI dados existentes."
 echo ""
@@ -64,94 +60,90 @@ echo "  Fonte:   $RESTORE_FILE"
 echo "  Tamanho: $(du -h "$RESTORE_FILE" | cut -f1)"
 echo "  SHA-256: $(sha256sum "$RESTORE_FILE" | cut -d' ' -f1)"
 echo ""
-
-# Destino — segurança para evitar restore contra produção por engano
-if [ -n "${RESTORE_TARGET:-}" ]; then
-    echo "  Destino: $RESTORE_TARGET"
-elif [ "${NODE_ENV:-}" != "production" ]; then
-    echo -e "  ${YELLOW}⚠️  NODE_ENV=$NODE_ENV (não é production)${NC}"
-    echo "  A confirmar que o destino está correto..."
-fi
-
-echo ""
 read -r -p "Escreve CONFIRMAR para prosseguir: " CONFIRM
 if [ "$CONFIRM" != "CONFIRMAR" ]; then
-    echo -e "${RED}❌ Restore cancelado.${NC}"
-    exit 1
+    echo -e "${RED}❌ Restore cancelado.${NC}"; exit 1
 fi
 
-# ── Restore PostgreSQL ──────────────────────────────────────────────
+# ── PostgreSQL ──────────────────────────────────────────────────────────
 if [ "$RESTORE_TYPE" = "pg" ]; then
-    echo ""
-    echo "📦 Restore PostgreSQL a partir de: $RESTORE_FILE"
+    echo ""; echo "📦 Restore PostgreSQL..."
 
-    # Verificar que o dump é válido
-    if ! pg_restore --list "$RESTORE_FILE" &>/dev/null; then
-        # Tentar verificar via Docker
-        if docker exec eternal-flowers-postgres pg_restore --list /tmp/check.dump &>/dev/null 2>&1; then
-            echo "  ✅ Dump válido"
-        else
-            echo -e "  ${YELLOW}⚠️  Não foi possível validar o dump (pode ser formato raw SQL)${NC}"
-        fi
-    else
-        echo "  ✅ Dump válido"
+    # Validar dump — FAIL CLOSED: se não for validado, ABORTAR
+    echo "  Validar dump via pg_restore --list..."
+    verify_ok=false
+    if "${COMPOSE_WRAPPER}" exec -T postgres pg_restore --list /dev/stdin < "$RESTORE_FILE" >/dev/null 2>&1; then
+        verify_ok=true
+    elif command -v pg_restore &>/dev/null && pg_restore --list "$RESTORE_FILE" >/dev/null 2>&1; then
+        verify_ok=true
     fi
+    if [ "$verify_ok" != "true" ]; then
+        echo -e "${RED}❌ Validação estrutural do dump falhou — ABORTAR.${NC}"
+        echo "  Não é possível continuar com um dump não verificado."
+        exit 1
+    fi
+    echo "  ✅ Dump válido (pg_restore --list)"
 
-    # Proteção: não permitir restore se a base de dados parecer vazia
-    # (para evitar restore contra produção por engano quando se pensa que está vazia)
+    # Restore via container usando compose wrapper
+    # Copiar dump para o container e executar pg_restore
+    tmp_restore="/tmp/restore-pg.$$.dump"
+    "${COMPOSE_WRAPPER}" cp "$RESTORE_FILE" "postgres:${tmp_restore}" 2>/dev/null || {
+        # Fallback: docker cp directly
+        local_cid=$("${COMPOSE_WRAPPER}" ps -q postgres 2>/dev/null)
+        docker cp "$RESTORE_FILE" "${local_cid}:${tmp_restore}" >/dev/null 2>&1
+    }
 
-    if command -v pg_restore &>/dev/null; then
+    # NOTE: POSTGRES_USER and POSTGRES_DB are resolved INSIDE the postgres
+    # container via sh -ec. The host shell NEVER references these variables.
+    if "${COMPOSE_WRAPPER}" exec -T postgres sh -ec '
         pg_restore \
-            --verbose \
-            --clean \
-            --if-exists \
-            --no-owner \
-            --no-acl \
-            --dbname="${DATABASE_URI:-}" \
-            "$RESTORE_FILE" 2>&1 && echo -e "${GREEN}✅ Restore PostgreSQL concluído${NC}" || {
-            echo -e "${RED}❌ Restore PostgreSQL falhou${NC}"
-            exit 1
-        }
+            --verbose --clean --if-exists --no-owner --no-acl \
+            -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+            "$1"
+    ' sh "${tmp_restore}" 2>&1; then
+        echo -e "${GREEN}✅ Restore PostgreSQL concluído${NC}"
     else
-        # Via Docker
-        docker exec -i eternal-flowers-postgres pg_restore \
-            --verbose \
-            --clean \
-            --if-exists \
-            --no-owner \
-            --no-acl \
-            -U "${PGUSER:-loja}" \
-            -d "${PGDATABASE:-loja_flores}" \
-            < "$RESTORE_FILE" 2>&1 && echo -e "${GREEN}✅ Restore PostgreSQL via Docker concluído${NC}" || {
-            echo -e "${RED}❌ Restore PostgreSQL via Docker falhou${NC}"
-            exit 1
-        }
+        echo -e "${RED}❌ Restore PostgreSQL falhou${NC}"
+        "${COMPOSE_WRAPPER}" exec -T postgres rm -f "${tmp_restore}" 2>/dev/null || true
+        exit 1
     fi
+    "${COMPOSE_WRAPPER}" exec -T postgres rm -f "${tmp_restore}" 2>/dev/null || true
 fi
 
-# ── Restore Media ──────────────────────────────────────────────────
+# ── Media ──────────────────────────────────────────────────────────────
 if [ "$RESTORE_TYPE" = "media" ]; then
-    echo ""
-    echo "📁 Restore Media a partir de: $RESTORE_FILE"
-    media_dest="${MEDIA_DEST:-./media}"
-    echo "  Destino: $media_dest"
+    echo ""; echo "📁 Restore Media para app:/app/media..."
+    echo "  ⚠️  Este restore faz overlay/sobrescreve ficheiros contidos no backup."
+    echo "     Ficheiros extra atualmente em /app/media NÃO são apagados."
 
-    if [ ! -d "$media_dest" ]; then
-        echo "  A criar diretório: $media_dest"
-        mkdir -p "$media_dest"
-    fi
-
-    tar xzf "$RESTORE_FILE" -C "$(dirname "$media_dest")" 2>&1 && {
-        echo -e "${GREEN}✅ Restore Media concluído${NC}"
-        echo "  Ficheiros: $(find "$media_dest" -type f | wc -l)"
-    } || {
-        echo -e "${RED}❌ Restore Media falhou${NC}"
-        exit 1
+    # Extrair para diretório temporário no host
+    tmp_media_dir=$(mktemp -d)
+    tar xzf "$RESTORE_FILE" -C "$tmp_media_dir" 2>&1 && echo "  Media extraída" || {
+        echo -e "${RED}❌ Falha ao extrair archive${NC}"; rm -rf "$tmp_media_dir"; exit 1
     }
+
+    # Copiar para o container app usando compose wrapper
+    "${COMPOSE_WRAPPER}" cp "${tmp_media_dir}/media/." "app:/app/media/" 2>/dev/null && {
+        echo -e "${GREEN}✅ Restore Media concluído${NC}"
+    } || {
+        local_cid=$("${COMPOSE_WRAPPER}" ps -q app 2>/dev/null)
+        if [ -n "$local_cid" ]; then
+            docker cp "${tmp_media_dir}/media/." "${local_cid}:/app/media/" >/dev/null 2>&1 && {
+                echo -e "${GREEN}✅ Restore Media concluído (fallback docker cp)${NC}"
+            } || {
+                echo -e "${RED}❌ Restore Media falhou${NC}"
+                rm -rf "$tmp_media_dir"; exit 1
+            }
+        else
+            echo -e "${RED}❌ Restore Media falhou — container app não encontrado${NC}"
+            rm -rf "$tmp_media_dir"; exit 1
+        fi
+    }
+    rm -rf "$tmp_media_dir"
 fi
 
 echo ""
 echo -e "${GREEN}✅ Restore concluído com sucesso.${NC}"
 echo ""
 echo "⚠️  Se foi restaurada a base de dados, reiniciar a aplicação:"
-echo "   docker compose -f docker-compose.production.yml restart app"
+echo "   ${COMPOSE_WRAPPER} restart app"

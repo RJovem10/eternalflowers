@@ -1,0 +1,22 @@
+[Unit]
+Description=Eternal Flowers — Production Backup
+Documentation=https://github.com/RJovem10/eternalflowers
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=__PROJECT_DIR__/scripts/production/backup.sh
+WorkingDirectory=__PROJECT_DIR__
+StandardOutput=journal
+StandardError=journal
+Nice=10
+IOSchedulingClass=idle
+PrivateDevices=true
+ProtectSystem=full
+ProtectHome=read-only
+NoNewPrivileges=true
+MemoryDenyWriteExecute=true
+# backups/ directory needs write access (under PROJECT_DIR)
+ReadWritePaths=__PROJECT_DIR__/backups
