@@ -51,8 +51,14 @@ log_warn() { echo -e "  ${YELLOW}⚠${NC} $1"; }
 # NUNCA imprime "verificado" sem ter executado pg_restore --list com sucesso.
 verify_pg_dump() {
     local dump_file="$1"
-    if "${COMPOSE_WRAPPER}" exec -T postgres pg_restore --list /dev/stdin < "${dump_file}" >/dev/null 2>&1; then
-        return 0
+    local tmp_verify="/tmp/verify-pg-dump.$$.dump"
+    # Copy dump into container, then verify with pg_restore --list
+    if "${COMPOSE_WRAPPER}" cp "${dump_file}" "postgres:${tmp_verify}" 2>/dev/null; then
+        if "${COMPOSE_WRAPPER}" exec -T postgres pg_restore --list "${tmp_verify}" >/dev/null 2>&1; then
+            "${COMPOSE_WRAPPER}" exec -T postgres rm -f "${tmp_verify}" 2>/dev/null || true
+            return 0
+        fi
+        "${COMPOSE_WRAPPER}" exec -T postgres rm -f "${tmp_verify}" 2>/dev/null || true
     fi
     # Fallback: host pg_restore
     if command -v pg_restore &>/dev/null; then
