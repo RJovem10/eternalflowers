@@ -10,14 +10,12 @@
  *   processing/shipped/completed → nenhum botão
  *
  * Todas as acções chamam o endpoint seguro /api/orders/:id/cancel.
+ *
+ * NOTA: beforeDocumentControls não recebe props (BeforeDocumentControlsClientProps = {}).
+ * O document id é obtido via useDocumentInfo() e os field values via useFormFields().
  */
+import { useDocumentInfo, useFormFields } from '@payloadcms/ui'
 import React, { useCallback, useState } from 'react'
-
-interface Props {
-  data?: Record<string, any>
-  collectionSlug?: string
-  id?: number | string
-}
 
 const STYLES = {
   button:
@@ -48,16 +46,23 @@ const STYLES = {
     'rounded bg-stone-200 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-300',
 }
 
-export function CancelOrderActions({ data, id }: Props) {
+export function CancelOrderActions() {
+  const { id } = useDocumentInfo()
+
+  // Use selectors específicos para evitar rerenders desnecessários
+  const orderStatus = useFormFields(
+    ([fields, _siblings]) => fields?.orderStatus?.value as string | undefined,
+  )
+
+  const paymentStatus = useFormFields(
+    ([fields, _siblings]) => fields?.paymentStatus?.value as string | undefined,
+  )
+
   const [loading, setLoading] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null)
   const [showConfirm, setShowConfirm] = useState(false)
 
-  const orderStatus = data?.orderStatus as string | undefined
-  const paymentStatus = data?.paymentStatus as string | undefined
   const isPaid = paymentStatus === 'paid'
-
-  const clearFeedback = useCallback(() => setFeedback(null), [])
 
   const callEndpoint = useCallback(async () => {
     if (!id) return
