@@ -284,4 +284,20 @@ describe('Page content (source-level checks)', () => {
   it('comentário com futuras locales foi substituído', () => {
     expect(pageContent).not.toContain('The poster image files for future locale')
   })
+
+  // ═══════════════════════════════════════════════════════════════
+  // 9. WhatsApp — usa NEXT_PUBLIC_WHATSAPP_NUMBER
+  // ═══════════════════════════════════════════════════════════════
+
+  it('whatsapp href usa process.env.NEXT_PUBLIC_WHATSAPP_NUMBER', () => {
+    expect(pageContent).toContain('process.env.NEXT_PUBLIC_WHATSAPP_NUMBER')
+  })
+
+  it('whatsapp href constrói wa.me/<numero>', () => {
+    expect(pageContent).toContain("`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER")
+  })
+
+  it('whatsapp href tem fallback 351000000000', () => {
+    expect(pageContent).toContain("process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '351000000000'")
+  })
 })
