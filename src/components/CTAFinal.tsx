@@ -9,12 +9,17 @@ interface CTAFinalProps {
   dict: any
 }
 
+const EXTERNAL_RE = /^https?:\/\//i
+
 function safeLink(link: string | undefined | null): string {
   if (!link || link === 'undefined' || link === 'null') return '/'
   return link.startsWith('/') ? link : `/${link}`
 }
 
 export default function CTAFinal({ title, subtitle, buttonText, buttonLink, locale, dict }: CTAFinalProps) {
+  const isExternal = EXTERNAL_RE.test(buttonLink)
+  const href = isExternal ? buttonLink : `/${locale}${safeLink(buttonLink)}`
+
   return (
     <section className="py-24 lg:py-32 bg-brand-charcoal text-white relative overflow-hidden">
       {/* Background decoration — textura subtil de fundo */}
@@ -38,7 +43,11 @@ export default function CTAFinal({ title, subtitle, buttonText, buttonLink, loca
           </p>
         )}
         <div className="mt-10 lg:mt-12">
-          <Button variant="primary" href={`/${locale}${safeLink(buttonLink)}`}>
+          <Button
+            variant="primary"
+            href={href}
+            {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+          >
             {buttonText}
           </Button>
         </div>
