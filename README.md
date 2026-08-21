@@ -166,13 +166,16 @@ Os backups só são úteis se forem monitorizados e restauráveis. Valide regula
 # testes unitários e de integração
 npx vitest run
 
+# verificação TypeScript
+npx tsc --noEmit
+
 # validação das traduções
 npm run translations:validate
 
 # build de produção
 npm run build
 
-# smoke test do ambiente de produção
+# executar no ambiente de produção após alterações/deploy
 ./scripts/production/smoke-test.sh
 ```
 
