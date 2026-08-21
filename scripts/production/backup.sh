@@ -45,16 +45,17 @@ log_err()  { echo -e "  ${RED}ERRO${NC} $1"; }
 log_warn() { echo -e "  ${YELLOW}⚠${NC} $1"; }
 
 # ─── PostgreSQL structural verification ──────────────────────────────────
-# Verifica a integridade de um dump custom-format via pg_restore --list.
+# Lista um dump custom-format via pg_restore --list.
 # Tenta primeiro dentro do container postgres (sempre disponível);
-# falha para host pg_restore apenas se presente em PATH.
-# NUNCA imprime "verificado" sem ter executado pg_restore --list com sucesso.
-verify_pg_dump() {
+# faz fallback para host pg_restore apenas se presente em PATH.
+# A listagem em stdout permite validar o dump e inspecionar as suas secções
+# usando exatamente a mesma execução bem-sucedida de pg_restore.
+list_pg_dump() {
     local dump_file="$1"
     local tmp_verify="/tmp/verify-pg-dump.$$.dump"
     # Copy dump into container, then verify with pg_restore --list
     if "${COMPOSE_WRAPPER}" cp "${dump_file}" "postgres:${tmp_verify}" 2>/dev/null; then
-        if "${COMPOSE_WRAPPER}" exec -T postgres pg_restore --list "${tmp_verify}" >/dev/null 2>&1; then
+        if "${COMPOSE_WRAPPER}" exec -T postgres pg_restore --list "${tmp_verify}" 2>/dev/null; then
             "${COMPOSE_WRAPPER}" exec -T postgres rm -f "${tmp_verify}" 2>/dev/null || true
             return 0
         fi
@@ -62,11 +63,15 @@ verify_pg_dump() {
     fi
     # Fallback: host pg_restore
     if command -v pg_restore &>/dev/null; then
-        if pg_restore --list "${dump_file}" >/dev/null 2>&1; then
+        if pg_restore --list "${dump_file}" 2>/dev/null; then
             return 0
         fi
     fi
     return 1
+}
+
+verify_pg_dump() {
+    list_pg_dump "$1" >/dev/null
 }
 
 # ─── Flags ────────────────────────────────────────────────────────────────
@@ -161,10 +166,11 @@ do_verify() {
 
     if [ "$backup_type" = "full" ] || [ "$backup_type" = "pg-only" ]; then
         echo ""; echo "  pg_restore --list:"
-        if verify_pg_dump "${pg_dump}"; then
+        local pg_listing
+        if pg_listing=$(list_pg_dump "${pg_dump}"); then
             local tcount
-            tcount=$(pg_restore --list "${pg_dump}" 2>/dev/null | grep -cE '^[0-9]+;.*TABLE DATA' || true)
-            log_ok "Dump PostgreSQL válido (${tcount} tabelas com dados)"
+            tcount=$(printf '%s\n' "${pg_listing}" | grep -cE '^[0-9]+;.*TABLE DATA' || true)
+            log_ok "Dump PostgreSQL válido (${tcount} secções TABLE DATA)"
         else
             log_err "pg_restore --list falhou (host e container)"; errors=$((errors + 1))
         fi
