@@ -18,10 +18,14 @@ import { validateCoupon } from '@/lib/coupon'
 import { isLocale } from '@/i18n/locales'
 import type {
   CreateOrderInput,
+  CreateManualOrderInput,
   CreateOrderResult,
+  ManualOrderPreview,
+  OrderItemInput,
   OrderItemSnapshot,
   OrderAddressSnapshot,
 } from './order-types'
+import { MANUAL_SALES_CHANNELS } from './order-types'
 import {
   OrderValidationError,
   InvalidProductError,
@@ -29,6 +33,7 @@ import {
   IdempotencyConflictError,
 } from './order-types'
 import { isShippingDestination } from './shipping/country-whitelist'
+import { calculateFixedShipping, type FixedShippingItem } from './shipping/fixed-shipping'
 
 // ─── Constantes ───────────────────────────────────────────────
 
@@ -38,8 +43,9 @@ const ORDER_NUMBER_RETRIES = 5
 
 // ─── Helpers ──────────────────────────────────────────────────
 
-function hashCheckoutRequest(checkoutRequestId: string): string {
-  return crypto.createHash('sha256').update(checkoutRequestId).digest('hex')
+function hashCheckoutRequest(checkoutRequestId: string, source: 'website' | 'manual'): string {
+  const material = source === 'website' ? checkoutRequestId : `manual:${checkoutRequestId}`
+  return crypto.createHash('sha256').update(material).digest('hex')
 }
 
 function generateOrderNumber(): string {
@@ -51,17 +57,80 @@ function generateOrderNumber(): string {
   return `EF-${y}${m}${d}-${rand}`
 }
 
-function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase()
+function normalizeEmail(email?: string): string {
+  return typeof email === 'string' ? email.trim().toLowerCase() : ''
 }
 
 function normalizeCountry(country: string): string {
   return country.trim().toUpperCase()
 }
 
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0
+}
+
+function validateAddressInput(
+  value: unknown,
+  field: 'shippingAddress' | 'billingAddress',
+  errors: string[],
+): void {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    errors.push(`${field} é obrigatório.`)
+    return
+  }
+
+  const address = value as Record<string, unknown>
+  if (!isNonEmptyString(address.recipientName)) {
+    errors.push(`${field}.recipientName é obrigatório.`)
+  }
+  if (!isNonEmptyString(address.line1)) {
+    errors.push(`${field}.line1 é obrigatório.`)
+  }
+  if (!isNonEmptyString(address.city)) {
+    errors.push(`${field}.city é obrigatório.`)
+  }
+
+  if (!isNonEmptyString(address.country)) {
+    errors.push(`${field}.country é obrigatório.`)
+  } else {
+    const normalized = normalizeCountry(address.country)
+    if (!ISO_ALPHA2_RE.test(normalized)) {
+      errors.push(`${field}.country deve ser ISO 3166-1 alpha-2.`)
+    } else if (!isShippingDestination(normalized)) {
+      errors.push(`Envio não disponível para "${normalized}". Destinos suportados: UE-27 + GB/CH/NO/IS/LI.`)
+    }
+  }
+
+  for (const optionalField of ['phone', 'line2', 'region', 'postalCode'] as const) {
+    const optionalValue = address[optionalField]
+    if (optionalValue !== undefined && optionalValue !== null && typeof optionalValue !== 'string') {
+      errors.push(`${field}.${optionalField} deve ser texto.`)
+    }
+  }
+}
+
 // ─── Validação de input (antes da transacção) ─────────────────
 
-function validateInput(input: CreateOrderInput): void {
+type OrderCreationInput = CreateOrderInput | CreateManualOrderInput
+
+interface CreationPolicy {
+  source: 'website' | 'manual'
+  requireEmail: boolean
+}
+
+function aggregateItems(items: OrderItemInput[]): OrderItemInput[] {
+  const quantities = new Map<number, number>()
+  for (const item of items) {
+    const quantity = (quantities.get(item.flowerId) || 0) + item.qty
+    if (!Number.isSafeInteger(quantity)) {
+      throw new OrderValidationError([`Quantidade total inválida para flowerId=${item.flowerId}.`])
+    }
+    quantities.set(item.flowerId, quantity)
+  }
+  return [...quantities.entries()].map(([flowerId, qty]) => ({ flowerId, qty }))
+}
+
+function validateInput(input: OrderCreationInput, policy: CreationPolicy): void {
   const errors: string[] = []
 
   // checkoutRequestId
@@ -70,60 +139,46 @@ function validateInput(input: CreateOrderInput): void {
   }
 
   // customer
-  if (!input.customer) {
+  if (!input.customer || typeof input.customer !== 'object' || Array.isArray(input.customer)) {
     errors.push('customer é obrigatório.')
   } else {
-    if (!input.customer.name || typeof input.customer.name !== 'string' || !input.customer.name.trim()) {
+    if (!isNonEmptyString(input.customer.name)) {
       errors.push('customer.name é obrigatório.')
     }
-    if (!input.customer.email || typeof input.customer.email !== 'string' || !input.customer.email.trim()) {
+    const email = input.customer.email
+    if (policy.requireEmail && !isNonEmptyString(email)) {
       errors.push('customer.email é obrigatório.')
-    } else if (!input.customer.email.includes('@')) {
+    } else if (email && (typeof email !== 'string' || !email.includes('@'))) {
       errors.push('customer.email inválido.')
     }
-    if (!input.customer.phone || typeof input.customer.phone !== 'string' || !input.customer.phone.trim()) {
+    if (!isNonEmptyString(input.customer.phone)) {
       errors.push('customer.phone é obrigatório.')
+    }
+    for (const optionalField of ['companyName', 'taxId'] as const) {
+      const optionalValue = input.customer[optionalField]
+      if (optionalValue !== undefined && optionalValue !== null && typeof optionalValue !== 'string') {
+        errors.push(`customer.${optionalField} deve ser texto.`)
+      }
     }
   }
 
   // shippingAddress
-  if (!input.shippingAddress) {
-    errors.push('shippingAddress é obrigatório.')
-  } else {
-    if (!input.shippingAddress.recipientName || !input.shippingAddress.recipientName.trim()) {
-      errors.push('shippingAddress.recipientName é obrigatório.')
-    }
-    if (!input.shippingAddress.line1 || !input.shippingAddress.line1.trim()) {
-      errors.push('shippingAddress.line1 é obrigatório.')
-    }
-    if (!input.shippingAddress.city || !input.shippingAddress.city.trim()) {
-      errors.push('shippingAddress.city é obrigatório.')
-    }
-    if (input.shippingAddress.country) {
-      const normalized = normalizeCountry(input.shippingAddress.country)
-      if (!ISO_ALPHA2_RE.test(normalized)) {
-        errors.push('shippingAddress.country deve ser ISO 3166-1 alpha-2.')
-      } else if (!isShippingDestination(normalized)) {
-        errors.push(`Envio não disponível para "${normalized}". Destinos suportados: UE-27 + GB/CH/NO/IS/LI.`)
-      }
-    } else {
-      errors.push('shippingAddress.country é obrigatório.')
-    }
-    if (input.shippingAddress.phone && !input.shippingAddress.phone.trim()) {
-      errors.push('shippingAddress.phone não pode ser vazio se fornecido.')
-    }
-  }
+  validateAddressInput(input.shippingAddress, 'shippingAddress', errors)
 
   // items
   if (!input.items || !Array.isArray(input.items) || input.items.length === 0) {
     errors.push('items não pode estar vazio.')
   } else {
     for (let i = 0; i < input.items.length; i++) {
-      const item = input.items[i]
-      if (!Number.isInteger(item.flowerId) || item.flowerId < 1) {
+      const item = input.items[i] as any
+      if (!item || typeof item !== 'object' || Array.isArray(item)) {
+        errors.push(`items[${i}] deve ser um objeto.`)
+        continue
+      }
+      if (!Number.isSafeInteger(item.flowerId) || item.flowerId < 1) {
         errors.push(`items[${i}].flowerId deve ser um inteiro positivo.`)
       }
-      if (!Number.isInteger(item.qty) || item.qty < 1) {
+      if (!Number.isSafeInteger(item.qty) || item.qty < 1) {
         errors.push(`items[${i}].qty deve ser um inteiro positivo.`)
       }
     }
@@ -131,19 +186,32 @@ function validateInput(input: CreateOrderInput): void {
 
   // billingAddress if not same as shipping
   if (!input.billingSameAsShipping) {
-    if (!input.billingAddress) {
-      errors.push('billingAddress é obrigatório quando billingSameAsShipping é false.')
-    } else if (input.billingAddress.country) {
-      const normalized = normalizeCountry(input.billingAddress.country)
-      if (!ISO_ALPHA2_RE.test(normalized)) {
-        errors.push('billingAddress.country deve ser ISO 3166-1 alpha-2.')
-      }
-    }
+    validateAddressInput(input.billingAddress, 'billingAddress', errors)
+  }
+
+  if (typeof input.billingSameAsShipping !== 'boolean') {
+    errors.push('billingSameAsShipping deve ser booleano.')
+  }
+
+  if (input.coupon !== undefined && typeof input.coupon !== 'string') {
+    errors.push('coupon deve ser texto.')
   }
 
   // locale
   if (input.locale && !isLocale(input.locale)) {
     errors.push(`locale "${input.locale}" não é suportado. Locales: pt, en, es, it, de.`)
+  }
+
+  if (policy.source === 'manual') {
+    const manualInput = input as CreateManualOrderInput
+    if (!MANUAL_SALES_CHANNELS.includes(manualInput.salesChannel)) {
+      errors.push('salesChannel inválido para encomenda manual.')
+    }
+    if (manualInput.internalNote !== undefined && typeof manualInput.internalNote !== 'string') {
+      errors.push('internalNote deve ser texto.')
+    } else if (manualInput.internalNote && manualInput.internalNote.length > 4000) {
+      errors.push('internalNote não pode exceder 4000 caracteres.')
+    }
   }
 
   if (errors.length > 0) {
@@ -157,40 +225,94 @@ export async function createOrder(
   payload: Payload,
   input: CreateOrderInput,
 ): Promise<CreateOrderResult> {
-  // 1. Validar input (antes da transacção)
-  validateInput(input)
+  return createOrderWithPolicy(payload, input, { source: 'website', requireEmail: true })
+}
 
-  const checkoutRequestHash = hashCheckoutRequest(input.checkoutRequestId)
+export async function createManualOrder(
+  payload: Payload,
+  input: CreateManualOrderInput,
+): Promise<CreateOrderResult> {
+  return createOrderWithPolicy(payload, input, { source: 'manual', requireEmail: false })
+}
+
+export async function previewManualOrder(
+  payload: Payload,
+  input: CreateManualOrderInput,
+): Promise<ManualOrderPreview> {
+  const policy: CreationPolicy = { source: 'manual', requireEmail: false }
+  validateInput(input, policy)
+  const normalizedInput = { ...input, items: aggregateItems(input.items) }
+  const resolved = await resolveOrderDraft(payload, normalizedInput, input.req)
+  const shipping = calculateFixedShipping({
+    items: resolved.fixedShippingItems,
+    destinationCountry: resolved.shippingSnapshot.country,
+  })
+  const total = shipping.shippingCost === null
+    ? null
+    : Number((resolved.subtotal - resolved.discount + shipping.shippingCost).toFixed(2))
+
+  return {
+    items: resolved.items.map((item) => ({
+      flowerId: item.flower,
+      name: item.name,
+      qty: item.qty,
+      price: item.price,
+      lineTotal: item.lineTotal,
+    })),
+    subtotal: resolved.subtotal,
+    discount: resolved.discount,
+    shippingCost: shipping.shippingCost,
+    total,
+    orderStatus: shipping.cupulaNeedsConfirmation ? 'awaiting_shipping' : 'pending_payment',
+  }
+}
+
+async function createOrderWithPolicy(
+  payload: Payload,
+  input: OrderCreationInput,
+  policy: CreationPolicy,
+): Promise<CreateOrderResult> {
+  validateInput(input, policy)
+  const normalizedInput = { ...input, items: aggregateItems(input.items) } as OrderCreationInput
+  const checkoutRequestHash = hashCheckoutRequest(input.checkoutRequestId, policy.source)
   const locale = input.locale && isLocale(input.locale) ? input.locale : 'pt'
 
   return runInTransaction(payload, input.req, async (ctx) => {
-    return executeCreateOrder(ctx, payload, input, checkoutRequestHash, locale)
+    return executeCreateOrder(
+      ctx,
+      payload,
+      normalizedInput,
+      policy,
+      checkoutRequestHash,
+      locale,
+    )
   })
 }
 
-async function executeCreateOrder(
-  ctx: TransactionCtx,
-  payload: Payload,
-  input: CreateOrderInput,
-  checkoutRequestHash: string,
-  locale: string,
-): Promise<CreateOrderResult> {
-  // ── 2. Idempotência ────────────────────────────────────────
-  const existing = await payload.find({
-    collection: 'orders',
-    where: { checkoutRequestHash: { equals: checkoutRequestHash } },
-    limit: 1,
-    depth: 0,
-    req: ctx.req,
-    overrideAccess: true,
-  })
-
-  if (existing.docs.length > 0) {
-    return handleExistingOrder(ctx, payload, existing.docs[0], input, checkoutRequestHash)
+interface ResolvedOrderDraft {
+  items: OrderItemSnapshot[]
+  fixedShippingItems: FixedShippingItem[]
+  subtotal: number
+  discount: number
+  couponCode: string | null
+  customerSnapshot: {
+    name: string
+    email: string | null
+    phone: string
+    companyName: string | null
+    taxId: string | null
   }
+  shippingSnapshot: OrderAddressSnapshot
+  billingSnapshot: OrderAddressSnapshot | null
+}
 
-  // ── 3. Carregar Flowers da BD (autoridade server-side) ─────
+async function resolveOrderDraft(
+  payload: Payload,
+  input: OrderCreationInput,
+  req?: any,
+): Promise<ResolvedOrderDraft> {
   const items: OrderItemSnapshot[] = []
+  const fixedShippingItems: FixedShippingItem[] = []
   let subtotal = 0
 
   for (const itemInput of input.items) {
@@ -198,7 +320,7 @@ async function executeCreateOrder(
       collection: 'flowers',
       id: itemInput.flowerId,
       depth: 0,
-      req: ctx.req,
+      req,
       overrideAccess: true,
     }) as any
 
@@ -206,7 +328,6 @@ async function executeCreateOrder(
       throw new InvalidProductError(`Flor com id ${itemInput.flowerId} não encontrada.`)
     }
 
-    // Nome da flor: usar o campo localizado ou cair para namePt
     const name = flower.namePt || flower.nameEn || ''
     if (!name) {
       throw new InvalidProductError(`Flor ${itemInput.flowerId} não tem nome definido.`)
@@ -220,7 +341,6 @@ async function executeCreateOrder(
     const qty = itemInput.qty
     const lineTotal = Number((price * qty).toFixed(2))
     subtotal += lineTotal
-
     items.push({
       flower: itemInput.flowerId,
       name,
@@ -229,36 +349,38 @@ async function executeCreateOrder(
       lineTotal,
       productionMode: flower.productionMode || null,
     })
+    fixedShippingItems.push({
+      shippingClass: flower.shippingClass === 'cupula' ? 'cupula' : 'standard',
+      canShareShippingPackage: flower.canShareShippingPackage === true,
+      qty,
+    })
   }
 
   subtotal = Number(subtotal.toFixed(2))
-
-  // ── 4. Cupão (se houver) ────────────────────────────────────
   let discount = 0
   let couponCode: string | null = null
-
-  if (input.coupon) {
-    const result = await validateCoupon(payload, input.coupon, input.customer.email, subtotal)
-
+  if (input.coupon?.trim()) {
+    const result = await validateCoupon(
+      payload,
+      input.coupon,
+      normalizeEmail(input.customer.email) || undefined,
+      subtotal,
+    )
     if (!result.valid) {
-      throw new CouponValidationError(
-        result.error || 'Cupão inválido para esta encomenda.',
-      )
+      throw new CouponValidationError(result.error || 'Cupão inválido para esta encomenda.')
     }
-
     discount = Number((result.discount ?? 0).toFixed(2))
-    couponCode = input.coupon.toUpperCase()
+    couponCode = input.coupon.trim().toUpperCase()
   }
 
-  // ── 5. Montar snapshots ─────────────────────────────────────
+  const normalizedEmail = normalizeEmail(input.customer.email)
   const customerSnapshot = {
     name: input.customer.name.trim(),
-    email: normalizeEmail(input.customer.email),
+    email: normalizedEmail || null,
     phone: input.customer.phone.trim(),
     companyName: input.customer.companyName?.trim() || null,
     taxId: input.customer.taxId?.trim() || null,
   }
-
   const shippingSnapshot: OrderAddressSnapshot = {
     recipientName: input.shippingAddress.recipientName.trim(),
     phone: input.shippingAddress.phone?.trim() || null,
@@ -269,7 +391,6 @@ async function executeCreateOrder(
     postalCode: input.shippingAddress.postalCode?.trim() || null,
     country: normalizeCountry(input.shippingAddress.country),
   }
-
   let billingSnapshot: OrderAddressSnapshot | null = null
   if (!input.billingSameAsShipping && input.billingAddress) {
     billingSnapshot = {
@@ -284,7 +405,39 @@ async function executeCreateOrder(
     }
   }
 
-  // ── 6. Criar Order (com retry em colisão de orderNumber) ────
+  return {
+    items,
+    fixedShippingItems,
+    subtotal,
+    discount,
+    couponCode,
+    customerSnapshot,
+    shippingSnapshot,
+    billingSnapshot,
+  }
+}
+
+async function executeCreateOrder(
+  ctx: TransactionCtx,
+  payload: Payload,
+  input: OrderCreationInput,
+  policy: CreationPolicy,
+  checkoutRequestHash: string,
+  locale: string,
+): Promise<CreateOrderResult> {
+  const existing = await payload.find({
+    collection: 'orders',
+    where: { checkoutRequestHash: { equals: checkoutRequestHash } },
+    limit: 1,
+    depth: 0,
+    req: ctx.req,
+    overrideAccess: true,
+  })
+  if (existing.docs.length > 0) {
+    return handleExistingOrder(existing.docs[0], input, policy, checkoutRequestHash)
+  }
+
+  const resolved = await resolveOrderDraft(payload, input, ctx.req)
   let lastError: unknown
   for (let attempt = 0; attempt < ORDER_NUMBER_RETRIES; attempt++) {
     try {
@@ -294,15 +447,15 @@ async function executeCreateOrder(
           orderNumber: generateOrderNumber(),
 
           // Customer
-          customer: customerSnapshot,
+          customer: resolved.customerSnapshot,
 
           // Addresses
-          shippingAddress: shippingSnapshot,
+          shippingAddress: resolved.shippingSnapshot,
           billingSameAsShipping: input.billingSameAsShipping,
-          billingAddress: billingSnapshot || undefined,
+          billingAddress: resolved.billingSnapshot || undefined,
 
           // Items
-          items: items.map((item) => ({
+          items: resolved.items.map((item) => ({
             flower: item.flower,
             name: item.name,
             price: item.price,
@@ -313,11 +466,11 @@ async function executeCreateOrder(
 
           // Financial
           currency: 'EUR',
-          subtotal,
-          discount,
+          subtotal: resolved.subtotal,
+          discount: resolved.discount,
           shippingCost: null,
           total: null,
-          coupon: couponCode,
+          coupon: resolved.couponCode,
 
           // Status
           orderStatus: 'draft',
@@ -326,9 +479,17 @@ async function executeCreateOrder(
           // Meta
           locale,
           checkoutRequestHash,
+          orderSource: policy.source,
+          salesChannel: policy.source === 'manual'
+            ? (input as CreateManualOrderInput).salesChannel
+            : null,
+          internalNote: policy.source === 'manual'
+            ? (input as CreateManualOrderInput).internalNote?.trim() || null
+            : null,
+          paymentProvider: policy.source === 'website' ? 'stripe' : null,
 
           // Legacy
-          email: customerSnapshot.email,
+          email: resolved.customerSnapshot.email || '',
           status: 'pending',
         },
         req: ctx.req,
@@ -350,7 +511,7 @@ async function executeCreateOrder(
           limit: 1, depth: 0, req: ctx.req, overrideAccess: true,
         })
         if (existing.docs.length > 0) {
-          return { order: existing.docs[0] }
+          return handleExistingOrder(existing.docs[0], input, policy, checkoutRequestHash)
         }
         // Caso improvável: re-lançar se não encontrar
         continue
@@ -370,10 +531,9 @@ async function executeCreateOrder(
 // ─── Idempotência — validar compatibilidade ───────────────────
 
 async function handleExistingOrder(
-  ctx: TransactionCtx,
-  payload: Payload,
   existingOrder: any,
-  input: CreateOrderInput,
+  input: OrderCreationInput,
+  policy: CreationPolicy,
   checkoutRequestHash: string,
 ): Promise<CreateOrderResult> {
   // Verificar compatibilidade: items e email essenciais
@@ -381,8 +541,14 @@ async function handleExistingOrder(
   const existingEmail = existingOrder.customer?.email || existingOrder.email || ''
   const inputEmail = normalizeEmail(input.customer.email)
 
+  if ((existingOrder.orderSource || 'website') !== policy.source) {
+    throw new IdempotencyConflictError(
+      `checkoutRequestHash ${checkoutRequestHash} já usado para origem diferente.`,
+    )
+  }
+
   // 1. Email deve corresponder
-  if (existingEmail.toLowerCase() !== inputEmail.toLowerCase()) {
+  if (String(existingEmail).toLowerCase() !== inputEmail.toLowerCase()) {
     throw new IdempotencyConflictError(
       `checkoutRequestHash ${checkoutRequestHash} já usado para email diferente.`,
     )

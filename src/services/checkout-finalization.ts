@@ -28,6 +28,7 @@ import { type ShippingParcel } from './shipping/shipping-types'
 import { calculateFixedShipping, type FixedShippingItem } from './shipping/fixed-shipping'
 import { reserveStock } from './stock'
 import { runInTransaction, type TransactionCtx } from './transact'
+import { lockOrderForUpdate } from './db-adapter'
 import type {
   PrepareOrderInput,
   PrepareOrderResult,
@@ -175,6 +176,10 @@ async function executeFinalize(
   // D. Revalidar estado da Order (dentro da transacção)
   // ════════════════════════════════════════════════════════
 
+  // Serializa dois pedidos idempotentes para a mesma Order antes de qualquer
+  // reserva, evitando attempts concorrentes com reservas duplicadas.
+  await lockOrderForUpdate(ctx, input.orderId)
+
   const freshOrder = await payload.findByID({
     collection: 'orders',
     id: input.orderId,
@@ -236,7 +241,7 @@ async function executeFinalize(
         quantity: qty,
         checkoutAttemptId,
         req: ctx.req,
-        durationMs: hasCupula ? 48 * 60 * 60 * 1000 : undefined,
+        durationMs: hasCupula ? 48 * 60 * 60 * 1000 : input.reservationDurationMs,
       })
 
       if (outcome.kind === 'created' || outcome.kind === 'existing_active') {
@@ -254,6 +259,14 @@ async function executeFinalize(
           reservationId: outcome.reservationId,
           expiresAt: outcome.expiresAt,
         })
+      } else if (outcome.kind === 'existing_confirmed') {
+        throw new CheckoutFinalizationError(
+          `Reserva para flowerId=${flowerId} já está confirmada numa Order ainda draft.`,
+        )
+      } else if (outcome.kind === 'attempt_terminated') {
+        throw new CheckoutFinalizationError(
+          `A tentativa de reserva para flowerId=${flowerId} já terminou.`,
+        )
       }
     } catch (err: any) {
       // Se alguma reserva falhar, rollback completo

@@ -35,12 +35,10 @@ import {
   validatePaymentIntentForOrder,
   createFullRefund,
 } from './stripe'
-import { runInTransaction, runInTransactionWithRetry, type TransactionCtx } from '../transact'
-import { confirmReservation } from '../stock'
-import type { ConfirmReservationOutcome } from '../stock-types'
+import { runInTransactionWithRetry } from '../transact'
+import { lockOrderForUpdate } from '../db-adapter'
 import type { CreatePaymentInput, CreatePaymentOutcome } from './payment-types'
-import { enqueueEmailNotification, dedupKeyConfirmed } from '../email/email-notifications'
-import { lockCouponForUpdate } from '../db-adapter'
+import { SettlementStockUnavailableError, settleOrderPayment } from './payment-settlement'
 
 // ─── Helpers ─────────────────────────────────────────────────
 
@@ -49,6 +47,32 @@ function generateIdempotencyKey(checkoutAttemptId: string): string {
     .createHash('sha256')
     .update(`payment:${checkoutAttemptId}`)
     .digest('hex')
+}
+
+const UUID_V4_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+/**
+ * Gera um UUID v4 CANÓNICO, ESTÁVEL e DETERMINÍSTICO derivado do ID da Order.
+ *
+ * Para Orders que já têm checkoutAttemptId (UUID v4 válido), esse é reutilizado.
+ * Para Orders legacy sem checkoutAttemptId, este identificador é derivado do
+ * orderId via SHA-256, garantindo que:
+ *   - É sempre o mesmo para a mesma Order (idempotência Stripe)
+ *   - NÃO depende de randomUUID() que mudaria num retry de transacção
+ *   - Tem formato UUID v4 (com bits de versão 4 e variante canónica)
+ */
+function deterministicCheckoutId(orderId: number): string {
+  const hash = crypto
+    .createHash('sha256')
+    .update(`order-checkout:${orderId}`)
+    .digest('hex')
+  return [
+    hash.slice(0, 8),
+    hash.slice(8, 12),
+    '4' + hash.slice(13, 16),   // version 4: 0100
+    '8' + hash.slice(17, 20),   // variant:   10xx
+    hash.slice(20, 32),
+  ].join('-')
 }
 
 // ─── createPaymentForOrder ───────────────────────────────────
@@ -68,11 +92,17 @@ export async function createPaymentForOrder(
   payload: Payload,
   input: CreatePaymentInput,
 ): Promise<CreatePaymentOutcome> {
+  return runInTransactionWithRetry(payload, input.req, async (ctx) => {
+  // Impede que uma associação Stripe e uma confirmação externa avancem
+  // em paralelo sobre a mesma Order.
+  await lockOrderForUpdate(ctx, input.orderId)
+
   // ─── 1. Carregar Order server-side ─────────────────────────
   const order = await payload.findByID({
     collection: 'orders',
     id: input.orderId,
     depth: 0,
+    req: ctx.req,
     overrideAccess: true,
   }) as any
 
@@ -85,6 +115,14 @@ export async function createPaymentForOrder(
     throw new InvalidOrderForPaymentError(
       `Order ${input.orderId} está "${order.orderStatus}". Apenas "pending_payment" aceita pagamento.`,
     )
+  }
+  if (!['unpaid', 'failed', 'pending'].includes(order.paymentStatus)) {
+    throw new InvalidOrderForPaymentError(
+      `Order ${input.orderId} tem paymentStatus "${order.paymentStatus}" e não aceita novo pagamento.`,
+    )
+  }
+  if (order.paymentProvider && order.paymentProvider !== PAYMENT_PROVIDER) {
+    throw new InvalidOrderForPaymentError('Order associada a outro provider de pagamento.')
   }
 
   // ─── 3. Validar total e currency ────────────────────────────
@@ -138,8 +176,22 @@ export async function createPaymentForOrder(
   }
 
   // ─── 5. Criar PaymentIntent Stripe ──────────────────────────
-  const checkoutAttemptId = order.checkoutAttemptId as string
-  const idempotencyKey = input.idempotencyKey || generateIdempotencyKey(checkoutAttemptId)
+  let checkoutAttemptId = typeof order.checkoutAttemptId === 'string'
+    ? order.checkoutAttemptId.trim()
+    : ''
+  if (!UUID_V4_PATTERN.test(checkoutAttemptId)) {
+    checkoutAttemptId = deterministicCheckoutId(order.id)
+    await payload.update({
+      collection: 'orders',
+      id: order.id,
+      data: { checkoutAttemptId } as any,
+      req: ctx.req,
+      overrideAccess: true,
+    })
+  }
+  // Nunca confiar numa chave fornecida por um caller/browser: a chave canónica
+  // deriva exclusivamente do checkoutAttemptId guardado na Order.
+  const idempotencyKey = generateIdempotencyKey(checkoutAttemptId)
 
   const intent = await stripeCreateIntent({
     amount: total,
@@ -160,6 +212,7 @@ export async function createPaymentForOrder(
       stripePaymentIntentId: intent.id,
       paymentProvider: PAYMENT_PROVIDER,
     } as any,
+    req: ctx.req,
     overrideAccess: true,
   })
 
@@ -168,6 +221,7 @@ export async function createPaymentForOrder(
     paymentIntentId: intent.id,
     clientSecret: intent.client_secret,
   }
+  })
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -198,6 +252,7 @@ export async function handlePaymentSucceeded(
   // ─── 1. Localizar Order ────────────────────────────────────
   const paymentIntentId = paymentIntent.id
   const metadataOrderId = paymentIntent.metadata?.orderId
+  const metadataCheckoutAttemptId = paymentIntent.metadata?.checkoutAttemptId
 
   // Procurar por stripePaymentIntentId
   const findResult = await payload.find({
@@ -209,12 +264,30 @@ export async function handlePaymentSucceeded(
   })
 
   let order = findResult.docs[0] as any
+  const usingMetadataFallback = !order
 
-  // Fallback: metadata orderId
-  if (!order && metadataOrderId) {
+  // O fallback só é seguro com os dois identificadores canónicos. Isto
+  // cobre webhooks que chegam antes de stripePaymentIntentId ser persistido.
+  if (!order) {
+    if (
+      typeof metadataOrderId !== 'string' ||
+      !metadataOrderId ||
+      typeof metadataCheckoutAttemptId !== 'string' ||
+      !metadataCheckoutAttemptId
+    ) {
+      return { kind: 'order_not_found' }
+    }
+    const parsedOrderId = Number(metadataOrderId)
+    if (
+      !Number.isSafeInteger(parsedOrderId) ||
+      parsedOrderId <= 0 ||
+      String(parsedOrderId) !== metadataOrderId
+    ) {
+      throw new PaymentOrderMismatchError('Metadata orderId inválido.')
+    }
     order = await payload.findByID({
       collection: 'orders',
-      id: Number(metadataOrderId),
+      id: parsedOrderId,
       depth: 0,
       overrideAccess: true,
     }) as any
@@ -229,6 +302,20 @@ export async function handlePaymentSucceeded(
     throw new PaymentOrderMismatchError(
       `PaymentIntent ${paymentIntentId} não corresponde ao stripePaymentIntentId da Order ${order.id} (${order.stripePaymentIntentId}).`,
     )
+  }
+  if (usingMetadataFallback) {
+    const storedCheckoutAttemptId = typeof order.checkoutAttemptId === 'string'
+      ? order.checkoutAttemptId.trim()
+      : ''
+    if (
+      String(order.id) !== metadataOrderId ||
+      !storedCheckoutAttemptId ||
+      metadataCheckoutAttemptId !== storedCheckoutAttemptId
+    ) {
+      throw new PaymentOrderMismatchError(
+        'Metadata da tentativa de pagamento não corresponde à Order.',
+      )
+    }
   }
 
   // ─── 3. Validar amount/currency ─────────────────────────────
@@ -247,253 +334,51 @@ export async function handlePaymentSucceeded(
     )
   }
 
-  // ─── 4. Idempotência — já processado com sucesso ───────────
-  if (order.paymentStatus === 'paid' && order.orderStatus === 'confirmed') {
-    return { kind: 'already_processed', orderId: order.id }
+  if (order.paymentProvider && order.paymentProvider !== PAYMENT_PROVIDER) {
+    throw new PaymentOrderMismatchError('A Order está associada a outro provider de pagamento.')
+  }
+  if (metadataOrderId && String(order.id) !== metadataOrderId) {
+    throw new PaymentOrderMismatchError('Metadata orderId não corresponde à Order localizada.')
+  }
+  if (
+    paymentIntent.metadata?.checkoutAttemptId &&
+    order.checkoutAttemptId &&
+    paymentIntent.metadata.checkoutAttemptId !== order.checkoutAttemptId
+  ) {
+    throw new PaymentOrderMismatchError('Metadata checkoutAttemptId não corresponde à Order.')
   }
 
-  // ─── 4b. Já refunded/expired com mesmo PaymentIntent ───────
+  // ─── 4. Já refunded/expired com mesmo PaymentIntent ─────────
   if (order.paymentStatus === 'refunded' && order.orderStatus === 'expired') {
     return { kind: 'already_refunded', orderId: order.id }
   }
 
-  // ─── 5. Operação transacional ───────────────────────────────
-  return runInTransaction(payload, undefined, async (ctx) => {
-    return executePaymentSucceeded(ctx, payload, order, paymentIntent)
-  })
-}
+  const paymentMethodType = Array.isArray(paymentIntent.payment_method_types)
+    ? paymentIntent.payment_method_types[0] || null
+    : null
 
-async function executePaymentSucceeded(
-  ctx: TransactionCtx,
-  payload: Payload,
-  order: any,
-  paymentIntent: any,
-): Promise<{ kind: string; orderId: number }> {
-  const now = new Date().toISOString()
-
-  // ─── Verificar todas as reservas necessárias ────────────────
-  const reservationsResult = await payload.find({
-    collection: 'stock-reservations' as any,
-    where: { order: { equals: order.id } },
-    limit: 100,
-    depth: 0,
-    overrideAccess: true,
-  })
-
-  const reservations = reservationsResult.docs as any[]
-  const items = (order.items as any[]) || []
-
-  // Determinar se há items reserváveis
-  const hasReservableItem = items.some((item: any) => {
-    const mode = item.productionMode
-    return mode === 'unique' || mode === 'reproducible' || mode === null || mode === undefined
-  })
-
-  // Se há items que precisam de reserva, verificar
-  if (hasReservableItem) {
-    // Verificar se cada item reservável tem uma reserva
-    for (const item of items) {
-      const mode = item.productionMode
-      if (mode === 'made_to_order') continue
-
-      const flowerId = typeof item.flower === 'object' ? item.flower.id : item.flower
-      const hasReservation = reservations.some((r: any) => {
-        const rFlowerId = typeof r.flower === 'object' ? r.flower.id : r.flower
-        return rFlowerId === flowerId
-      })
-
-      if (!hasReservation) {
-        throw new LatePaymentError(
-          paymentIntent.id,
-          `Item flowerId=${flowerId} não tem reserva associada.`,
-        )
-      }
-    }
-
-    // Tentar confirmar TODAS as reservas
-    const outcomes: Array<{ reservationId: number; result: ConfirmReservationOutcome }> = []
-
-    for (const reservation of reservations) {
-      try {
-        const result = await confirmReservation(payload, {
-          reservationId: reservation.id,
-          req: ctx.req,
-        })
-        outcomes.push({ reservationId: reservation.id, result })
-      } catch (err: any) {
-        // Erro de dominío (StockInvariantViolation, etc.) — rollback total
-        throw new PaymentError(
-          `Falha ao confirmar reserva ${reservation.id}: ${err.message}`,
-        )
-      }
-    }
-
-    // Verificar outcomes
-    // Aceitáveis: confirmed, already_confirmed
-    // Inaceitáveis: expired_now, terminated (expired/released)
-    for (const outcome of outcomes) {
-      if (outcome.result.kind === 'confirmed' || outcome.result.kind === 'already_confirmed') {
-        continue // OK
-      }
-
-      if (outcome.result.kind === 'expired_now') {
-        // Reserva expirou neste exato momento — late payment
-        throw new LatePaymentError(
-          paymentIntent.id,
-          `Reserva ${outcome.reservationId} expirou antes da confirmação do pagamento.`,
-        )
-      }
-
-      if (outcome.result.kind === 'terminated') {
-        // Reserva já estava expired/released — late payment
-        throw new LatePaymentError(
-          paymentIntent.id,
-          `Reserva ${outcome.reservationId} está ${outcome.result.status} (não pode ser confirmada).`,
-        )
-      }
-    }
-  }
-
-  // ─── Se chegámos aqui, stock está confirmado ───────────────
-
-  // ─── Coupon redemption (ISSUE-1S) ─────────────────────────
-  // Regras:
-  // - Apenas consumido quando payment é confirmado (nunca antes)
-  // - Idempotente: se couponRedeemedAt já está preenchido, skip
-  // - Uso do cupão atómico dentro da mesma transacção
-  // - SEMPRE incrementa usesCount quando uma Order paga tem coupon
-  //   sem couponRedeemedAt — grandfathering permite exceder maxUses
-  //   (a validação de maxUses é feita na aplicação inicial do coupon,
-  //   não no momento do pagamento)
-  // - couponRedeemedAt apenas é marcado se a utilização foi realmente
-  //   contabilizada (coupon encontrado e actualizado)
-  // - Cancelamento/refund posterior NÃO devolve a utilização
-  let couponRedeemed = false
-  const couponCode = (order.coupon as string | undefined)?.trim()
-  const existingRedeemedAt = (order.couponRedeemedAt as string | undefined)
-  if (couponCode && !existingRedeemedAt) {
-    // Procurar coupon activo pelo código
-    const couponResult = await payload.find({
-      collection: 'coupons',
-      where: { code: { equals: couponCode } },
-      limit: 1,
-      depth: 0,
-      req: ctx.req,
-      overrideAccess: true,
-    })
-
-    const coupon = couponResult.docs[0] as any
-    if (coupon && coupon.id) {
-      // Lock coupon row para PG (FOR UPDATE) — previne race
-      await lockCouponForUpdate(ctx, coupon.id)
-
-      // Re-read usesCount dentro da transacção (após lock)
-      const freshCoupon = await payload.findByID({
-        collection: 'coupons',
-        id: coupon.id,
-        depth: 0,
-        req: ctx.req,
-        overrideAccess: true,
-      }) as any
-
-      if (freshCoupon) {
-        const currentUses = Number(freshCoupon.usesCount) || 0
-
-        // Incrementa SEMPRE — grandfathering permite usesCount > maxUses
-        // A validação de maxUses já foi feita aquando da aplicação do coupon
-        await payload.update({
-          collection: 'coupons',
-          id: coupon.id,
-          data: { usesCount: currentUses + 1 } as any,
-          req: ctx.req,
-          overrideAccess: true,
-        })
-        couponRedeemed = true
-      }
-      // Se coupon não existe mais (apagado entre criação e pagamento):
-      // não bloqueia — o snapshot do desconto está na Order
-    }
-  }
-
-  // ─── Obter payment method type ──────────────────────────────
-  let paymentMethodType: string | null = null
   try {
-    if (paymentIntent.payment_method_types && paymentIntent.payment_method_types.length > 0) {
-      paymentMethodType = paymentIntent.payment_method_types[0]
-    }
-    if (paymentIntent.payment_method) {
-      const paymentMethodId = paymentIntent.payment_method
-      if (typeof paymentMethodId === 'string') {
-        if (!paymentMethodType) {
-          paymentMethodType = paymentIntent.payment_method_types?.[0] || null
-        }
-      }
-    }
-  } catch {
-    // Melhor esforço — não bloquear se não conseguir
-  }
-
-  // ─── Actualizar Order: paid + confirmed ─────────────────────
-  const updateData: Record<string, unknown> = {
-    paymentStatus: 'paid',
-    orderStatus: 'confirmed',
-    paymentMethodType,
-    paidAt: now,
-  }
-
-  // Se a Order tem cupão e foi realmente contabilizado, marcar couponRedeemedAt
-  if (couponRedeemed) {
-    updateData.couponRedeemedAt = now
-  }
-
-  await payload.update({
-    collection: 'orders',
-    id: order.id,
-    data: updateData as any,
-    req: ctx.req,
-    overrideAccess: true,
-  })
-
-  // ─── Enqueue order_confirmed email notification (mesma transacção) ──
-  // Faz parte da transactional outbox: falha ao persistir a notification
-  // faz rollback da transacção de domínio.
-  const customer = (order.customer || {}) as any
-
-  await enqueueEmailNotification(payload, {
-    type: 'order_confirmed',
-    orderId: order.id,
-    recipientEmail: customer.email || order.email || '',
-    locale: order.locale || 'pt',
-    deduplicationKey: dedupKeyConfirmed(order.id),
-    snapshot: {
-      type: 'order_confirmed',
-      data: {
-        orderNumber: order.orderNumber || String(order.id),
-        customerName: customer.name || '',
-        items: items.map((item: any) => ({
-          name: item.name || '',
-          qty: Number(item.qty) || 1,
-          unitPrice: Number(item.price) || 0,
-          lineTotal: Number(item.lineTotal) || 0,
-        })),
-        subtotal: Number(order.subtotal) || 0,
-        discount: Number(order.discount) || 0,
-        shippingCost: Number(order.shippingCost) || 0,
-        total: Number(order.total) || 0,
-        currency: order.currency || 'EUR',
+    return await settleOrderPayment(payload, {
+      orderId: Number(order.id),
+      payment: {
+        provider: 'stripe',
+        paymentIntentId,
+        paymentMethodType,
       },
-    },
-    req: ctx.req,
-  })
-
-  return { kind: 'processed', orderId: order.id }
+    })
+  } catch (err) {
+    if (err instanceof SettlementStockUnavailableError) {
+      throw new LatePaymentError(paymentIntentId, err.message)
+    }
+    throw err
+  }
 }
 
 // ─── handleLatePaymentRefund ────────────────────────────────
 
 /**
  * Processa late payment: stock já não pode ser confirmado.
- * Chamado quando executePaymentSucceeded lança LatePaymentError.
+ * Chamado quando o settlement comum lança LatePaymentError.
  *
  * Fluxo (fora da transacção original que foi rolled back):
  * A. Criar refund Stripe FORA da DB transaction
@@ -581,7 +466,7 @@ export async function handleLatePaymentRefund(
 // ─── handlePaymentSucceededWithFallback ─────────────────────
 
 /**
- * Wrapper que executa executePaymentSucceeded dentro de transacção
+ * Wrapper que executa o settlement de pagamento
  * e trata LatePaymentError com refund automático.
  *
  * Usado pelo webhook route para garantir que late payments são

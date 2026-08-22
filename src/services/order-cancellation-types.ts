@@ -7,9 +7,21 @@
 
 // ─── Inputs ──────────────────────────────────────────────────
 
+export interface ManualRefundConfirmationInput {
+  /** Confirma que o reembolso integral já foi executado fora da aplicação. */
+  confirmed: boolean
+  /** Referência opcional do comprovativo/operação externa. */
+  reference?: string
+}
+
 export interface CancelOrderInput {
   /** ID da Order */
   orderId: number
+  /**
+   * Confirmação explícita para pagamentos manuais. O autor é sempre derivado
+   * de req.user; nunca pode ser indicado pelo browser.
+   */
+  manualRefund?: ManualRefundConfirmationInput
   /** Payload request para transacções internas */
   req?: any
 }
@@ -30,6 +42,13 @@ export type CancelOrderResult =
       orderId: number
       refundId: string
       stockRestored: boolean
+    }
+  // Cancelamento de pagamento externo, confirmado por um administrador
+  | {
+      kind: 'manual_paid_refund_cancelled'
+      orderId: number
+      stockRestored: boolean
+      refundedAt: string
     }
   // Order já estava cancelada (idempotente)
   | { kind: 'already_cancelled'; orderId: number }
@@ -67,5 +86,12 @@ export class CancelRefundError extends Error {
   constructor(msg: string) {
     super(msg)
     this.name = 'CancelRefundError'
+  }
+}
+
+export class ManualRefundConfirmationRequiredError extends CancelOrderNotAllowedError {
+  constructor(orderId: number, reason = 'Confirmação explícita do reembolso externo é obrigatória.') {
+    super(orderId, reason)
+    this.name = 'ManualRefundConfirmationRequiredError'
   }
 }

@@ -17,8 +17,8 @@ export type PaymentMethodType = string | null
 
 export interface CreatePaymentInput {
   orderId: number
-  /** Idempotência derivada de checkoutAttemptId */
-  idempotencyKey: string
+  /** @deprecated O serviço deriva a chave exclusivamente da Order. */
+  idempotencyKey?: string
   req?: any
 }
 
@@ -47,7 +47,10 @@ export type ReservationSettlementOutcome =
 
 // ─── Refund snapshot ───────────────────────────────────────
 
-export type RefundReason = 'stock_reservation_expired' | 'admin_order_cancelled'
+export type RefundReason =
+  | 'stock_reservation_expired'
+  | 'admin_order_cancelled'
+  | 'admin_manual_payment_refunded'
 
 // ─── Erros tipados ──────────────────────────────────────────
 

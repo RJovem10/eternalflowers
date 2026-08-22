@@ -2,6 +2,24 @@ import { buildConfig, type CollectionConfig, type GlobalConfig, type PayloadHand
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { sqliteAdapter } from '@payloadcms/db-sqlite'
 
+type ManualOrderHandlerName =
+  | 'confirmManualPaymentHandler'
+  | 'confirmShippingHandler'
+  | 'createManualOrderHandler'
+  | 'issuePaymentLinkHandler'
+  | 'previewManualOrderHandler'
+
+const lazyManualOrderHandler = (name: ManualOrderHandlerName): PayloadHandler => async (req) => {
+  const handlers = await import('./endpoints/admin/manual-orders')
+  return handlers[name](req)
+}
+
+const confirmManualPaymentHandler = lazyManualOrderHandler('confirmManualPaymentHandler')
+const confirmShippingHandler = lazyManualOrderHandler('confirmShippingHandler')
+const createManualOrderHandler = lazyManualOrderHandler('createManualOrderHandler')
+const issuePaymentLinkHandler = lazyManualOrderHandler('issuePaymentLinkHandler')
+const previewManualOrderHandler = lazyManualOrderHandler('previewManualOrderHandler')
+
 // ─── Database selection ─────────────────────────────────────────
 // Local dev:     DATABASE_URI vazio ou 'file:./loja.sqlite' → SQLite
 // Production:    DATABASE_URI deve começar por 'postgres'    → PostgreSQL
@@ -22,6 +40,15 @@ if (process.env.NODE_ENV === 'production' && !isBuilding && !usePostgres) {
 const db = usePostgres
   ? postgresAdapter({ pool: { connectionString: uri }, migrationDir: './src/migrations-pg', push: process.env.PAYLOAD_PG_PUSH === 'true' })
   : sqliteAdapter({ client: { url: uri.startsWith('file:') ? uri : 'file:./loja.sqlite' }, push: process.env.PAYLOAD_SQLITE_PUSH !== 'false', transactionOptions: {}})
+
+const adminUserAccess = ({ req }: any) => Boolean(
+  req?.user && req.user.collection === req.payload?.config?.admin?.user,
+)
+
+const systemManagedFieldAccess = {
+  create: () => false,
+  update: () => false,
+}
 
 const Flowers: CollectionConfig = {
   slug: 'flowers',
@@ -300,7 +327,22 @@ const cancelHandler: PayloadHandler = async (req) => {
   if (orderId === null) return fulfillmentError('ID de encomenda inválido.', 400)
   try {
     const { cancelOrder } = await import('@/services/order-cancellation')
-    const result = await cancelOrder(req.payload, { orderId, req })
+    let manualRefund: { confirmed: boolean; reference?: string } | undefined
+    try {
+      const body = await req.json?.()
+      const command = body && typeof body === 'object' && !Array.isArray(body)
+        ? (body as any).manualRefund
+        : undefined
+      if (command && typeof command === 'object' && !Array.isArray(command)) {
+        manualRefund = {
+          confirmed: command.confirmed === true,
+          reference: command.reference,
+        }
+      }
+    } catch {
+      // O cancelamento Stripe e o cancelamento pré-pagamento não têm body.
+    }
+    const result = await cancelOrder(req.payload, { orderId, manualRefund, req })
     return fulfillmentJson(result)
   } catch (err: any) {
     const isKnown = err.code === 'CANCEL_NOT_ALLOWED' || err.code === 'CANCEL_ORDER_NOT_FOUND' || err.code === 'CANCEL_STRIPE_ERROR' || err.code === 'CANCEL_REFUND_ERROR'
@@ -317,13 +359,35 @@ const cancelHandler: PayloadHandler = async (req) => {
 
 const Orders: CollectionConfig = {
   slug: 'orders',
+  disableDuplicate: true,
+  access: {
+    read: adminUserAccess,
+    create: () => false,
+    update: adminUserAccess,
+    delete: adminUserAccess,
+  },
   admin: {
     useAsTitle: 'orderNumber',
     defaultColumns: ['orderNumber', 'customer.name', 'orderStatus', 'paymentStatus', 'total', 'createdAt'],
     listSearchableFields: ['orderNumber', 'name', 'email'],
     components: {
+      views: {
+        list: {
+          actions: [
+            { path: '@/components/admin/manual-orders/ManualOrderListAction#ManualOrderListAction' },
+          ],
+        },
+        manual: {
+          Component: '@/components/admin/manual-orders/ManualOrderView#ManualOrderView',
+          path: '/manual',
+          exact: true,
+        },
+      },
       edit: {
         beforeDocumentControls: [
+          {
+            path: '@/components/admin/manual-orders/ManualOrderPaymentActions#ManualOrderPaymentActions',
+          },
           {
             path: '@/components/admin/FulfillmentActions#FulfillmentActions',
           },
@@ -335,6 +399,31 @@ const Orders: CollectionConfig = {
     },
   },
   endpoints: [
+    {
+      path: '/manual/preview',
+      method: 'post',
+      handler: previewManualOrderHandler,
+    },
+    {
+      path: '/manual/create',
+      method: 'post',
+      handler: createManualOrderHandler,
+    },
+    {
+      path: '/:id/manual-payment/confirm',
+      method: 'post',
+      handler: confirmManualPaymentHandler,
+    },
+    {
+      path: '/:id/payment-link',
+      method: 'post',
+      handler: issuePaymentLinkHandler,
+    },
+    {
+      path: '/:id/shipping/confirm',
+      method: 'post',
+      handler: confirmShippingHandler,
+    },
     {
       path: '/:id/start-processing',
       method: 'post',
@@ -358,7 +447,7 @@ const Orders: CollectionConfig = {
   ],
   fields: [
     // ── Nº Encomenda ────────────────────────────────────────────
-    { name: 'orderNumber', type: 'text', unique: true, label: 'Nº Encomenda', admin: { readOnly: true } },
+    { name: 'orderNumber', type: 'text', unique: true, label: 'Nº Encomenda', admin: { readOnly: true }, access: systemManagedFieldAccess },
 
     // ── Estado ──────────────────────────────────────────────────
     {
@@ -367,6 +456,7 @@ const Orders: CollectionConfig = {
       defaultValue: 'pending_payment',
       label: 'Estado da Encomenda',
       admin: { readOnly: true },
+      access: systemManagedFieldAccess,
       options: [
         { label: 'Rascunho', value: 'draft' },
         { label: 'A aguardar pagamento', value: 'pending_payment' },
@@ -385,6 +475,7 @@ const Orders: CollectionConfig = {
       defaultValue: 'unpaid',
       label: 'Estado do Pagamento',
       admin: { readOnly: true },
+      access: systemManagedFieldAccess,
       options: [
         { label: 'Não pago', value: 'unpaid' },
         { label: 'Pendente', value: 'pending' },
@@ -394,6 +485,26 @@ const Orders: CollectionConfig = {
       ],
     },
     { name: 'locale', type: 'text', label: 'Língua do pedido', defaultValue: 'pt' },
+    {
+      name: 'orderSource', type: 'select', required: true, defaultValue: 'website',
+      label: 'Origem da encomenda', admin: { readOnly: true }, access: systemManagedFieldAccess,
+      options: [
+        { label: 'Website', value: 'website' },
+        { label: 'Manual', value: 'manual' },
+      ],
+    },
+    {
+      name: 'salesChannel', type: 'select', label: 'Canal da venda',
+      admin: { readOnly: true }, access: systemManagedFieldAccess,
+      options: [
+        { label: 'Telefone', value: 'phone' },
+        { label: 'Presencial', value: 'in_person' },
+        { label: 'WhatsApp', value: 'whatsapp' },
+        { label: 'Instagram', value: 'instagram' },
+        { label: 'Outro', value: 'other' },
+      ],
+    },
+    { name: 'internalNote', type: 'textarea', label: 'Nota interna', maxLength: 4000 },
 
     // ── Cliente ─────────────────────────────────────────────────
     {
@@ -402,7 +513,7 @@ const Orders: CollectionConfig = {
       label: 'Cliente',
       fields: [
         { name: 'name', type: 'text', label: 'Nome' },
-        { name: 'email', type: 'email', required: true, label: 'Email' },
+        { name: 'email', type: 'email', label: 'Email' },
         { name: 'phone', type: 'text', label: 'Telefone' },
         { name: 'companyName', type: 'text', label: 'Empresa' },
         { name: 'taxId', type: 'text', label: 'NIF' },
@@ -450,6 +561,7 @@ const Orders: CollectionConfig = {
       type: 'array',
       label: 'Artigos',
       admin: { readOnly: true },
+      access: systemManagedFieldAccess,
       fields: [
         { name: 'flower', type: 'relationship', relationTo: 'flowers', required: true, label: 'Flor' },
         { name: 'name', type: 'text', label: 'Nome' },
@@ -461,49 +573,67 @@ const Orders: CollectionConfig = {
     },
 
     // ── Valores ─────────────────────────────────────────────────
-    { name: 'subtotal', type: 'number', label: 'Subtotal (€)', admin: { readOnly: true } },
-    { name: 'discount', type: 'number', label: 'Desconto (€)', defaultValue: 0, admin: { readOnly: true } },
-    { name: 'shippingCost', type: 'number', label: 'Portes (€)', admin: { readOnly: true } },
-    { name: 'total', type: 'number', label: 'Total (€)', admin: { readOnly: true } },
-    { name: 'coupon', type: 'text', label: 'Cupão usado', admin: { readOnly: true } },
-    { name: 'couponRedeemedAt', type: 'date', label: 'Cupão consumido em', admin: { readOnly: true, position: 'sidebar', description: 'System-managed. Preenchido automaticamente quando o pagamento é confirmado.' } },
-    { name: 'currency', type: 'text', label: 'Moeda', defaultValue: 'EUR', admin: { readOnly: true } },
+    { name: 'subtotal', type: 'number', label: 'Subtotal (€)', admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'discount', type: 'number', label: 'Desconto (€)', defaultValue: 0, admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'shippingCost', type: 'number', label: 'Portes (€)', admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'total', type: 'number', label: 'Total (€)', admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'coupon', type: 'text', label: 'Cupão usado', admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'couponRedeemedAt', type: 'date', label: 'Cupão consumido em', admin: { readOnly: true, position: 'sidebar', description: 'System-managed. Preenchido automaticamente quando o pagamento é confirmado.' }, access: systemManagedFieldAccess },
+    { name: 'currency', type: 'text', label: 'Moeda', defaultValue: 'EUR', admin: { readOnly: true }, access: systemManagedFieldAccess },
 
     // ── Envio (snapshot do checkout) ────────────────────────────
-    { name: 'shippingProvider', type: 'text', label: 'Transportadora', admin: { readOnly: true } },
-    { name: 'shippingServiceCode', type: 'text', label: 'Cód. Serviço Envio', admin: { readOnly: true } },
-    { name: 'shippingServiceName', type: 'text', label: 'Serviço Envio', admin: { readOnly: true } },
-    { name: 'shippingEstimatedMinDays', type: 'number', label: 'Estimativa Min (dias)', admin: { readOnly: true } },
-    { name: 'shippingEstimatedMaxDays', type: 'number', label: 'Estimativa Max (dias)', admin: { readOnly: true } },
+    { name: 'shippingProvider', type: 'text', label: 'Transportadora', admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'shippingServiceCode', type: 'text', label: 'Cód. Serviço Envio', admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'shippingServiceName', type: 'text', label: 'Serviço Envio', admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'shippingEstimatedMinDays', type: 'number', label: 'Estimativa Min (dias)', admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'shippingEstimatedMaxDays', type: 'number', label: 'Estimativa Max (dias)', admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'shippingQuoteReference', type: 'text', label: 'Referência dos portes', maxLength: 500, admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'shippingConfirmedAt', type: 'date', label: 'Portes confirmados em', admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'shippingConfirmedBy', type: 'relationship', relationTo: 'users', label: 'Portes confirmados por', admin: { readOnly: true }, access: systemManagedFieldAccess },
 
     // ── Pagamento (Stripe) ──────────────────────────────────────
-    { name: 'paymentProvider', type: 'text', label: 'Provider de pagamento', defaultValue: 'stripe', admin: { readOnly: true } },
-    { name: 'stripePaymentIntentId', type: 'text', unique: true, label: 'Stripe PaymentIntent ID', admin: { readOnly: true } },
-    { name: 'paymentMethodType', type: 'text', label: 'Método de pagamento', admin: { readOnly: true } },
-    { name: 'paidAt', type: 'date', label: 'Pago em', admin: { readOnly: true } },
+    { name: 'paymentProvider', type: 'text', label: 'Provider de pagamento', defaultValue: 'stripe', admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'stripePaymentIntentId', type: 'text', unique: true, label: 'Stripe PaymentIntent ID', admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'paymentMethodType', type: 'text', label: 'Método de pagamento', admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'paidAt', type: 'date', label: 'Pago em', admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'manualPaymentReference', type: 'text', label: 'Referência do pagamento externo', maxLength: 500, admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'manualPaymentConfirmedBy', type: 'relationship', relationTo: 'users', label: 'Pagamento confirmado por', admin: { readOnly: true }, access: systemManagedFieldAccess },
+    {
+      name: 'paymentLinkTokenHash', type: 'text', unique: true,
+      admin: { hidden: true, readOnly: true },
+      access: { read: () => false, create: () => false, update: () => false },
+    },
+    { name: 'paymentLinkIssuedAt', type: 'date', admin: { hidden: true, readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'paymentLinkExpiresAt', type: 'date', label: 'Link de pagamento expira em', admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'paymentLinkConsumedAt', type: 'date', admin: { hidden: true, readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'paymentLinkIssuedBy', type: 'relationship', relationTo: 'users', admin: { hidden: true, readOnly: true }, access: systemManagedFieldAccess },
 
     // ── Fulfillment ──────────────────────────────────────────────
-    { name: 'processingAt', type: 'date', label: 'Preparação iniciada em', admin: { readOnly: true } },
-    { name: 'shippedAt', type: 'date', label: 'Expedida em', admin: { readOnly: true } },
-    { name: 'completedAt', type: 'date', label: 'Concluída em', admin: { readOnly: true } },
-    { name: 'cancelledAt', type: 'date', label: 'Cancelada em', admin: { readOnly: true } },
-    { name: 'trackingNumber', type: 'text', label: 'Código de Tracking', admin: { readOnly: true } },
+    { name: 'processingAt', type: 'date', label: 'Preparação iniciada em', admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'shippedAt', type: 'date', label: 'Expedida em', admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'completedAt', type: 'date', label: 'Concluída em', admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'cancelledAt', type: 'date', label: 'Cancelada em', admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'trackingNumber', type: 'text', label: 'Código de Tracking', admin: { readOnly: true }, access: systemManagedFieldAccess },
 
-    { name: 'stripeRefundId', type: 'text', unique: true, label: 'Stripe Refund ID', admin: { readOnly: true } },
-    { name: 'refundReason', type: 'text', label: 'Razão do reembolso', admin: { readOnly: true } },
+    { name: 'stripeRefundId', type: 'text', unique: true, label: 'Stripe Refund ID', admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'refundReason', type: 'text', label: 'Razão do reembolso', admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'manualRefundedAt', type: 'date', label: 'Reembolso externo confirmado em', admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'manualRefundReference', type: 'text', label: 'Referência do reembolso externo', maxLength: 500, admin: { readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'manualRefundConfirmedBy', type: 'relationship', relationTo: 'users', label: 'Reembolso externo confirmado por', admin: { readOnly: true }, access: systemManagedFieldAccess },
 
     // ── Checkout interno (hidden) ──────────────────────────────
-    { name: 'checkoutRequestHash', type: 'text', unique: true, label: 'Hash do checkout', admin: { hidden: true, readOnly: true } },
-    { name: 'checkoutAttemptId', type: 'text', unique: true, label: 'Checkout Attempt ID', admin: { hidden: true, readOnly: true } },
+    { name: 'checkoutRequestHash', type: 'text', unique: true, label: 'Hash do checkout', admin: { hidden: true, readOnly: true }, access: systemManagedFieldAccess },
+    { name: 'checkoutAttemptId', type: 'text', unique: true, label: 'Checkout Attempt ID', admin: { hidden: true, readOnly: true }, access: systemManagedFieldAccess },
 
     // ── Legado (preservado para retrocompatibilidade) ────────────
-    { name: 'email', type: 'email', label: 'Email (legado)', admin: { hidden: true } },
+    { name: 'email', type: 'email', label: 'Email (legado)', admin: { hidden: true, readOnly: true }, access: systemManagedFieldAccess },
     {
       name: 'status',
       type: 'select',
       defaultValue: 'pending',
       label: 'Estado (legado)',
-      admin: { hidden: true },
+      admin: { hidden: true, readOnly: true },
+      access: systemManagedFieldAccess,
       options: [
         { label: 'Pendente', value: 'pending' },
         { label: 'Pago', value: 'paid' },
@@ -511,6 +641,21 @@ const Orders: CollectionConfig = {
       ],
     },
   ],
+  hooks: {
+    beforeValidate: [
+      ({ data, originalDoc }) => {
+        const source = data?.orderSource ?? (originalDoc as any)?.orderSource ?? 'website'
+        if (source === 'manual') return data
+
+        const customerEmail = data?.customer?.email ?? (originalDoc as any)?.customer?.email
+        const legacyEmail = data?.email ?? (originalDoc as any)?.email
+        if (!String(customerEmail || legacyEmail || '').trim()) {
+          throw new Error('O email é obrigatório para encomendas do website.')
+        }
+        return data
+      },
+    ],
+  },
 }
 
 const Categories: CollectionConfig = {

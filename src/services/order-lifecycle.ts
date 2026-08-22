@@ -15,6 +15,7 @@
  *   - NÃO criar cron/scheduler nesta ISSUE.
  */
 import type { Payload } from 'payload'
+import { lockOrderForUpdate } from './db-adapter'
 import { runInTransaction } from './transact'
 import { expireReservation, releaseReservation } from './stock'
 import { cancelPaymentIntent } from './payments/stripe'
@@ -45,12 +46,14 @@ function isReservable(mode: string | null | undefined): boolean {
 async function loadReservationsByOrder(
   payload: Payload,
   orderId: number,
+  req?: any,
 ): Promise<any[]> {
   const result = await payload.find({
     collection: 'stock-reservations' as any,
     where: { order: { equals: orderId } },
     limit: 100,
     depth: 0,
+    req,
     overrideAccess: true,
   })
   return result.docs as any[]
@@ -314,6 +317,8 @@ async function executeOrderExpiry(
   now: Date,
   paymentIntentCancelled: boolean,
 ): Promise<OrderLifecycleResult> {
+  await lockOrderForUpdate(ctx, orderId)
+
   // ─── 1. Re-carregar Order dentro da transacção ──────────────
   const freshOrder = await payload.findByID({
     collection: 'orders',
@@ -344,7 +349,7 @@ async function executeOrderExpiry(
   }
 
   // ─── 3. Revalidar reservas ──────────────────────────────────
-  const freshReservations = await loadReservationsByOrder(payload, orderId)
+  const freshReservations = await loadReservationsByOrder(payload, orderId, ctx.req)
 
   let expiredCount = 0
   let releasedCount = 0
@@ -390,6 +395,8 @@ async function executeOrderExpiry(
     id: orderId,
     data: {
       orderStatus: 'expired',
+      paymentLinkTokenHash: null,
+      paymentLinkExpiresAt: null,
       // paymentStatus permanece (unpaid/failed)
     } as any,
     req: ctx.req,

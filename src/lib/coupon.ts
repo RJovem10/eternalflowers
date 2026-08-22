@@ -63,6 +63,13 @@ export async function validateCoupon(
     return { valid: false, error: `Mínimo ${c.minOrder} €.`, error_code: 'MIN_ORDER' }
   if (c.maxUses && c.usesCount >= c.maxUses)
     return { valid: false, error: 'Esgotado.', error_code: 'SOLD_OUT' }
+  if (c.firstOrderOnly && !email?.trim()) {
+    return {
+      valid: false,
+      error: 'É necessário um email para validar este cupão de primeira compra.',
+      error_code: 'INCOMPLETE_DATA',
+    }
+  }
   if (c.firstOrderOnly && email) {
     const prior = await payload.find({
       collection: 'orders',

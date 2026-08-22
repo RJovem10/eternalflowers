@@ -183,3 +183,18 @@ export async function lockCouponForUpdate(ctx: TransactionCtx, couponId: number)
     await sessionDb.execute(sql`SELECT id FROM coupons WHERE id = ${couponId} FOR UPDATE`)
   }
 }
+
+/**
+ * Bloqueia uma Order antes de qualquer transição de pagamento. Em SQLite a
+ * transação já serializa a escrita; em PostgreSQL usamos FOR UPDATE para que
+ * webhook e confirmação manual não consigam liquidar a mesma Order em paralelo.
+ */
+export async function lockOrderForUpdate(ctx: TransactionCtx, orderId: number): Promise<void> {
+  if (getAdapterName(ctx) === 'postgres') {
+    const sessionDb = getTransactionalSession(ctx)
+    if (typeof sessionDb.execute !== 'function') {
+      throw new Error('STOCK_BUSY_RETRY: sessão PG sem método execute')
+    }
+    await sessionDb.execute(sql`SELECT id FROM orders WHERE id = ${orderId} FOR UPDATE`)
+  }
+}

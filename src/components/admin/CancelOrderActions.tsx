@@ -38,6 +38,12 @@ const STYLES = {
     'mb-3 text-lg font-semibold text-stone-900',
   confirmText:
     'mb-5 text-sm text-stone-600',
+  manualConfirmation:
+    'mb-4 flex items-start gap-2 text-sm text-stone-700',
+  manualReferenceLabel:
+    'mb-5 block text-sm font-medium text-stone-700',
+  manualReferenceInput:
+    'mt-1 w-full rounded border border-stone-300 px-3 py-2 text-sm font-normal text-stone-900',
   confirmActions:
     'flex justify-end gap-3',
   confirmButton:
@@ -58,23 +64,40 @@ export function CancelOrderActions() {
     ([fields, _siblings]) => fields?.paymentStatus?.value as string | undefined,
   )
 
+  const paymentProvider = useFormFields(
+    ([fields, _siblings]) => fields?.paymentProvider?.value as string | undefined,
+  )
+
   const [loading, setLoading] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [externalRefundConfirmed, setExternalRefundConfirmed] = useState(false)
+  const [externalRefundReference, setExternalRefundReference] = useState('')
 
   const isPaid = paymentStatus === 'paid'
+  const isManualPayment = paymentProvider === 'manual'
 
   const callEndpoint = useCallback(async () => {
     if (!id) return
 
-    const actionKey = isPaid ? 'refund' : 'cancel'
+    const actionKey = isPaid ? (isManualPayment ? 'manual-refund' : 'refund') : 'cancel'
     setLoading(actionKey)
     setFeedback(null)
 
     try {
+      const manualRefundBody = isPaid && isManualPayment
+        ? JSON.stringify({
+            manualRefund: {
+              confirmed: externalRefundConfirmed,
+              reference: externalRefundReference.trim() || undefined,
+            },
+          })
+        : undefined
+
       const res = await fetch(`/api/orders/${id}/cancel`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: manualRefundBody,
       })
 
       const data = await res.json()
@@ -90,18 +113,22 @@ export function CancelOrderActions() {
     } finally {
       setLoading(null)
       setShowConfirm(false)
+      setExternalRefundConfirmed(false)
+      setExternalRefundReference('')
     }
-  }, [id, isPaid])
+  }, [externalRefundConfirmed, externalRefundReference, id, isManualPayment, isPaid])
 
   if (!id) return null
 
   // Determinar qual botão mostrar
-  let buttonConfig: { label: string; isRefund: boolean } | null = null
+  let buttonConfig: { label: string; isRefund: boolean; isManualRefund: boolean } | null = null
 
   if (orderStatus === 'pending_payment') {
-    buttonConfig = { label: 'Cancelar encomenda', isRefund: false }
+    buttonConfig = { label: 'Cancelar encomenda', isRefund: false, isManualRefund: false }
   } else if (orderStatus === 'confirmed' && isPaid) {
-    buttonConfig = { label: 'Cancelar e reembolsar', isRefund: true }
+    buttonConfig = isManualPayment
+      ? { label: 'Cancelar e registar reembolso externo', isRefund: true, isManualRefund: true }
+      : { label: 'Cancelar e reembolsar', isRefund: true, isManualRefund: false }
   }
 
   // Se já cancelada, mostrar estado
@@ -147,16 +174,49 @@ export function CancelOrderActions() {
       {showConfirm && (
         <div className={STYLES.confirmOverlay}>
           <div className={STYLES.confirmBox}>
-            <h4 className={STYLES.confirmTitle}>Confirmar cancelamento</h4>
-            <p className={STYLES.confirmText}>
-              Esta encomenda será cancelada e o valor total será reembolsado ao cliente.
-              Esta acção não pode ser desfeita.
-            </p>
+            <h4 className={STYLES.confirmTitle}>
+              {buttonConfig.isManualRefund ? 'Confirmar reembolso externo' : 'Confirmar cancelamento'}
+            </h4>
+            {buttonConfig.isManualRefund ? (
+              <>
+                <p className={STYLES.confirmText}>
+                  A aplicação não vai devolver dinheiro automaticamente. Confirma apenas depois de
+                  teres feito o reembolso integral ao cliente fora do site.
+                </p>
+                <label className={STYLES.manualConfirmation}>
+                  <input
+                    type="checkbox"
+                    checked={externalRefundConfirmed}
+                    onChange={(event) => setExternalRefundConfirmed(event.target.checked)}
+                  />
+                  <span>Confirmo que o reembolso externo integral já foi efetuado.</span>
+                </label>
+                <label className={STYLES.manualReferenceLabel}>
+                  Referência do reembolso (opcional)
+                  <input
+                    type="text"
+                    maxLength={500}
+                    className={STYLES.manualReferenceInput}
+                    value={externalRefundReference}
+                    onChange={(event) => setExternalRefundReference(event.target.value)}
+                  />
+                </label>
+              </>
+            ) : (
+              <p className={STYLES.confirmText}>
+                Esta encomenda será cancelada e o valor total será reembolsado ao cliente.
+                Esta acção não pode ser desfeita.
+              </p>
+            )}
             <div className={STYLES.confirmActions}>
               <button
                 type="button"
                 className={STYLES.confirmCancel}
-                onClick={() => setShowConfirm(false)}
+                onClick={() => {
+                  setShowConfirm(false)
+                  setExternalRefundConfirmed(false)
+                  setExternalRefundReference('')
+                }}
                 disabled={isDisabled}
               >
                 Voltar
@@ -165,7 +225,7 @@ export function CancelOrderActions() {
                 type="button"
                 className={`${STYLES.confirmButton} bg-red-600 hover:bg-red-700`}
                 onClick={callEndpoint}
-                disabled={isDisabled}
+                disabled={isDisabled || (buttonConfig.isManualRefund && !externalRefundConfirmed)}
               >
                 {loading ? 'A processar...' : 'Confirmar cancelamento'}
               </button>
@@ -183,6 +243,8 @@ function getSuccessMessage(data: any): string {
       return 'Encomenda cancelada com sucesso!'
     case 'paid_refund_cancelled':
       return 'Encomenda cancelada e reembolsada com sucesso!'
+    case 'manual_paid_refund_cancelled':
+      return 'Encomenda cancelada e reembolso externo registado com sucesso!'
     case 'already_cancelled':
       return 'Encomenda já estava cancelada.'
     default:

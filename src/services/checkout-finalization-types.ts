@@ -22,6 +22,11 @@ export interface PrepareOrderInput {
   origin?: ShippingAddress
   /** Payload request para transacções internas */
   req?: any
+  /**
+   * Janela interna de reserva. Só serviços server-side podem defini-la;
+   * o endpoint público de checkout nunca a encaminha do browser.
+   */
+  reservationDurationMs?: number
 }
 
 // ─── Resultado ───────────────────────────────────────────────

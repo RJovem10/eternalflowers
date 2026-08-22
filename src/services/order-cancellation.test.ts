@@ -30,6 +30,7 @@ import { cancelOrder } from './order-cancellation'
 import {
   CancelOrderNotAllowedError,
   CancelOrderNotFoundError,
+  ManualRefundConfirmationRequiredError,
 } from './order-cancellation-types'
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -40,8 +41,11 @@ function createMockOrder(overrides: Partial<any> = {}): any {
     orderNumber: 'EF-20260818-TEST',
     orderStatus: 'pending_payment',
     paymentStatus: 'unpaid',
+    paymentProvider: 'stripe',
     total: 150.00,
     currency: 'EUR',
+    customer: { name: 'Cliente Teste', email: 'cliente@example.com' },
+    email: 'cliente@example.com',
     stripePaymentIntentId: null,
     stripeRefundId: null,
     refundReason: null,
@@ -68,6 +72,7 @@ interface MockPayloadOptions {
   order?: any
   orders?: any[]
   reservations?: any[]
+  reservationQueryDocs?: any[]
   flowers?: Record<number, any>
   expectedOrderUpdate?: { id: number; data: any }
   expectedReservationUpdate?: { id: number; data: any }
@@ -76,6 +81,8 @@ interface MockPayloadOptions {
 let mockOptions: MockPayloadOptions = {}
 let mockEmailNotifs: any[] = []
 let mockEmailNotifIdSeq = 0
+let mockOrderConcurrencyEvents: Array<{ kind: 'lock' | 'read'; orderId: number; req: any }> = []
+let mockOrderLockHook: ((orderId: number) => void) | undefined
 
 function resetMockPayload() {
   mockOptions = {
@@ -86,6 +93,8 @@ function resetMockPayload() {
   }
   mockEmailNotifs = []
   mockEmailNotifIdSeq = 0
+  mockOrderConcurrencyEvents = []
+  mockOrderLockHook = undefined
 }
 
 function createMockPayload(): any {
@@ -103,15 +112,16 @@ function createMockPayload(): any {
       if (collection === 'stock-reservations' || String(collection).includes('stock')) {
         const status = where?.status?.equals
         const order = where?.order?.equals
-        let filtered = mockOptions.reservations || []
+        let filtered = mockOptions.reservationQueryDocs || mockOptions.reservations || []
         if (status) filtered = filtered.filter((r: any) => r.status === status)
         if (order) filtered = filtered.filter((r: any) => r.order === order || r.order?.id === order)
         return { docs: filtered, totalDocs: filtered.length }
       }
       return { docs: [], totalDocs: 0 }
     }),
-    findByID: vi.fn(async ({ collection, id }: any) => {
+    findByID: vi.fn(async ({ collection, id, req }: any) => {
       if (collection === 'orders' || collection === 'orders') {
+        if (req) mockOrderConcurrencyEvents.push({ kind: 'read', orderId: Number(id), req })
         if (mockOptions.order && mockOptions.order.id === id) return mockOptions.order
         return null
       }
@@ -158,21 +168,42 @@ function createMockPayload(): any {
       }
       return undefined
     }),
+    config: { admin: { user: 'users' } },
     db: { name: 'sqlite' },
   }
   return payload
 }
 
+function createAdminRequest(manualRefund?: { confirmed: boolean; reference?: string }): any {
+  return {
+    user: { id: 42, collection: 'users' },
+    json: vi.fn(async () => manualRefund ? { manualRefund } : {}),
+  }
+}
+
 // ─── Mock Stripe ──────────────────────────────────────────────
+
+vi.mock('./db-adapter', async () => {
+  const actual = await vi.importActual<any>('./db-adapter')
+  return {
+    ...actual,
+    lockOrderForUpdate: vi.fn(async (ctx: any, orderId: number) => {
+      mockOrderConcurrencyEvents.push({ kind: 'lock', orderId, req: ctx.req })
+      mockOrderLockHook?.(orderId)
+    }),
+  }
+})
 
 let mockPaymentIntents: Record<string, any> = {}
 let mockRefunds: Record<string, any[]> = {}
 let mockRefundsCalled: Array<{ paymentIntentId: string; idempotencyKey: string; metadata?: Record<string, string> }> = []
+let mockStripeCallCounts = { retrieve: 0, cancel: 0, createRefund: 0, listRefunds: 0 }
 
 function resetStripeMocks() {
   mockPaymentIntents = {}
   mockRefunds = {}
   mockRefundsCalled = []
+  mockStripeCallCounts = { retrieve: 0, cancel: 0, createRefund: 0, listRefunds: 0 }
 }
 
 function addMockPaymentIntent(overrides: Partial<any> = {}): any {
@@ -198,11 +229,13 @@ vi.mock('./payments/stripe', async () => {
   return {
     ...actual as any,
     retrievePaymentIntent: vi.fn(async (paymentIntentId: string) => {
+      mockStripeCallCounts.retrieve++
       const pi = mockPaymentIntents[paymentIntentId]
       if (!pi) throw new Error(`PaymentIntent ${paymentIntentId} not found`)
       return pi
     }),
     cancelPaymentIntent: vi.fn(async (paymentIntentId: string) => {
+      mockStripeCallCounts.cancel++
       const pi = mockPaymentIntents[paymentIntentId]
       if (!pi) return { canceled: false, currentStatus: 'unknown' }
       if (pi.status === 'canceled') return { canceled: true }
@@ -215,6 +248,7 @@ vi.mock('./payments/stripe', async () => {
       return { canceled: false, currentStatus: pi.status }
     }),
     createFullRefund: vi.fn(async (paymentIntentId: string, idempotencyKeyPrefix?: string, metadata?: Record<string, string>) => {
+      mockStripeCallCounts.createRefund++
       const prefix = idempotencyKeyPrefix ?? 'late-stock-refund'
       const key = `${prefix}:${paymentIntentId}`
       mockRefundsCalled.push({ paymentIntentId, idempotencyKey: key, metadata })
@@ -239,6 +273,7 @@ vi.mock('./payments/stripe', async () => {
       return refund
     }),
     listRefundsForPaymentIntent: vi.fn(async (paymentIntentId: string) => {
+      mockStripeCallCounts.listRefunds++
       return mockRefunds[paymentIntentId] || []
     }),
   }
@@ -708,6 +743,170 @@ describe('cancelOrder — pós-pagamento com reembolso (confirmed+paid)', () => 
   })
 })
 
+describe('cancelOrder — pagamento manual reembolsado externamente', () => {
+  beforeEach(() => {
+    resetMockPayload()
+    resetStripeMocks()
+    mockOptions.order = createMockOrder({
+      orderStatus: 'confirmed',
+      paymentStatus: 'paid',
+      paymentProvider: 'manual',
+      paymentMethodType: 'cash',
+      stripePaymentIntentId: null,
+      stripeRefundId: null,
+    })
+  })
+
+  it('exige confirmação explícita do reembolso externo', async () => {
+    const payload = createMockPayload()
+
+    await expect(cancelOrder(payload, {
+      orderId: 1,
+      req: createAdminRequest(),
+    })).rejects.toThrow(ManualRefundConfirmationRequiredError)
+
+    expect(mockOptions.order.orderStatus).toBe('confirmed')
+    expect(mockOptions.order.paymentStatus).toBe('paid')
+    expect(mockStripeCallCounts).toEqual({ retrieve: 0, cancel: 0, createRefund: 0, listRefunds: 0 })
+  })
+
+  it('regista confirmação e referência, restaura stock e nunca chama Stripe', async () => {
+    mockOptions.reservations = [
+      createMockReservation({ id: 701, status: 'confirmed', order: 1, flower: { id: 10 }, quantity: 1 }),
+    ]
+    mockOptions.flowers = {
+      10: { id: 10, productionMode: 'unique', stockQuantity: 0, availability: 'sold' },
+    }
+    const payload = createMockPayload()
+    const req = createAdminRequest({ confirmed: true, reference: '  TRANSFER-2026-08-22  ' })
+
+    const result = await cancelOrder(payload, { orderId: 1, req })
+
+    expect(result).toMatchObject({
+      kind: 'manual_paid_refund_cancelled',
+      orderId: 1,
+      stockRestored: true,
+      refundedAt: expect.any(String),
+    })
+    expect(mockOptions.order).toMatchObject({
+      orderStatus: 'cancelled',
+      paymentStatus: 'refunded',
+      refundReason: 'admin_manual_payment_refunded',
+      manualRefundReference: 'TRANSFER-2026-08-22',
+      manualRefundConfirmedBy: 42,
+      manualRefundedAt: expect.any(String),
+      stripeRefundId: null,
+    })
+    expect(mockOptions.flowers[10]).toMatchObject({ stockQuantity: 1, availability: 'available' })
+    expect(mockOptions.reservations[0].status).toBe('released')
+    expect(mockStripeCallCounts).toEqual({ retrieve: 0, cancel: 0, createRefund: 0, listRefunds: 0 })
+  })
+
+  it('exige administrador autenticado e não aceita autor vindo do browser', async () => {
+    const payload = createMockPayload()
+    const req = {
+      user: { id: 77, collection: 'customers' },
+      json: vi.fn(async () => ({
+        manualRefund: { confirmed: true, reference: 'REF', confirmedBy: 999 },
+      })),
+    }
+
+    await expect(cancelOrder(payload, { orderId: 1, req })).rejects.toThrow(
+      ManualRefundConfirmationRequiredError,
+    )
+    expect((mockOptions.order as any).manualRefundConfirmedBy).toBeUndefined()
+    expect(mockStripeCallCounts).toEqual({ retrieve: 0, cancel: 0, createRefund: 0, listRefunds: 0 })
+  })
+
+  it('bloqueia dados manuais inconsistentes com identificador Stripe sem chamar Stripe', async () => {
+    mockOptions.order.stripePaymentIntentId = 'pi_must_not_be_touched'
+    const payload = createMockPayload()
+
+    await expect(cancelOrder(payload, {
+      orderId: 1,
+      req: createAdminRequest({ confirmed: true }),
+    })).rejects.toThrow(CancelOrderNotAllowedError)
+
+    expect(mockOptions.order.orderStatus).toBe('confirmed')
+    expect(mockStripeCallCounts).toEqual({ retrieve: 0, cancel: 0, createRefund: 0, listRefunds: 0 })
+  })
+
+  it('valida o limite da referência externa antes de alterar a Order', async () => {
+    const payload = createMockPayload()
+
+    await expect(cancelOrder(payload, {
+      orderId: 1,
+      req: createAdminRequest({ confirmed: true, reference: 'x'.repeat(501) }),
+    })).rejects.toThrow('não pode exceder 500 caracteres')
+
+    expect(mockOptions.order.orderStatus).toBe('confirmed')
+    expect(mockStripeCallCounts).toEqual({ retrieve: 0, cancel: 0, createRefund: 0, listRefunds: 0 })
+  })
+
+  it('sem email conclui o cancelamento sem criar notificação', async () => {
+    mockOptions.order.customer = { name: 'Cliente sem email' }
+    mockOptions.order.email = null
+    const payload = createMockPayload()
+
+    const result = await cancelOrder(payload, {
+      orderId: 1,
+      manualRefund: { confirmed: true },
+      req: { user: { id: 42, collection: 'users' } },
+    })
+
+    expect(result.kind).toBe('manual_paid_refund_cancelled')
+    expect(mockEmailNotifs).toHaveLength(0)
+    expect(mockStripeCallCounts).toEqual({ retrieve: 0, cancel: 0, createRefund: 0, listRefunds: 0 })
+  })
+
+  it('retry é idempotente e não restaura stock duas vezes', async () => {
+    mockOptions.reservations = [
+      createMockReservation({ id: 702, status: 'confirmed', order: 1, flower: { id: 20 }, quantity: 2 }),
+    ]
+    mockOptions.flowers = {
+      20: { id: 20, productionMode: 'reproducible', stockQuantity: 3, availability: 'available' },
+    }
+    const payload = createMockPayload()
+
+    const first = await cancelOrder(payload, {
+      orderId: 1,
+      req: createAdminRequest({ confirmed: true }),
+    })
+    const second = await cancelOrder(payload, {
+      orderId: 1,
+      req: createAdminRequest({ confirmed: true }),
+    })
+
+    expect(first.kind).toBe('manual_paid_refund_cancelled')
+    expect(second.kind).toBe('already_cancelled')
+    expect(mockOptions.flowers[20].stockQuantity).toBe(5)
+    expect(mockOptions.reservations[0].status).toBe('released')
+    expect(mockStripeCallCounts).toEqual({ retrieve: 0, cancel: 0, createRefund: 0, listRefunds: 0 })
+  })
+
+  it('revalida a reserva depois do lock e ignora snapshot concorrente já libertado', async () => {
+    mockOptions.reservations = [
+      createMockReservation({ id: 703, status: 'released', order: 1, flower: { id: 30 }, quantity: 2 }),
+    ]
+    mockOptions.reservationQueryDocs = [
+      createMockReservation({ id: 703, status: 'confirmed', order: 1, flower: { id: 30 }, quantity: 2 }),
+    ]
+    mockOptions.flowers = {
+      30: { id: 30, productionMode: 'reproducible', stockQuantity: 8, availability: 'available' },
+    }
+    const payload = createMockPayload()
+
+    const result = await cancelOrder(payload, {
+      orderId: 1,
+      req: createAdminRequest({ confirmed: true }),
+    })
+
+    expect(result).toMatchObject({ kind: 'manual_paid_refund_cancelled', stockRestored: false })
+    expect(mockOptions.flowers[30].stockQuantity).toBe(8)
+    expect(mockStripeCallCounts).toEqual({ retrieve: 0, cancel: 0, createRefund: 0, listRefunds: 0 })
+  })
+})
+
 describe('cancelOrder — estados não permitidos', () => {
   beforeEach(() => {
     resetMockPayload()
@@ -733,16 +932,14 @@ describe('cancelOrder — estados não permitidos', () => {
   })
 
   it('19. sem auth → endpoint rejeita (401 no handler)', async () => {
-    // O endpoint handler verifica req.user, não o service
-    // O service não tem auth check — isso é responsabilidade do handler
-    // Este teste verifica que o handler rejeita sem user
-    // (testado indiretamente pelo handler inline)
+    // O handler protege todos os providers; o serviço reforça ainda a
+    // identidade do administrador no ramo manual (coberto acima).
     expect(true).toBe(true)
   })
 
   it('20. body não controla amount/status/stock', async () => {
-    // O serviço cancelOrder não aceita body
-    // O endpoint é POST /api/orders/:id/cancel sem body
+    // No ramo manual o body só fornece confirmação/referência. Provider,
+    // estado, total e stock continuam a ser derivados da base de dados.
     expect(true).toBe(true)
   })
 })
@@ -829,5 +1026,77 @@ describe('cancelOrder — order não encontrada', () => {
     mockOptions.order = null
     const payload = createMockPayload()
     await expect(cancelOrder(payload, { orderId: 999 })).rejects.toThrow(CancelOrderNotFoundError)
+  })
+})
+
+describe('cancelOrder — lock transacional da Order (P1)', () => {
+  beforeEach(() => {
+    resetMockPayload()
+    resetStripeMocks()
+  })
+
+  function expectLockBeforeRead(orderId = 1) {
+    const relevant = mockOrderConcurrencyEvents.filter((event) => event.orderId === orderId)
+    expect(relevant.map((event) => event.kind).slice(0, 2)).toEqual(['lock', 'read'])
+    expect(relevant[0].req).toBe(relevant[1].req)
+  }
+
+  it('bloqueia antes da releitura no cancelamento pré-pagamento e propaga ctx.req à query de reservas', async () => {
+    mockOptions.order = createMockOrder({ orderStatus: 'pending_payment', paymentStatus: 'unpaid' })
+    mockOptions.reservations = [createMockReservation({ order: 1, status: 'active' })]
+    const payload = createMockPayload()
+
+    await cancelOrder(payload, { orderId: 1 })
+
+    expectLockBeforeRead()
+    const reservationRead = payload.find.mock.calls.find(
+      ([args]: any[]) => args.collection === 'stock-reservations' && args.where?.status?.equals === 'active',
+    )?.[0]
+    expect(reservationRead?.req).toBe(mockOrderConcurrencyEvents[0].req)
+  })
+
+  it('bloqueia antes da releitura no reembolso Stripe', async () => {
+    addMockPaymentIntent({ id: 'pi_lock_stripe', status: 'succeeded' })
+    mockOptions.order = createMockOrder({
+      orderStatus: 'confirmed',
+      paymentStatus: 'paid',
+      paymentProvider: 'stripe',
+      stripePaymentIntentId: 'pi_lock_stripe',
+    })
+    const payload = createMockPayload()
+
+    await cancelOrder(payload, { orderId: 1 })
+
+    expectLockBeforeRead()
+  })
+
+  it('mantém o lock antes da releitura no reembolso manual', async () => {
+    mockOptions.order = createMockOrder({
+      orderStatus: 'confirmed',
+      paymentStatus: 'paid',
+      paymentProvider: 'manual',
+      stripePaymentIntentId: null,
+    })
+    const req = createAdminRequest({ confirmed: true })
+    const payload = createMockPayload()
+
+    await cancelOrder(payload, { orderId: 1, req })
+
+    expectLockBeforeRead()
+    expect(mockOrderConcurrencyEvents[0].req).toBe(req)
+  })
+
+  it('decide com o estado relido depois de adquirir o lock', async () => {
+    mockOptions.order = createMockOrder({ orderStatus: 'pending_payment', paymentStatus: 'unpaid' })
+    mockOrderLockHook = () => {
+      mockOptions.order.orderStatus = 'confirmed'
+      mockOptions.order.paymentStatus = 'paid'
+    }
+    const payload = createMockPayload()
+
+    await expect(cancelOrder(payload, { orderId: 1 })).rejects.toThrow(CancelOrderNotAllowedError)
+
+    expectLockBeforeRead()
+    expect(mockOptions.order.orderStatus).toBe('confirmed')
   })
 })
