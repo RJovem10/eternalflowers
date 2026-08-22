@@ -116,6 +116,15 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Encomendas manuais usam exclusivamente o bearer token temporário.
+    // Nunca reutilizar checkoutRequestHash como autorização desse fluxo.
+    if (order.orderSource === 'manual') {
+      return NextResponse.json(
+        { error: 'Encomenda não encontrada.' },
+        { status: 404 },
+      )
+    }
+
     // 4. Verificar checkoutRequestHash
     const expectedHash = crypto
       .createHash('sha256')

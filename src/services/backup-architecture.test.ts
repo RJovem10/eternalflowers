@@ -780,8 +780,11 @@ describe('backup.sh — flock persistent lock (ISSUE-41)', () => {
 describe('backup.sh — verify_pg_dump container fallback chain (ISSUE-41)', () => {
   const content = fs.readFileSync(BACKUP_SH, 'utf-8')
 
-  it('verify_pg_dump tenta container primeiro (copy + list), depois host', () => {
-    const funcSection = content.substring(content.indexOf('verify_pg_dump()'))
+  it('list_pg_dump tenta container primeiro (copy + list), depois host', () => {
+    const funcSection = content.substring(
+      content.indexOf('list_pg_dump()'),
+      content.indexOf('verify_pg_dump()'),
+    )
     // Container path: copy dump into container, then --list
     expect(funcSection).toContain('pg_restore --list')
     expect(funcSection).toContain('cp "${dump_file}"')
@@ -791,9 +794,17 @@ describe('backup.sh — verify_pg_dump container fallback chain (ISSUE-41)', () 
   })
 
   it('verify_pg_dump retorna 1 (failure) se nenhum verificador funciona', () => {
-    const funcSection = content.substring(content.indexOf('verify_pg_dump()'))
-    // The final return 1 when both paths fail
-    expect(funcSection).toContain('return 1')
+    const listSection = content.substring(
+      content.indexOf('list_pg_dump()'),
+      content.indexOf('verify_pg_dump()'),
+    )
+    const verifySection = content.substring(
+      content.indexOf('verify_pg_dump()'),
+      content.indexOf('# ─── Flags'),
+    )
+    // list_pg_dump fails closed; verify_pg_dump delegates to that result.
+    expect(listSection).toContain('return 1')
+    expect(verifySection).toContain('list_pg_dump "$1"')
   })
 })
 

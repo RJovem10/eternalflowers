@@ -26,6 +26,14 @@ export interface OrderCustomerInput {
   taxId?: string
 }
 
+export interface ManualOrderCustomerInput {
+  name: string
+  email?: string
+  phone: string
+  companyName?: string
+  taxId?: string
+}
+
 // ─── Item input (só flowerId + qty — nada de preço/nome) ──────
 
 export interface OrderItemInput {
@@ -45,6 +53,49 @@ export interface CreateOrderInput {
   coupon?: string
   locale: Locale | string
   req?: any
+}
+
+export const MANUAL_SALES_CHANNELS = [
+  'phone',
+  'in_person',
+  'whatsapp',
+  'instagram',
+  'other',
+] as const
+
+export type ManualSalesChannel = (typeof MANUAL_SALES_CHANNELS)[number]
+
+/**
+ * Input exclusivo do fluxo administrativo. Mantém email opcional sem
+ * enfraquecer o contrato do checkout público (`CreateOrderInput`).
+ */
+export interface CreateManualOrderInput {
+  checkoutRequestId: string
+  customer: ManualOrderCustomerInput
+  shippingAddress: OrderAddressInput
+  billingSameAsShipping: boolean
+  billingAddress?: OrderAddressInput
+  items: OrderItemInput[]
+  coupon?: string
+  locale: Locale | string
+  salesChannel: ManualSalesChannel
+  internalNote?: string
+  req?: any
+}
+
+export interface ManualOrderPreview {
+  items: Array<{
+    flowerId: number
+    name: string
+    qty: number
+    price: number
+    lineTotal: number
+  }>
+  subtotal: number
+  discount: number
+  shippingCost: number | null
+  total: number | null
+  orderStatus: 'pending_payment' | 'awaiting_shipping'
 }
 
 // ─── OrderAddressSnapshot ─────────────────────────────────────

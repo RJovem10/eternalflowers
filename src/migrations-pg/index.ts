@@ -18,6 +18,7 @@ import * as migration_20260818_000002_coupon_redeemed_at from './20260818_000002
 import * as migration_20260819_180000_can_share_shipping_package from './20260819_180000_can_share_shipping_package';
 import * as migration_20260819_183000_awaiting_shipping_enum from './20260819_183000_awaiting_shipping_enum';
 import * as migration_20260820_000000_is_public from './20260820_000000_is_public';
+import * as migration_20260822_000000_manual_orders from './20260822_000000_manual_orders';
 
 export const migrations = [
   { up: migration_20260731_000000_baseline.up, down: migration_20260731_000000_baseline.down, name: '20260731_000000_baseline' },
@@ -41,4 +42,5 @@ export const migrations = [
   { up: migration_20260819_180000_can_share_shipping_package.up, down: migration_20260819_180000_can_share_shipping_package.down, name: '20260819_180000_can_share_shipping_package' },
   { up: migration_20260819_183000_awaiting_shipping_enum.up, down: migration_20260819_183000_awaiting_shipping_enum.down, name: '20260819_183000_awaiting_shipping_enum' },
   { up: migration_20260820_000000_is_public.up, down: migration_20260820_000000_is_public.down, name: '20260820_000000_is_public' },
+  { up: migration_20260822_000000_manual_orders.up, down: migration_20260822_000000_manual_orders.down, name: '20260822_000000_manual_orders' },
 ];

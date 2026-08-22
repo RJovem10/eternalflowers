@@ -6,11 +6,13 @@
  *
  * O serviço decide internamente entre:
  *   - pre_payment_cancel  (pending_payment → cancelled, sem reembolso)
- *   - paid_refund_cancel  (confirmed + paid → refund + cancelled)
+ *   - paid_refund_cancel  (Stripe confirmed + paid → refund + cancelled)
+ *   - manual_paid_refund_cancel (manual confirmed + paid → registo externo + cancelled)
  *
  * Regras:
  *   - pending_payment → pode cancelar (cancela PI se existir, liberta reservas)
- *   - confirmed + paid → pode cancelar com REFUND INTEGRAL, antes de processing
+ *   - Stripe confirmed + paid → REFUND INTEGRAL, antes de processing
+ *   - manual confirmed + paid → exige confirmação de reembolso já feito fora do site
  *   - processing/shipped/completed → NÃO permitir
  *   - cancelled/expired → idempotente
  *   - Stripe calls FORA de DB transaction
@@ -21,17 +23,19 @@ import type { Payload } from 'payload'
 import { runInTransaction } from './transact'
 import { enqueueEmailNotification, dedupKeyCancelled } from './email/email-notifications'
 import { releaseReservation } from './stock'
-import { lockFlowerForUpdate, updateFlowerStock } from './db-adapter'
+import { lockFlowerForUpdate, lockOrderForUpdate, updateFlowerStock } from './db-adapter'
 import { retrievePaymentIntent, createFullRefund, cancelPaymentIntent, listRefundsForPaymentIntent } from './payments/stripe'
 import type {
   CancelOrderInput,
   CancelOrderResult,
+  ManualRefundConfirmationInput,
 } from './order-cancellation-types'
 import {
   CancelOrderNotAllowedError,
   CancelOrderNotFoundError,
   CancelStripeError,
   CancelRefundError,
+  ManualRefundConfirmationRequiredError,
 } from './order-cancellation-types'
 import { type TransactionCtx } from './transact'
 import type { RefundReason } from './payments/payment-types'
@@ -58,7 +62,8 @@ const FORWARD_FULFILLMENT_STATUSES = new Set([
  *
  * O serviço decide internamente a estratégia:
  *   - pending_payment / awaiting_shipping → pre_payment_cancel
- *   - confirmed + paid → paid_refund_cancel
+ *   - Stripe confirmed + paid → paid_refund_cancel
+ *   - manual confirmed + paid → manual_paid_refund_cancel
  *   - processing/shipped/completed → erro (não permitido)
  *   - já cancelled/expired → already_cancelled (idempotente)
  */
@@ -99,7 +104,20 @@ export async function cancelOrder(
   }
 
   if (order.orderStatus === 'confirmed' && paymentStatus === 'paid') {
-    return paidRefundCancel(payload, order)
+    if (order.paymentProvider === 'manual') {
+      const confirmation = await resolveManualRefundConfirmation(payload, input)
+      return manualPaidRefundCancel(payload, order, confirmation, input.req)
+    }
+
+    // Retrocompatibilidade: encomendas Stripe antigas podem não ter provider.
+    if (order.paymentProvider === 'stripe' || !order.paymentProvider) {
+      return paidRefundCancel(payload, order)
+    }
+
+    throw new CancelOrderNotAllowedError(
+      input.orderId,
+      `Provider de pagamento "${order.paymentProvider || 'desconhecido'}" não suporta cancelamento automático.`,
+    )
   }
 
   // Outros estados (draft, confirmed+unpaid, etc.) — não cancelável
@@ -163,6 +181,8 @@ async function prePaymentCancel(
 
   // ─── B. Transaction DB curta ────────────────────────────────
   return runInTransaction(payload, undefined, async (ctx) => {
+    await lockOrderForUpdate(ctx, orderId)
+
     // Revalidar estado
     const freshOrder = await payload.findByID({
       collection: 'orders',
@@ -198,6 +218,8 @@ async function prePaymentCancel(
       data: {
         orderStatus: 'cancelled',
         cancelledAt: now,
+        paymentLinkTokenHash: null,
+        paymentLinkExpiresAt: null,
       } as any,
       req: ctx.req,
       overrideAccess: true,
@@ -206,10 +228,11 @@ async function prePaymentCancel(
     // ─── Enqueue order_cancelled email notification (mesma transacção) ──
     // Falha ao persistir a notification faz rollback da transacção de domínio.
     const customer = (freshOrder.customer || {}) as any
-    await enqueueEmailNotification(payload, {
+    const recipientEmail = String(customer.email || freshOrder.email || '').trim()
+    if (recipientEmail) await enqueueEmailNotification(payload, {
       type: 'order_cancelled',
       orderId: orderId,
-      recipientEmail: customer.email || freshOrder.email || '',
+      recipientEmail,
       locale: freshOrder.locale || 'pt',
       deduplicationKey: dedupKeyCancelled(orderId),
       snapshot: {
@@ -230,6 +253,171 @@ async function prePaymentCancel(
       orderId,
       paymentIntentCancelled,
       reservationsReleased,
+    }
+  })
+}
+
+// ═══════════════════════════════════════════════════════════════
+// manualPaidRefundCancel — Registo de reembolso executado externamente
+// ═════════════════════════════════════════════════════════════
+
+interface ResolvedManualRefundConfirmation {
+  confirmedBy: number | string
+  reference: string | null
+}
+
+async function resolveManualRefundConfirmation(
+  payload: Payload,
+  input: CancelOrderInput,
+): Promise<ResolvedManualRefundConfirmation> {
+  let confirmation: ManualRefundConfirmationInput | undefined = input.manualRefund
+
+  // O endpoint Payload existente passa o request completo ao serviço. Ler o
+  // corpo apenas neste ramo mantém o endpoint Stripe sem alterações.
+  if (!confirmation && typeof input.req?.json === 'function') {
+    try {
+      const body = await input.req.json()
+      if (body && typeof body === 'object' && body.manualRefund && typeof body.manualRefund === 'object') {
+        confirmation = body.manualRefund as ManualRefundConfirmationInput
+      }
+    } catch {
+      // Corpo ausente/inválido equivale a não confirmar o reembolso externo.
+    }
+  }
+
+  if (confirmation?.confirmed !== true) {
+    throw new ManualRefundConfirmationRequiredError(input.orderId)
+  }
+
+  const user = input.req?.user as any
+  const adminUserCollection = (payload as any).config?.admin?.user as string | undefined
+  if (
+    user?.id === undefined ||
+    user?.id === null ||
+    (adminUserCollection && user.collection !== adminUserCollection)
+  ) {
+    throw new ManualRefundConfirmationRequiredError(
+      input.orderId,
+      'A confirmação do reembolso externo exige um administrador autenticado.',
+    )
+  }
+
+  if (confirmation.reference !== undefined && typeof confirmation.reference !== 'string') {
+    throw new CancelRefundError('A referência do reembolso externo tem de ser texto.')
+  }
+
+  const reference = confirmation.reference?.trim() || null
+  if (reference && reference.length > 500) {
+    throw new CancelRefundError('A referência do reembolso externo não pode exceder 500 caracteres.')
+  }
+
+  return { confirmedBy: user.id, reference }
+}
+
+async function manualPaidRefundCancel(
+  payload: Payload,
+  order: any,
+  confirmation: ResolvedManualRefundConfirmation,
+  req?: any,
+): Promise<CancelOrderResult> {
+  const orderId = order.id
+
+  // Uma Order manual nunca pode provocar chamadas Stripe. Identificadores
+  // Stripe neste provider indicam dados inconsistentes e bloqueiam a operação.
+  if (order.stripePaymentIntentId || order.stripeRefundId) {
+    throw new CancelOrderNotAllowedError(
+      orderId,
+      'Pagamento manual contém identificadores Stripe inesperados. Rever a encomenda antes de cancelar.',
+    )
+  }
+
+  return runInTransaction(payload, req, async (ctx) => {
+    // Serializa tentativas concorrentes para a mesma Order. A segunda tentativa
+    // observa o estado cancelado e não restaura stock novamente.
+    await lockOrderForUpdate(ctx, orderId)
+
+    const freshOrder = await payload.findByID({
+      collection: 'orders',
+      id: orderId,
+      req: ctx.req,
+      depth: 0,
+      overrideAccess: true,
+    }) as any
+
+    if (!freshOrder) {
+      throw new CancelOrderNotFoundError(orderId)
+    }
+
+    if (freshOrder.orderStatus === 'cancelled' || freshOrder.orderStatus === 'expired') {
+      return { kind: 'already_cancelled', orderId }
+    }
+
+    if (
+      freshOrder.orderStatus !== 'confirmed' ||
+      freshOrder.paymentStatus !== 'paid' ||
+      freshOrder.paymentProvider !== 'manual'
+    ) {
+      throw new CancelOrderNotAllowedError(
+        orderId,
+        `Order mudou para orderStatus="${freshOrder.orderStatus}" paymentStatus="${freshOrder.paymentStatus}" provider="${freshOrder.paymentProvider}" entre validações.`,
+      )
+    }
+
+    if (freshOrder.stripePaymentIntentId || freshOrder.stripeRefundId) {
+      throw new CancelOrderNotAllowedError(
+        orderId,
+        'Pagamento manual contém identificadores Stripe inesperados. Rever a encomenda antes de cancelar.',
+      )
+    }
+
+    const stockRestored = await restoreConfirmedOrderStock(ctx, payload, orderId)
+    const refundedAt = new Date().toISOString()
+
+    await payload.update({
+      collection: 'orders',
+      id: orderId,
+      data: {
+        paymentStatus: 'refunded',
+        orderStatus: 'cancelled',
+        refundReason: 'admin_manual_payment_refunded',
+        cancelledAt: refundedAt,
+        manualRefundedAt: refundedAt,
+        manualRefundReference: confirmation.reference,
+        manualRefundConfirmedBy: confirmation.confirmedBy,
+        paymentLinkTokenHash: null,
+        paymentLinkExpiresAt: null,
+      } as any,
+      req: ctx.req,
+      overrideAccess: true,
+    })
+
+    const customer = (freshOrder.customer || {}) as any
+    const recipientEmail = String(customer.email || freshOrder.email || '').trim()
+    if (recipientEmail) await enqueueEmailNotification(payload, {
+      type: 'order_cancelled',
+      orderId,
+      recipientEmail,
+      locale: freshOrder.locale || 'pt',
+      deduplicationKey: dedupKeyCancelled(orderId),
+      snapshot: {
+        type: 'order_cancelled',
+        data: {
+          orderNumber: freshOrder.orderNumber || String(orderId),
+          customerName: customer.name || '',
+          wasRefunded: true,
+          total: Number(freshOrder.total) || 0,
+          currency: freshOrder.currency || 'EUR',
+          paymentMethodType: freshOrder.paymentMethodType || null,
+        },
+      },
+      req: ctx.req,
+    })
+
+    return {
+      kind: 'manual_paid_refund_cancelled',
+      orderId,
+      stockRestored,
+      refundedAt,
     }
   })
 }
@@ -263,6 +451,8 @@ async function paidRefundCancel(
   // ─── B. Transaction DB curta ────────────────────────────────
   console.log('[order-cancel] stage=db-transaction:start orderId=' + orderId)
   return runInTransaction(payload, undefined, async (ctx) => {
+    await lockOrderForUpdate(ctx, orderId)
+
     // Revalidar estado
     const freshOrder = await payload.findByID({
       collection: 'orders',
@@ -308,6 +498,8 @@ async function paidRefundCancel(
         stripeRefundId: refundId,
         refundReason,
         cancelledAt: now,
+        paymentLinkTokenHash: null,
+        paymentLinkExpiresAt: null,
       } as any,
       req: ctx.req,
       overrideAccess: true,
@@ -317,11 +509,12 @@ async function paidRefundCancel(
     // ─── Enqueue order_cancelled email notification (mesma transacção) ──
     // Falha ao persistir a notification faz rollback da transacção de domínio.
     const customer = (freshOrder.customer || {}) as any
+    const recipientEmail = String(customer.email || freshOrder.email || '').trim()
     console.log('[order-cancel] stage=email-enqueue:start orderId=' + orderId)
-    await enqueueEmailNotification(payload, {
+    if (recipientEmail) await enqueueEmailNotification(payload, {
       type: 'order_cancelled',
       orderId: orderId,
-      recipientEmail: customer.email || freshOrder.email || '',
+      recipientEmail,
       locale: freshOrder.locale || 'pt',
       deduplicationKey: dedupKeyCancelled(orderId),
       snapshot: {
@@ -446,6 +639,7 @@ async function releaseOrderReservations(
     },
     limit: 100,
     depth: 0,
+    req: ctx.req,
     overrideAccess: true,
   })
 
@@ -481,13 +675,23 @@ async function restoreConfirmedOrderStock(
       order: { equals: orderId },
       status: { equals: 'confirmed' },
     },
-    limit: 100,
+    pagination: false,
     depth: 0,
+    req: ctx.req,
     overrideAccess: true,
   })
 
-  const confirmedReservations = items.docs as any[]
+  const confirmedReservations = [...items.docs] as any[]
   if (confirmedReservations.length === 0) return false
+
+  // Ordem determinística de locks evita deadlocks quando há várias flores.
+  confirmedReservations.sort((left, right) => {
+    const leftFlowerId = typeof left.flower === 'object' ? left.flower?.id : left.flower
+    const rightFlowerId = typeof right.flower === 'object' ? right.flower?.id : right.flower
+    return Number(leftFlowerId) - Number(rightFlowerId) || Number(left.id) - Number(right.id)
+  })
+
+  let restoredAny = false
 
   for (const reservation of confirmedReservations) {
     const flowerId = typeof reservation.flower === 'object'
@@ -496,6 +700,31 @@ async function restoreConfirmedOrderStock(
 
     // Lock da flower
     await lockFlowerForUpdate(ctx, flowerId)
+
+    // A lista inicial pode ficar desactualizada enquanto esperamos pelo lock.
+    // Recarregar dentro da transacção impede libertar/restaurar duas vezes.
+    const freshReservation = await payload.findByID({
+      collection: 'stock-reservations' as any,
+      id: reservation.id,
+      req: ctx.req,
+      depth: 0,
+      overrideAccess: true,
+    }) as any
+    const freshOrderId = typeof freshReservation?.order === 'object'
+      ? freshReservation.order?.id
+      : freshReservation?.order
+    const freshFlowerId = typeof freshReservation?.flower === 'object'
+      ? freshReservation.flower?.id
+      : freshReservation?.flower
+
+    if (
+      !freshReservation ||
+      freshReservation.status !== 'confirmed' ||
+      Number(freshOrderId) !== Number(orderId) ||
+      Number(freshFlowerId) !== Number(flowerId)
+    ) {
+      continue
+    }
 
     // Carregar flower actual
     const flower = await payload.findByID({
@@ -510,10 +739,7 @@ async function restoreConfirmedOrderStock(
 
     const mode = flower.productionMode as string | undefined
 
-    // made_to_order: não tem stock físico para restaurar
-    if (mode === 'made_to_order') continue
-
-    const qty = reservation.quantity ?? 1
+    const qty = freshReservation.quantity ?? 1
 
     if (mode === 'unique') {
       // Unique: stock era 0 (ou vendido), restaurar para 1, disponível
@@ -521,23 +747,25 @@ async function restoreConfirmedOrderStock(
         stockQuantity: 1,
         availability: 'available',
       })
+      restoredAny = true
     } else if (mode === 'reproducible') {
       // Reproducible: incrementar stock pela quantidade confirmada
       const currentStock = flower.stockQuantity ?? 0
       await updateFlowerStock(ctx, flowerId, {
         stockQuantity: currentStock + qty,
       })
+      restoredAny = true
     }
 
     // Marcar reserva como released (não pode ser re-restaurada)
     await payload.update({
       collection: 'stock-reservations' as any,
-      id: reservation.id,
+      id: freshReservation.id,
       data: { status: 'released', releasedAt: new Date().toISOString() } as any,
       req: ctx.req,
       overrideAccess: true,
     })
   }
 
-  return true
+  return restoredAny
 }

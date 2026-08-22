@@ -10,7 +10,7 @@
  * submissão involuntária do formulário Payload.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import React from 'react'
 
@@ -35,11 +35,12 @@ function setupDocumentInfo(id: number | null) {
   mockUseDocumentInfo.mockReturnValue({ id })
 }
 
-function setupFormFields(orderStatus: string, paymentStatus: string) {
+function setupFormFields(orderStatus: string, paymentStatus: string, paymentProvider = 'stripe') {
   mockUseFormFields.mockImplementation((selector: Function) => {
     const fields = {
       orderStatus: { value: orderStatus },
       paymentStatus: { value: paymentStatus },
+      paymentProvider: { value: paymentProvider },
     }
     return selector([fields, {}])
   })
@@ -56,6 +57,7 @@ function getButtonsMissingType(buttons: HTMLElement[]): HTMLElement[] {
 
 describe('CancelOrderActions', () => {
   beforeEach(() => {
+    vi.unstubAllGlobals()
     vi.clearAllMocks()
   })
 
@@ -102,6 +104,43 @@ describe('CancelOrderActions', () => {
 
     // All have type="button"
     expect(getButtonsMissingType(allButtons)).toEqual([])
+  })
+
+  it('manual paid exige confirmação externa e envia apenas confirmação/referência', async () => {
+    setupDocumentInfo(6)
+    setupFormFields('confirmed', 'paid', 'manual')
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: 'resposta de teste' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<CancelOrderActions />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar e registar reembolso externo' }))
+
+    expect(screen.getByText(/não vai devolver dinheiro automaticamente/i)).toBeInTheDocument()
+    const confirmButton = screen.getByRole('button', { name: 'Confirmar cancelamento' })
+    expect(confirmButton).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('checkbox', {
+      name: 'Confirmo que o reembolso externo integral já foi efetuado.',
+    }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Referência do reembolso (opcional)' }), {
+      target: { value: '  REF-EXTERNA-42  ' },
+    })
+    expect(confirmButton).toBeEnabled()
+    fireEvent.click(confirmButton)
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(fetchMock).toHaveBeenCalledWith('/api/orders/6/cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        manualRefund: { confirmed: true, reference: 'REF-EXTERNA-42' },
+      }),
+    })
+    expect(getButtonsMissingType(screen.getAllByRole('button'))).toEqual([])
   })
 
   it('does not render when order is cancelled, expired, or processing', () => {
