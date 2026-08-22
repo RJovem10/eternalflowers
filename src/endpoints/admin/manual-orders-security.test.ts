@@ -218,7 +218,8 @@ describe('manual-order admin endpoint security', () => {
     expect(response.status).toBe(200)
     expect(mocks.previewManualOrder).toHaveBeenCalledTimes(1)
     const mapped = mocks.previewManualOrder.mock.calls[0][1]
-    expect(mapped.items).toEqual([{ flowerId: 1, qty: 2 }])
+    // Manual orders use free items: name/qty/price from input, not flowerId
+    expect(mapped.items).toEqual([{ name: 'Forjado', qty: 2, price: 0.01 }])
     expect(mapped).not.toHaveProperty('subtotal')
     expect(mapped).not.toHaveProperty('discount')
     expect(mapped).not.toHaveProperty('shippingCost')

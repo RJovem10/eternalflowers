@@ -22,6 +22,7 @@ import type {
   CreateOrderResult,
   ManualOrderItemInput,
   ManualOrderPreview,
+  ManualShippingInput,
   OrderItemInput,
   OrderItemSnapshot,
   OrderAddressSnapshot,
@@ -34,7 +35,7 @@ import {
   IdempotencyConflictError,
 } from './order-types'
 import { isShippingDestination } from './shipping/country-whitelist'
-import { calculateFixedShipping, type FixedShippingItem } from './shipping/fixed-shipping'
+import { type FixedShippingItem } from './shipping/fixed-shipping'
 
 // ─── Constantes ───────────────────────────────────────────────
 
@@ -252,11 +253,72 @@ function validateInput(input: OrderCreationInput, policy: CreationPolicy): void 
     } else if (manualInput.internalNote && manualInput.internalNote.length > 4000) {
       errors.push('internalNote não pode exceder 4000 caracteres.')
     }
+
+    // ── Shipping manual — obrigatório enquanto não for "a confirmar" ──
+    validateManualShipping(manualInput.shipping, errors)
   }
 
   if (errors.length > 0) {
     throw new OrderValidationError(errors)
   }
+}
+
+/**
+ * Valida o shipping manual (exclusivo do fluxo administrativo).
+ *
+ * REGRA: se `needsConfirmation === false`, `amount` é obrigatório e deve ser
+ * um número finito >= 0. `0` é válido (portes grátis); ""/null/undefined NÃO o
+ * são. Isto impede que uma Order manual fique em `draft` por portes em branco.
+ * Se `needsConfirmation === true`, `amount` é ignorado (persistimos null).
+ */
+function validateManualShipping(
+  shipping: ManualShippingInput | undefined,
+  errors: string[],
+): void {
+  if (shipping === undefined || shipping === null) {
+    errors.push('shipping é obrigatório para encomendas manuais.')
+    return
+  }
+
+  if (shipping.needsConfirmation === true) {
+    // "Portes a confirmar" — amount/needsConfirmation undefined são irrelevantes.
+    return
+  }
+
+  if (shipping.needsConfirmation === false && shipping.amount === undefined) {
+    errors.push('shipping.amount é obrigatório quando os portes não estão "a confirmar".')
+    return
+  }
+
+  if (
+    typeof shipping.amount !== 'number' ||
+    !Number.isFinite(shipping.amount) ||
+    shipping.amount < 0
+  ) {
+    errors.push('shipping.amount deve ser um número finito maior ou igual a 0.')
+  }
+}
+
+/**
+ * Resolve os portes de uma encomenda manual a partir do input manual enviado.
+ *
+ * Apenas para orderSource/manual — usa EXCLUSIVAMENTE o shipping manual do input.
+ *  - needsConfirmation === true (ou indefinido): shippingCost=null, total=null, awaiting_shipping
+ *  - needsConfirmation === false + amount: shippingCost=amount, total=subtotal-discount+amount, pending_payment
+ */
+function resolveManualShipping(
+  shipping: ManualShippingInput | undefined,
+  subtotal: number,
+  discount: number,
+): { shippingCost: number | null; total: number | null; orderStatus: 'pending_payment' | 'awaiting_shipping' } {
+  if (!shipping || shipping.needsConfirmation === true) {
+    return { shippingCost: null, total: null, orderStatus: 'awaiting_shipping' }
+  }
+
+  const amount = Number(shipping.amount)
+  const shippingCost = Number(amount.toFixed(2))
+  const total = Number((subtotal - discount + shippingCost).toFixed(2))
+  return { shippingCost, total, orderStatus: 'pending_payment' }
 }
 
 // ─── Criar Order ──────────────────────────────────────────────
@@ -283,13 +345,12 @@ export async function previewManualOrder(
   validateInput(input, policy)
   const normalizedInput = { ...input, items: aggregateItems(input.items) as ManualOrderItemInput[] }
   const resolved = await resolveOrderDraft(payload, normalizedInput, input.req)
-  const shipping = calculateFixedShipping({
-    items: resolved.fixedShippingItems,
-    destinationCountry: resolved.shippingSnapshot.country,
-  })
-  const total = shipping.shippingCost === null
-    ? null
-    : Number((resolved.subtotal - resolved.discount + shipping.shippingCost).toFixed(2))
+
+  const { shippingCost, total, orderStatus } = resolveManualShipping(
+    input.shipping,
+    resolved.subtotal,
+    resolved.discount,
+  )
 
   return {
     items: resolved.items.map((item) => ({
@@ -300,9 +361,9 @@ export async function previewManualOrder(
     })),
     subtotal: resolved.subtotal,
     discount: resolved.discount,
-    shippingCost: shipping.shippingCost,
+    shippingCost,
     total,
-    orderStatus: shipping.cupulaNeedsConfirmation ? 'awaiting_shipping' : 'pending_payment',
+    orderStatus,
   }
 }
 
@@ -623,7 +684,7 @@ async function handleExistingOrder(
     )
   }
 
-  // 2. Items devem corresponder em quantidade e flowerId
+  // 2. Items devem corresponder
   if (existingItems && input.items) {
     if (existingItems.length !== input.items.length) {
       throw new IdempotencyConflictError(
@@ -631,19 +692,37 @@ async function handleExistingOrder(
       )
     }
 
+    const isManual = (existingOrder.orderSource || 'website') === 'manual'
+
     for (let i = 0; i < input.items.length; i++) {
-      const existingFlowerId = typeof existingItems[i]?.flower === 'object'
-        ? existingItems[i].flower.id
-        : existingItems[i]?.flower
+      const existingItem = existingItems[i] as any
       const incomingItem = input.items[i] as any
-      const incomingFlowerId = 'flowerId' in incomingItem ? incomingItem.flowerId : 0
-      if (existingFlowerId !== incomingFlowerId) {
-        throw new IdempotencyConflictError(
-          `checkoutRequestHash ${checkoutRequestHash} já usado com items diferentes.`,
-        )
+
+      if (isManual) {
+        // Manual free items — comparar por name, qty, price (não por flowerId)
+        const existingName = String(existingItem?.name || '').trim().toLowerCase()
+        const incomingName = String(incomingItem?.name || '').trim().toLowerCase()
+        const existingPrice = Number(Number(existingItem?.price || 0).toFixed(2))
+        const incomingPrice = Number(Number(incomingItem?.price || 0).toFixed(2))
+        if (existingName !== incomingName || existingPrice !== incomingPrice) {
+          throw new IdempotencyConflictError(
+            `checkoutRequestHash ${checkoutRequestHash} já usado com items diferentes (name/price).`,
+          )
+        }
+      } else {
+        // Website items — comparar por flowerId (compatível com null vs 0 issue)
+        const existingFlowerId = typeof existingItem?.flower === 'object'
+          ? existingItem.flower.id
+          : existingItem?.flower
+        const incomingFlowerId = 'flowerId' in incomingItem ? incomingItem.flowerId : 0
+        if (existingFlowerId !== incomingFlowerId) {
+          throw new IdempotencyConflictError(
+            `checkoutRequestHash ${checkoutRequestHash} já usado com items diferentes (flowerId).`,
+          )
+        }
       }
-      // Quantidade também deve corresponder
-      if ((existingItems[i]?.qty ?? 0) !== input.items[i].qty) {
+      // Quantidade também deve corresponder (para ambos os tipos)
+      if ((existingItem?.qty ?? 0) !== incomingItem.qty) {
         throw new IdempotencyConflictError(
           `checkoutRequestHash ${checkoutRequestHash} já usado com quantidades diferentes.`,
         )

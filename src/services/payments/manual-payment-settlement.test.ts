@@ -57,8 +57,8 @@ function makeOrder(overrides: Record<string, any> = {}) {
     email: '',
     locale: 'pt',
     items: [
-      { flower: 1, name: 'Rosa', price: 17, qty: 1, lineTotal: 17, productionMode: 'reproducible' },
-      { flower: 1, name: 'Rosa', price: 17, qty: 2, lineTotal: 34, productionMode: 'reproducible' },
+      { flower: null, name: 'Rosa', price: 17, qty: 1, lineTotal: 17, productionMode: 'reproducible' },
+      { flower: null, name: 'Rosa', price: 17, qty: 2, lineTotal: 34, productionMode: 'reproducible' },
     ],
     ...overrides,
   }
@@ -125,7 +125,7 @@ describe('manual external-payment settlement', () => {
     })
   })
 
-  it('I/N: confirms exact aggregated stock once, records manual evidence, and skips email when absent', async () => {
+  it('I/N: records manual evidence, skips stock reservations and email when absent', async () => {
     const payload = createPayload()
     const result = await confirmExternalPayment(payload, {
       orderId: 42,
@@ -140,8 +140,8 @@ describe('manual external-payment settlement', () => {
     } as any)
 
     expect(result).toEqual({ kind: 'processed', orderId: 42 })
-    expect(mocks.confirmReservation).toHaveBeenCalledTimes(1)
-    expect(mocks.confirmReservation).toHaveBeenCalledWith(payload, expect.objectContaining({ reservationId: 7 }))
+    // Manual orders skip stock reservations
+    expect(mocks.confirmReservation).not.toHaveBeenCalled()
     expect(order).toMatchObject({
       total: 59,
       paymentStatus: 'paid',
@@ -170,7 +170,8 @@ describe('manual external-payment settlement', () => {
     await expect(confirmExternalPayment(payload, input))
       .resolves.toEqual({ kind: 'already_processed', orderId: 42 })
 
-    expect(mocks.confirmReservation).toHaveBeenCalledTimes(1)
+    // Manual orders skip stock reservations
+    expect(mocks.confirmReservation).not.toHaveBeenCalled()
     const financialUpdates = payload.update.mock.calls.filter(
       ([args]: any[]) => args.collection === 'orders' && args.data.paymentStatus === 'paid',
     )
@@ -194,23 +195,24 @@ describe('manual external-payment settlement', () => {
       confirmed: true,
       confirmedBy: 10,
     })).rejects.toThrow(PaymentSettlementConflictError)
-    expect(mocks.confirmReservation).toHaveBeenCalledTimes(1)
+    // Manual orders skip stock reservations
+    expect(mocks.confirmReservation).not.toHaveBeenCalled()
   })
 
-  it('I: fails closed before stock mutation when reservations do not exactly match order quantities', async () => {
+  it('manual orders skip stock reservation validation (no reservations to mismatch)', async () => {
     const payload = createPayload()
-    reservations[0].quantity = 2
-
-    await expect(confirmExternalPayment(payload, {
+    // Manual orders never check reservations — settlement proceeds regardless
+    const result = await confirmExternalPayment(payload, {
       orderId: 42,
       method: 'cash',
       confirmed: true,
       confirmedBy: 9,
-    })).rejects.toThrow(SettlementStockUnavailableError)
+    })
 
+    expect(result).toEqual({ kind: 'processed', orderId: 42 })
     expect(mocks.confirmReservation).not.toHaveBeenCalled()
-    expect(order.paymentStatus).toBe('unpaid')
-    expect(order.orderStatus).toBe('pending_payment')
+    expect(order.paymentStatus).toBe('paid')
+    expect(order.orderStatus).toBe('confirmed')
   })
 
   it('never permits external settlement for an existing website order', async () => {
@@ -323,7 +325,8 @@ describe('manual external-payment settlement', () => {
     await expect(settleOrderPayment(payload, input))
       .resolves.toEqual({ kind: 'already_processed', orderId: 42 })
 
-    expect(mocks.confirmReservation).toHaveBeenCalledTimes(1)
+    // Manual orders skip stock reservations
+    expect(mocks.confirmReservation).not.toHaveBeenCalled()
     expect(order).toMatchObject({
       paymentProvider: 'stripe',
       stripePaymentIntentId: 'pi_link_42',

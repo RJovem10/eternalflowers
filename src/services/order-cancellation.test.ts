@@ -770,7 +770,7 @@ describe('cancelOrder — pagamento manual reembolsado externamente', () => {
     expect(mockStripeCallCounts).toEqual({ retrieve: 0, cancel: 0, createRefund: 0, listRefunds: 0 })
   })
 
-  it('regista confirmação e referência, restaura stock e nunca chama Stripe', async () => {
+  it('regista confirmação e referência, não restaura stock (manual orders não têm stock) e nunca chama Stripe', async () => {
     mockOptions.reservations = [
       createMockReservation({ id: 701, status: 'confirmed', order: 1, flower: { id: 10 }, quantity: 1 }),
     ]
@@ -785,7 +785,7 @@ describe('cancelOrder — pagamento manual reembolsado externamente', () => {
     expect(result).toMatchObject({
       kind: 'manual_paid_refund_cancelled',
       orderId: 1,
-      stockRestored: true,
+      stockRestored: false,
       refundedAt: expect.any(String),
     })
     expect(mockOptions.order).toMatchObject({
@@ -797,8 +797,9 @@ describe('cancelOrder — pagamento manual reembolsado externamente', () => {
       manualRefundedAt: expect.any(String),
       stripeRefundId: null,
     })
-    expect(mockOptions.flowers[10]).toMatchObject({ stockQuantity: 1, availability: 'available' })
-    expect(mockOptions.reservations[0].status).toBe('released')
+    // Manual orders não alteram stock
+    expect(mockOptions.flowers[10]).toMatchObject({ stockQuantity: 0, availability: 'sold' })
+    expect(mockOptions.reservations[0].status).toBe('confirmed')
     expect(mockStripeCallCounts).toEqual({ retrieve: 0, cancel: 0, createRefund: 0, listRefunds: 0 })
   })
 
@@ -859,7 +860,7 @@ describe('cancelOrder — pagamento manual reembolsado externamente', () => {
     expect(mockStripeCallCounts).toEqual({ retrieve: 0, cancel: 0, createRefund: 0, listRefunds: 0 })
   })
 
-  it('retry é idempotente e não restaura stock duas vezes', async () => {
+  it('retry é idempotente e não restaura stock (manual orders não têm stock)', async () => {
     mockOptions.reservations = [
       createMockReservation({ id: 702, status: 'confirmed', order: 1, flower: { id: 20 }, quantity: 2 }),
     ]
@@ -879,8 +880,9 @@ describe('cancelOrder — pagamento manual reembolsado externamente', () => {
 
     expect(first.kind).toBe('manual_paid_refund_cancelled')
     expect(second.kind).toBe('already_cancelled')
-    expect(mockOptions.flowers[20].stockQuantity).toBe(5)
-    expect(mockOptions.reservations[0].status).toBe('released')
+    // Manual orders não alteram stock
+    expect(mockOptions.flowers[20].stockQuantity).toBe(3)
+    expect(mockOptions.reservations[0].status).toBe('confirmed')
     expect(mockStripeCallCounts).toEqual({ retrieve: 0, cancel: 0, createRefund: 0, listRefunds: 0 })
   })
 
