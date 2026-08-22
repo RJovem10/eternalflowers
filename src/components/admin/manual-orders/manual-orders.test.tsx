@@ -47,9 +47,10 @@ function draft(): ManualOrderDraft {
       postalCode: "",
       country: "PT",
     },
-    items: [{ flowerId: 7, qty: 2 }],
+    items: [{ name: "Orquídea", qty: 2, price: 35 }],
     coupon: "",
     internalNote: "",
+    shipping: { amount: null, needsConfirmation: false },
   };
 }
 
@@ -68,7 +69,7 @@ describe("pedido enviado pelo formulário manual", () => {
 
     expect(request.customer).toEqual({ name: "Maria", phone: "912345678" });
     expect(request.billingAddress).toBeUndefined();
-    expect(request.items).toEqual([{ flowerId: 7, qty: 2 }]);
+    expect(request.items).toEqual([{ name: "Orquídea", qty: 2, price: 35 }]);
     expect(request.shippingAddress.country).toBe("PT");
     expect(request).not.toHaveProperty("price");
     expect(request).not.toHaveProperty("subtotal");
@@ -76,6 +77,10 @@ describe("pedido enviado pelo formulário manual", () => {
     expect(request).not.toHaveProperty("total");
     expect(request).not.toHaveProperty("orderStatus");
     expect(request).not.toHaveProperty("paymentStatus");
+    expect(request.shipping).toEqual({
+      amount: undefined,
+      needsConfirmation: false,
+    });
   });
 
   it("cria requestIds UUID v4", () => {
@@ -92,19 +97,7 @@ describe("segurança dos botões no formulário Payload", () => {
   });
 
   it('todos os botões da criação têm type="button" explícito', () => {
-    render(
-      <ManualOrderForm
-        products={[
-          {
-            id: 7,
-            name: "Orquídea",
-            price: 35,
-            availability: "available",
-            stockQuantity: 1,
-          },
-        ]}
-      />,
-    );
+    render(<ManualOrderForm />);
 
     for (const button of screen.getAllByRole("button")) {
       expect(button).toHaveAttribute("type", "button");

@@ -50,14 +50,51 @@ export const createManualOrderHandler: PayloadHandler = async (req) => {
     const paymentChoice = body.paymentChoice === 'external' ? 'external' : 'stripe'
     const created = await createManualOrder(req.payload, input)
     let order = created.order as any
+    const shippingConfig = input.shipping
+
+    const needPrepareForPayment = shippingConfig
+      ? false
+      : true
 
     if (order.orderStatus === 'draft') {
-      const prepared = await prepareOrderForPayment(req.payload, {
-        orderId: Number(order.id),
-        reservationDurationMs: MANUAL_RESERVATION_DURATION_MS,
-        req,
-      })
-      order = prepared.order
+      // Manual shipping provided — skip prepareOrderForPayment, apply directly
+      if (shippingConfig?.needsConfirmation) {
+        const subtotal = Number(order.subtotal) || 0
+        const discount = Number(order.discount) || 0
+        order = await req.payload.update({
+          collection: 'orders',
+          id: order.id,
+          data: {
+            shippingCost: null,
+            total: null,
+            orderStatus: 'awaiting_shipping',
+          },
+          req,
+          overrideAccess: true,
+        })
+      } else if (shippingConfig && shippingConfig.amount !== undefined) {
+        const subtotal = Number(order.subtotal) || 0
+        const discount = Number(order.discount) || 0
+        const total = Number((subtotal - discount + shippingConfig.amount).toFixed(2))
+        order = await req.payload.update({
+          collection: 'orders',
+          id: order.id,
+          data: {
+            shippingCost: shippingConfig.amount,
+            total,
+            orderStatus: 'pending_payment',
+          },
+          req,
+          overrideAccess: true,
+        })
+      } else if (needPrepareForPayment) {
+        const prepared = await prepareOrderForPayment(req.payload, {
+          orderId: Number(order.id),
+          reservationDurationMs: MANUAL_RESERVATION_DURATION_MS,
+          req,
+        })
+        order = prepared.order
+      }
     }
 
     let paymentLink: string | null = null
@@ -191,7 +228,17 @@ function mapManualInput(body: Record<string, unknown>, req: PayloadRequest): Cre
   const rawItems = Array.isArray(body.items) ? body.items : []
   const items = rawItems
     .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
-    .map((item) => ({ flowerId: Number(item.flowerId) || 0, qty: Number(item.qty) || 0 }))
+    .map((item) => ({ name: String(item.name || ''), qty: Number(item.qty) || 0, price: Number(item.price) || 0 }))
+
+  const rawShipping = asObject(body.shipping)
+  const shipping: CreateManualOrderInput['shipping'] = rawShipping
+    ? {
+        amount: typeof rawShipping.amount === 'number' && Number.isFinite(rawShipping.amount) && rawShipping.amount >= 0
+          ? rawShipping.amount
+          : undefined,
+        needsConfirmation: rawShipping.needsConfirmation === true,
+      }
+    : undefined
 
   return {
     checkoutRequestId: asString(body.requestId) || '',
@@ -204,6 +251,7 @@ function mapManualInput(body: Record<string, unknown>, req: PayloadRequest): Cre
     coupon: asString(body.coupon) || undefined,
     internalNote: asString(body.internalNote) || undefined,
     locale: asString(body.locale) || 'pt',
+    shipping,
     req,
   }
 }

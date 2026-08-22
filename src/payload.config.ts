@@ -563,7 +563,7 @@ const Orders: CollectionConfig = {
       admin: { readOnly: true },
       access: systemManagedFieldAccess,
       fields: [
-        { name: 'flower', type: 'relationship', relationTo: 'flowers', required: true, label: 'Flor' },
+        { name: 'flower', type: 'relationship', relationTo: 'flowers', label: 'Flor' },
         { name: 'name', type: 'text', label: 'Nome' },
         { name: 'price', type: 'number', label: 'Preço unitário (€)' },
         { name: 'qty', type: 'number', label: 'Qtd', defaultValue: 1 },

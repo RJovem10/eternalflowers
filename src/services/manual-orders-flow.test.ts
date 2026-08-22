@@ -156,7 +156,7 @@ function manualInput(overrides: Record<string, any> = {}): CreateManualOrderInpu
       country: 'PT',
     },
     billingSameAsShipping: true,
-    items: [{ flowerId: 1, qty: 2 }],
+    items: [{ name: "Orquídea", qty: 2, price: 35 }],
     locale: 'pt',
     internalNote: 'Pedido recebido no WhatsApp.',
     ...overrides,

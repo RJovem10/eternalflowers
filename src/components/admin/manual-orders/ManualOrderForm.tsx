@@ -2,7 +2,7 @@
 
 import { useConfig } from "@payloadcms/ui";
 import { formatAdminURL } from "payload/shared";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { AddressFields } from "./AddressFields";
 import styles from "./manual-orders.module.css";
 import type {
@@ -10,8 +10,8 @@ import type {
   CreatedManualOrder,
   CustomerInput,
   ExternalPaymentMethod,
+  FreeItem,
   ManualOrderDraft,
-  ManualOrderProduct,
   ManualOrderQuote,
   ManualSalesChannel,
 } from "./types";
@@ -22,10 +22,6 @@ import {
 } from "./utils";
 
 type PaymentChoice = "stripe" | "external";
-
-type ManualOrderFormProps = {
-  products: ManualOrderProduct[];
-};
 
 const EMPTY_ADDRESS: AddressInput = {
   recipientName: "",
@@ -72,6 +68,10 @@ function initialDraft(requestId = ""): ManualOrderDraft {
     items: [],
     coupon: "",
     internalNote: "",
+    shipping: {
+      amount: null,
+      needsConfirmation: false,
+    },
   };
 }
 
@@ -145,36 +145,9 @@ function validateAddress(address: AddressInput, label: string): string | null {
   return null;
 }
 
-function productAvailability(product: ManualOrderProduct): string {
-  if (product.availability === "sold") return "Vendido";
-  if (product.availability === "reserved") return "Reservado";
-  if (product.availability === "preparing") return "Em preparação";
-  if (!product.productionMode) return "Produto por classificar";
-  if (product.productionMode === "made_to_order")
-    return "Produzido por encomenda";
-  if ((product.stockQuantity ?? 0) <= 0) return "Sem stock";
-  if (typeof product.stockQuantity === "number")
-    return `Stock: ${product.stockQuantity}`;
-  return "Disponível";
-}
-
-function isProductSelectable(product: ManualOrderProduct): boolean {
-  if (product.productionMode === "made_to_order") {
-    return ["available", "preparing"].includes(
-      product.availability || "available",
-    );
-  }
-  if (!["unique", "reproducible"].includes(product.productionMode || ""))
-    return false;
-  if (["sold", "reserved", "preparing"].includes(product.availability || ""))
-    return false;
-  return (product.stockQuantity ?? 0) > 0;
-}
-
-export function ManualOrderForm({ products }: ManualOrderFormProps) {
+export function ManualOrderForm() {
   const { config } = useConfig();
   const [draft, setDraft] = useState<ManualOrderDraft>(() => initialDraft());
-  const [productToAdd, setProductToAdd] = useState("");
   const [quote, setQuote] = useState<ManualOrderQuote | null>(null);
   const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>("stripe");
   const [externalMethod, setExternalMethod] =
@@ -196,19 +169,6 @@ export function ManualOrderForm({ products }: ManualOrderFormProps) {
     requestIdRef.current = requestId;
     setDraft((current) => ({ ...current, requestId }));
   }, []);
-
-  const productsById = useMemo(
-    () => new Map(products.map((product) => [product.id, product])),
-    [products],
-  );
-
-  const availableProducts = useMemo(
-    () =>
-      products.filter(
-        (product) => !draft.items.some((item) => item.flowerId === product.id),
-      ),
-    [draft.items, products],
-  );
 
   function materialChange(
     update: (current: ManualOrderDraft) => ManualOrderDraft,
@@ -241,32 +201,57 @@ export function ManualOrderForm({ products }: ManualOrderFormProps) {
     }));
   }
 
-  function addProduct() {
-    const flowerId = Number(productToAdd);
-    const product = productsById.get(flowerId);
-    if (!product || !isProductSelectable(product)) return;
-
+  function addItem() {
     materialChange((current) => ({
       ...current,
-      items: [...current.items, { flowerId, qty: 1 }],
+      items: [...current.items, { name: "", qty: 1, price: 0 }],
     }));
-    setProductToAdd("");
   }
 
-  function updateQuantity(flowerId: number, value: string) {
-    const qty = Number(value);
+  function updateItem(index: number, field: keyof FreeItem, value: string) {
     materialChange((current) => ({
       ...current,
-      items: current.items.map((item) =>
-        item.flowerId === flowerId ? { ...item, qty } : item,
+      items: current.items.map((item, i) =>
+        i === index
+          ? {
+              ...item,
+              [field]:
+                field === "name"
+                  ? value
+                  : value === ""
+                    ? (item[field] as number)
+                    : Number(value),
+            }
+          : item,
       ),
     }));
   }
 
-  function removeProduct(flowerId: number) {
+  function removeItem(index: number) {
     materialChange((current) => ({
       ...current,
-      items: current.items.filter((item) => item.flowerId !== flowerId),
+      items: current.items.filter((_, i) => i !== index),
+    }));
+  }
+
+  function handleShippingAmountChange(value: string) {
+    materialChange((current) => ({
+      ...current,
+      shipping: {
+        ...current.shipping,
+        amount: value === "" ? null : Number(value),
+      },
+    }));
+  }
+
+  function handleShippingConfirmationChange(checked: boolean) {
+    materialChange((current) => ({
+      ...current,
+      shipping: {
+        ...current.shipping,
+        needsConfirmation: checked,
+        amount: checked ? null : current.shipping.amount,
+      },
     }));
   }
 
@@ -471,7 +456,6 @@ export function ManualOrderForm({ products }: ManualOrderFormProps) {
     const requestId = createRequestId();
     requestIdRef.current = requestId;
     setDraft(initialDraft(requestId));
-    setProductToAdd("");
     setQuote(null);
     setPaymentChoice("stripe");
     setExternalMethod("external_mb_way");
@@ -576,6 +560,8 @@ export function ManualOrderForm({ products }: ManualOrderFormProps) {
     );
   }
 
+  const shippingDisabled = draft.shipping.needsConfirmation;
+
   return (
     <form onSubmit={(event) => event.preventDefault()}>
       {error && (
@@ -673,127 +659,150 @@ export function ManualOrderForm({ products }: ManualOrderFormProps) {
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <div>
-            <h2 className={styles.sectionTitle}>2. Produtos</h2>
+            <h2 className={styles.sectionTitle}>2. Artigos</h2>
             <p className={styles.sectionHint}>
-              Os preços apresentados vêm do catálogo e serão novamente validados
-              pelo servidor.
+              Adiciona artigos livres com nome, quantidade e preço unitário.
             </p>
           </div>
         </div>
 
-        {products.length === 0 ? (
+        {draft.items.length === 0 ? (
           <p className={styles.emptyState}>
-            Não existem produtos disponíveis no catálogo.
+            Ainda não adicionaste artigos.
           </p>
         ) : (
-          <>
-            <div className={styles.productPicker}>
-              <label className={styles.field} htmlFor="manual-product-picker">
-                <span className={styles.label}>Escolher produto</span>
-                <select
-                  className={styles.select}
-                  id="manual-product-picker"
-                  onChange={(event) => setProductToAdd(event.target.value)}
-                  value={productToAdd}
-                >
-                  <option value="">Seleciona um produto…</option>
-                  {availableProducts.map((product) => (
-                    <option
-                      disabled={!isProductSelectable(product)}
-                      key={product.id}
-                      value={product.id}
-                    >
-                      {product.name}
-                      {product.sku ? ` · ${product.sku}` : ""} ·{" "}
-                      {formatMoney(product.price)} ·{" "}
-                      {productAvailability(product)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                className={styles.secondaryButton}
-                disabled={!productToAdd}
-                onClick={addProduct}
-                type="button"
-              >
-                Adicionar
-              </button>
-            </div>
-
-            {draft.items.length === 0 ? (
-              <p className={styles.emptyState}>
-                Ainda não adicionaste produtos.
-              </p>
-            ) : (
-              <div className={styles.tableScroll}>
-                <table className={styles.itemsTable}>
-                  <thead>
-                    <tr>
-                      <th>Produto</th>
-                      <th>Preço atual</th>
-                      <th>Quantidade</th>
-                      <th aria-label="Ações" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {draft.items.map((item) => {
-                      const product = productsById.get(item.flowerId);
-                      if (!product) return null;
-                      return (
-                        <tr key={item.flowerId}>
-                          <td>
-                            <span className={styles.productName}>
-                              {product.name}
-                            </span>
-                            <span className={styles.productMeta}>
-                              {[product.sku, productAvailability(product)]
-                                .filter(Boolean)
-                                .join(" · ")}
-                            </span>
-                          </td>
-                          <td>{formatMoney(product.price)}</td>
-                          <td>
-                            <input
-                              aria-label={`Quantidade de ${product.name}`}
-                              className={styles.quantityInput}
-                              inputMode="numeric"
-                              min="1"
-                              onChange={(event) =>
-                                updateQuantity(
-                                  item.flowerId,
-                                  event.target.value,
-                                )
-                              }
-                              step="1"
-                              type="number"
-                              value={Number.isNaN(item.qty) ? "" : item.qty}
-                            />
-                          </td>
-                          <td className={styles.numericCell}>
-                            <button
-                              className={styles.quietButton}
-                              onClick={() => removeProduct(item.flowerId)}
-                              type="button"
-                            >
-                              Remover
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </>
+          <div className={styles.tableScroll}>
+            <table className={styles.itemsTable}>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Qtd.</th>
+                  <th>Preço unitário</th>
+                  <th aria-label="Ações" />
+                </tr>
+              </thead>
+              <tbody>
+                {draft.items.map((item, index) => (
+                  <tr key={index}>
+                    <td>
+                      <input
+                        aria-label="Nome do artigo"
+                        className={styles.input}
+                        onChange={(event) =>
+                          updateItem(index, "name", event.target.value)
+                        }
+                        placeholder="Descrição do artigo"
+                        type="text"
+                        value={item.name}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        aria-label="Quantidade"
+                        className={styles.quantityInput}
+                        inputMode="numeric"
+                        min="1"
+                        onChange={(event) =>
+                          updateItem(index, "qty", event.target.value)
+                        }
+                        step="1"
+                        type="number"
+                        value={Number.isNaN(item.qty) ? "" : item.qty}
+                      />
+                    </td>
+                    <td>
+                      <div className={styles.priceInputWrapper}>
+                        <span className={styles.pricePrefix}>€</span>
+                        <input
+                          aria-label="Preço unitário"
+                          className={styles.priceInput}
+                          inputMode="decimal"
+                          min="0"
+                          onChange={(event) =>
+                            updateItem(index, "price", event.target.value)
+                          }
+                          step="0.01"
+                          type="number"
+                          value={Number.isNaN(item.price) ? "" : item.price}
+                        />
+                      </div>
+                    </td>
+                    <td className={styles.numericCell}>
+                      <button
+                        className={styles.quietButton}
+                        onClick={() => removeItem(index)}
+                        type="button"
+                      >
+                        Remover
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
+
+        <button
+          className={styles.secondaryButton}
+          onClick={addItem}
+          type="button"
+        >
+          + Adicionar artigo
+        </button>
       </section>
 
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <div>
-            <h2 className={styles.sectionTitle}>3. Moradas</h2>
+            <h2 className={styles.sectionTitle}>3. Portes</h2>
+            <p className={styles.sectionHint}>
+              Indica o valor dos portes de envio ou assinala se estão por
+              confirmar.
+            </p>
+          </div>
+        </div>
+
+        <div className={styles.gridTwo}>
+          <label className={styles.field} htmlFor="manual-shipping-amount">
+            <span className={styles.label}>Valor dos portes</span>
+            <div className={styles.priceInputWrapper}>
+              <span className={styles.pricePrefix}>€</span>
+              <input
+                className={styles.priceInput}
+                disabled={shippingDisabled}
+                id="manual-shipping-amount"
+                inputMode="decimal"
+                min="0"
+                onChange={(event) =>
+                  handleShippingAmountChange(event.target.value)
+                }
+                step="0.01"
+                type="number"
+                value={
+                  draft.shipping.amount === null ? "" : draft.shipping.amount
+                }
+              />
+            </div>
+          </label>
+
+          <label className={styles.checkboxRow}>
+            <input
+              checked={draft.shipping.needsConfirmation}
+              onChange={(event) =>
+                handleShippingConfirmationChange(event.target.checked)
+              }
+              type="checkbox"
+            />
+            <span>Portes a confirmar</span>
+          </label>
+        </div>
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <div>
+            <h2 className={styles.sectionTitle}>4. Moradas</h2>
             <p className={styles.sectionHint}>
               Só são apresentados os países atualmente suportados.
             </p>
@@ -858,7 +867,7 @@ export function ManualOrderForm({ products }: ManualOrderFormProps) {
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <div>
-            <h2 className={styles.sectionTitle}>4. Resumo</h2>
+            <h2 className={styles.sectionTitle}>5. Resumo</h2>
             <p className={styles.sectionHint}>
               O servidor calcula os artigos, desconto, portes e total. Qualquer
               alteração exige um novo cálculo.
@@ -904,8 +913,8 @@ export function ManualOrderForm({ products }: ManualOrderFormProps) {
 
         {!quote ? (
           <p className={styles.alertInfo}>
-            Preenche os dados e clica em “Calcular resumo” para veres os valores
-            finais.
+            Preenche os dados e clica em &ldquo;Calcular resumo&rdquo; para
+            veres os valores finais.
           </p>
         ) : (
           <div aria-live="polite">
@@ -921,7 +930,7 @@ export function ManualOrderForm({ products }: ManualOrderFormProps) {
                 </thead>
                 <tbody>
                   {quote.items.map((item, index) => (
-                    <tr key={`${item.flowerId || item.name}-${index}`}>
+                    <tr key={`${item.name}-${index}`}>
                       <td>{item.name}</td>
                       <td className={styles.numericCell}>{item.qty}</td>
                       <td className={styles.numericCell}>
@@ -969,7 +978,7 @@ export function ManualOrderForm({ products }: ManualOrderFormProps) {
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <div>
-            <h2 className={styles.sectionTitle}>5. Pagamento</h2>
+            <h2 className={styles.sectionTitle}>6. Pagamento</h2>
             <p className={styles.sectionHint}>
               Escolhe como o cliente irá pagar esta encomenda.
             </p>
@@ -1112,8 +1121,8 @@ export function ManualOrderForm({ products }: ManualOrderFormProps) {
               : quote?.orderStatus === "awaiting_shipping"
                 ? "Criar a aguardar portes"
                 : paymentChoice === "external"
-                ? "Criar e registar pagamento"
-                : "Criar encomenda"}
+                  ? "Criar e registar pagamento"
+                  : "Criar encomenda"}
           </button>
         </div>
       </div>

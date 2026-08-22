@@ -192,6 +192,11 @@ async function processOrder(
   const orderId = order.id
   const items = (order.items as any[]) || []
 
+  // ─── 0. Manual orders não têm reservas — saltar lifecycle ──
+  if (order.orderSource === 'manual') {
+    return { kind: 'skipped_manual_order', orderId }
+  }
+
   // ─── A. Determinar quais items requerem reservation ─────────
   const reservableItems = items.filter((item: any) => {
     const mode = item.productionMode
