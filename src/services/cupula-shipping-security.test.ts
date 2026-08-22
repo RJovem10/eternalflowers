@@ -89,7 +89,8 @@ describe('manual cúpula shipping confirmation', () => {
     } as any)
 
     expect(result.kind).toBe('confirmed')
-    expect(mocks.validateActiveOrderReservations).toHaveBeenCalledTimes(1)
+    // Manual orders skip reservation validation
+    expect(mocks.validateActiveOrderReservations).not.toHaveBeenCalled()
     expect(order).toMatchObject({
       subtotal: 120,
       discount: 10,
@@ -128,17 +129,22 @@ describe('manual cúpula shipping confirmation', () => {
     expect(payload.update).toHaveBeenCalledTimes(1)
   })
 
-  it('fails closed if reservations are no longer valid', async () => {
+  it('manual orders skip reservation validation (no stock reservations exist)', async () => {
     const payload = createPayload()
+    // Even if reservation validation would fail, manual orders never call it
+    // because they do not hold stock reservations.
     mocks.validateActiveOrderReservations.mockRejectedValue(new Error('expired reservation'))
 
-    await expect(confirmCupulaShippingQuote(payload, {
+    const result = await confirmCupulaShippingQuote(payload, {
       orderId: 42,
       quoteAmountCents: 500,
       confirmed: true,
       confirmedBy: 9,
-    })).rejects.toThrow('expired reservation')
-    expect(payload.update).not.toHaveBeenCalled()
+    })
+
+    expect(result.kind).toBe('confirmed')
+    expect(mocks.validateActiveOrderReservations).not.toHaveBeenCalled()
+    expect(order.orderStatus).toBe('pending_payment')
   })
 
   it('never changes a quote after a Stripe PaymentIntent exists', async () => {

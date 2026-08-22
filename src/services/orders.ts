@@ -20,7 +20,9 @@ import type {
   CreateOrderInput,
   CreateManualOrderInput,
   CreateOrderResult,
+  ManualOrderItemInput,
   ManualOrderPreview,
+  ManualShippingInput,
   OrderItemInput,
   OrderItemSnapshot,
   OrderAddressSnapshot,
@@ -33,7 +35,7 @@ import {
   IdempotencyConflictError,
 } from './order-types'
 import { isShippingDestination } from './shipping/country-whitelist'
-import { calculateFixedShipping, type FixedShippingItem } from './shipping/fixed-shipping'
+import { type FixedShippingItem } from './shipping/fixed-shipping'
 
 // ─── Constantes ───────────────────────────────────────────────
 
@@ -118,16 +120,36 @@ interface CreationPolicy {
   requireEmail: boolean
 }
 
-function aggregateItems(items: OrderItemInput[]): OrderItemInput[] {
-  const quantities = new Map<number, number>()
-  for (const item of items) {
-    const quantity = (quantities.get(item.flowerId) || 0) + item.qty
-    if (!Number.isSafeInteger(quantity)) {
-      throw new OrderValidationError([`Quantidade total inválida para flowerId=${item.flowerId}.`])
+function aggregateItems(items: (OrderItemInput | ManualOrderItemInput)[]): (OrderItemInput | ManualOrderItemInput)[] {
+  // Website items — aggregate by flowerId
+  if (items.length > 0 && 'flowerId' in items[0]) {
+    const typed = items as OrderItemInput[]
+    const quantities = new Map<number, number>()
+    for (const item of typed) {
+      const quantity = (quantities.get(item.flowerId) || 0) + item.qty
+      if (!Number.isSafeInteger(quantity)) {
+        throw new OrderValidationError([`Quantidade total inválida para flowerId=${item.flowerId}.`])
+      }
+      quantities.set(item.flowerId, quantity)
     }
-    quantities.set(item.flowerId, quantity)
+    return [...quantities.entries()].map(([flowerId, qty]) => ({ flowerId, qty }))
   }
-  return [...quantities.entries()].map(([flowerId, qty]) => ({ flowerId, qty }))
+  // Manual free items — aggregate by name+price
+  if (items.length > 0 && 'name' in items[0]) {
+    const typed = items as ManualOrderItemInput[]
+    const keyed = new Map<string, ManualOrderItemInput>()
+    for (const item of typed) {
+      const key = `${item.name}|${item.price}`
+      const existing = keyed.get(key)
+      if (existing) {
+        existing.qty += item.qty
+      } else {
+        keyed.set(key, { ...item })
+      }
+    }
+    return [...keyed.values()]
+  }
+  return items
 }
 
 function validateInput(input: OrderCreationInput, policy: CreationPolicy): void {
@@ -175,11 +197,30 @@ function validateInput(input: OrderCreationInput, policy: CreationPolicy): void 
         errors.push(`items[${i}] deve ser um objeto.`)
         continue
       }
-      if (!Number.isSafeInteger(item.flowerId) || item.flowerId < 1) {
-        errors.push(`items[${i}].flowerId deve ser um inteiro positivo.`)
+      // Website items — validate flowerId + qty
+      if ('flowerId' in item) {
+        if (!Number.isSafeInteger(item.flowerId) || item.flowerId < 1) {
+          errors.push(`items[${i}].flowerId deve ser um inteiro positivo.`)
+        }
+        if (!Number.isSafeInteger(item.qty) || item.qty < 1) {
+          errors.push(`items[${i}].qty deve ser um inteiro positivo.`)
+        }
       }
-      if (!Number.isSafeInteger(item.qty) || item.qty < 1) {
-        errors.push(`items[${i}].qty deve ser um inteiro positivo.`)
+      // Manual free items — validate name + qty + price
+      else if ('name' in item && 'price' in item) {
+        if (typeof item.name !== 'string' || !item.name.trim()) {
+          errors.push(`items[${i}].name é obrigatório.`)
+        } else if (item.name.length > 500) {
+          errors.push(`items[${i}].name não pode exceder 500 caracteres.`)
+        }
+        if (!Number.isInteger(Number(item.qty)) || Number(item.qty) < 1) {
+          errors.push(`items[${i}].qty deve ser um inteiro positivo.`)
+        }
+        if (typeof item.price !== 'number' || !Number.isFinite(item.price) || item.price < 0) {
+          errors.push(`items[${i}].price deve ser um número não negativo.`)
+        }
+      } else {
+        errors.push(`items[${i}] deve ter flowerId+qty (catálogo) ou name+qty+price (livre).`)
       }
     }
   }
@@ -212,11 +253,72 @@ function validateInput(input: OrderCreationInput, policy: CreationPolicy): void 
     } else if (manualInput.internalNote && manualInput.internalNote.length > 4000) {
       errors.push('internalNote não pode exceder 4000 caracteres.')
     }
+
+    // ── Shipping manual — obrigatório enquanto não for "a confirmar" ──
+    validateManualShipping(manualInput.shipping, errors)
   }
 
   if (errors.length > 0) {
     throw new OrderValidationError(errors)
   }
+}
+
+/**
+ * Valida o shipping manual (exclusivo do fluxo administrativo).
+ *
+ * REGRA: se `needsConfirmation === false`, `amount` é obrigatório e deve ser
+ * um número finito >= 0. `0` é válido (portes grátis); ""/null/undefined NÃO o
+ * são. Isto impede que uma Order manual fique em `draft` por portes em branco.
+ * Se `needsConfirmation === true`, `amount` é ignorado (persistimos null).
+ */
+function validateManualShipping(
+  shipping: ManualShippingInput | undefined,
+  errors: string[],
+): void {
+  if (shipping === undefined || shipping === null) {
+    errors.push('shipping é obrigatório para encomendas manuais.')
+    return
+  }
+
+  if (shipping.needsConfirmation === true) {
+    // "Portes a confirmar" — amount/needsConfirmation undefined são irrelevantes.
+    return
+  }
+
+  if (shipping.needsConfirmation === false && shipping.amount === undefined) {
+    errors.push('shipping.amount é obrigatório quando os portes não estão "a confirmar".')
+    return
+  }
+
+  if (
+    typeof shipping.amount !== 'number' ||
+    !Number.isFinite(shipping.amount) ||
+    shipping.amount < 0
+  ) {
+    errors.push('shipping.amount deve ser um número finito maior ou igual a 0.')
+  }
+}
+
+/**
+ * Resolve os portes de uma encomenda manual a partir do input manual enviado.
+ *
+ * Apenas para orderSource/manual — usa EXCLUSIVAMENTE o shipping manual do input.
+ *  - needsConfirmation === true (ou indefinido): shippingCost=null, total=null, awaiting_shipping
+ *  - needsConfirmation === false + amount: shippingCost=amount, total=subtotal-discount+amount, pending_payment
+ */
+function resolveManualShipping(
+  shipping: ManualShippingInput | undefined,
+  subtotal: number,
+  discount: number,
+): { shippingCost: number | null; total: number | null; orderStatus: 'pending_payment' | 'awaiting_shipping' } {
+  if (!shipping || shipping.needsConfirmation === true) {
+    return { shippingCost: null, total: null, orderStatus: 'awaiting_shipping' }
+  }
+
+  const amount = Number(shipping.amount)
+  const shippingCost = Number(amount.toFixed(2))
+  const total = Number((subtotal - discount + shippingCost).toFixed(2))
+  return { shippingCost, total, orderStatus: 'pending_payment' }
 }
 
 // ─── Criar Order ──────────────────────────────────────────────
@@ -241,19 +343,17 @@ export async function previewManualOrder(
 ): Promise<ManualOrderPreview> {
   const policy: CreationPolicy = { source: 'manual', requireEmail: false }
   validateInput(input, policy)
-  const normalizedInput = { ...input, items: aggregateItems(input.items) }
+  const normalizedInput = { ...input, items: aggregateItems(input.items) as ManualOrderItemInput[] }
   const resolved = await resolveOrderDraft(payload, normalizedInput, input.req)
-  const shipping = calculateFixedShipping({
-    items: resolved.fixedShippingItems,
-    destinationCountry: resolved.shippingSnapshot.country,
-  })
-  const total = shipping.shippingCost === null
-    ? null
-    : Number((resolved.subtotal - resolved.discount + shipping.shippingCost).toFixed(2))
+
+  const { shippingCost, total, orderStatus } = resolveManualShipping(
+    input.shipping,
+    resolved.subtotal,
+    resolved.discount,
+  )
 
   return {
     items: resolved.items.map((item) => ({
-      flowerId: item.flower,
       name: item.name,
       qty: item.qty,
       price: item.price,
@@ -261,9 +361,9 @@ export async function previewManualOrder(
     })),
     subtotal: resolved.subtotal,
     discount: resolved.discount,
-    shippingCost: shipping.shippingCost,
+    shippingCost,
     total,
-    orderStatus: shipping.cupulaNeedsConfirmation ? 'awaiting_shipping' : 'pending_payment',
+    orderStatus,
   }
 }
 
@@ -316,33 +416,63 @@ async function resolveOrderDraft(
   let subtotal = 0
 
   for (const itemInput of input.items) {
+    // Manual free item — use name/qty/price directly
+    if ('name' in itemInput && 'price' in itemInput && !('flowerId' in itemInput)) {
+      const manual = itemInput as ManualOrderItemInput
+      const name = manual.name.trim()
+      if (!name) {
+        throw new InvalidProductError('Item livre tem nome vazio.')
+      }
+      const price = Number(manual.price) || 0
+      if (price < 0) {
+        throw new InvalidProductError(`Item livre "${name}" tem preço inválido (${manual.price}).`)
+      }
+      const qty = Number(manual.qty) || 0
+      if (qty < 1) {
+        throw new InvalidProductError(`Item livre "${name}" tem quantidade inválida.`)
+      }
+      const lineTotal = Number((price * qty).toFixed(2))
+      subtotal += lineTotal
+      items.push({
+        flower: null,
+        name,
+        price,
+        qty,
+        lineTotal,
+        productionMode: null,
+      })
+      continue
+    }
+
+    // Catalog item — look up flower in DB
+    const catalogItem = itemInput as OrderItemInput
     const flower = await payload.findByID({
       collection: 'flowers',
-      id: itemInput.flowerId,
+      id: catalogItem.flowerId,
       depth: 0,
       req,
       overrideAccess: true,
     }) as any
 
     if (!flower || !flower.id) {
-      throw new InvalidProductError(`Flor com id ${itemInput.flowerId} não encontrada.`)
+      throw new InvalidProductError(`Flor com id ${catalogItem.flowerId} não encontrada.`)
     }
 
     const name = flower.namePt || flower.nameEn || ''
     if (!name) {
-      throw new InvalidProductError(`Flor ${itemInput.flowerId} não tem nome definido.`)
+      throw new InvalidProductError(`Flor ${catalogItem.flowerId} não tem nome definido.`)
     }
 
     const price = Number(flower.price) || 0
     if (price <= 0) {
-      throw new InvalidProductError(`Flor ${itemInput.flowerId} tem preço inválido (${flower.price}).`)
+      throw new InvalidProductError(`Flor ${catalogItem.flowerId} tem preço inválido (${flower.price}).`)
     }
 
-    const qty = itemInput.qty
+    const qty = catalogItem.qty
     const lineTotal = Number((price * qty).toFixed(2))
     subtotal += lineTotal
     items.push({
-      flower: itemInput.flowerId,
+      flower: catalogItem.flowerId,
       name,
       price,
       qty,
@@ -554,7 +684,7 @@ async function handleExistingOrder(
     )
   }
 
-  // 2. Items devem corresponder em quantidade e flowerId
+  // 2. Items devem corresponder
   if (existingItems && input.items) {
     if (existingItems.length !== input.items.length) {
       throw new IdempotencyConflictError(
@@ -562,17 +692,37 @@ async function handleExistingOrder(
       )
     }
 
+    const isManual = (existingOrder.orderSource || 'website') === 'manual'
+
     for (let i = 0; i < input.items.length; i++) {
-      const existingFlowerId = typeof existingItems[i]?.flower === 'object'
-        ? existingItems[i].flower.id
-        : existingItems[i]?.flower
-      if (existingFlowerId !== input.items[i].flowerId) {
-        throw new IdempotencyConflictError(
-          `checkoutRequestHash ${checkoutRequestHash} já usado com items diferentes.`,
-        )
+      const existingItem = existingItems[i] as any
+      const incomingItem = input.items[i] as any
+
+      if (isManual) {
+        // Manual free items — comparar por name, qty, price (não por flowerId)
+        const existingName = String(existingItem?.name || '').trim().toLowerCase()
+        const incomingName = String(incomingItem?.name || '').trim().toLowerCase()
+        const existingPrice = Number(Number(existingItem?.price || 0).toFixed(2))
+        const incomingPrice = Number(Number(incomingItem?.price || 0).toFixed(2))
+        if (existingName !== incomingName || existingPrice !== incomingPrice) {
+          throw new IdempotencyConflictError(
+            `checkoutRequestHash ${checkoutRequestHash} já usado com items diferentes (name/price).`,
+          )
+        }
+      } else {
+        // Website items — comparar por flowerId (compatível com null vs 0 issue)
+        const existingFlowerId = typeof existingItem?.flower === 'object'
+          ? existingItem.flower.id
+          : existingItem?.flower
+        const incomingFlowerId = 'flowerId' in incomingItem ? incomingItem.flowerId : 0
+        if (existingFlowerId !== incomingFlowerId) {
+          throw new IdempotencyConflictError(
+            `checkoutRequestHash ${checkoutRequestHash} já usado com items diferentes (flowerId).`,
+          )
+        }
       }
-      // Quantidade também deve corresponder
-      if ((existingItems[i]?.qty ?? 0) !== input.items[i].qty) {
+      // Quantidade também deve corresponder (para ambos os tipos)
+      if ((existingItem?.qty ?? 0) !== incomingItem.qty) {
         throw new IdempotencyConflictError(
           `checkoutRequestHash ${checkoutRequestHash} já usado com quantidades diferentes.`,
         )

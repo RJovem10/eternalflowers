@@ -35,6 +35,8 @@ export type OrderLifecycleResult =
   | { kind: 'skipped_not_candidate'; orderId: number; reason: string }
   // Todas as reservas ainda válidas — nada a fazer
   | { kind: 'skipped_reservations_valid'; orderId: number }
+  // Manual order — sem reservas de stock para expirar
+  | { kind: 'skipped_manual_order'; orderId: number }
   // Erro inesperado no processamento
   | { kind: 'error'; orderId: number; error: string }
 

@@ -92,6 +92,57 @@ export async function prepareOrderForPayment(
     )
   }
 
+  // ── A3. Manual order: skip shipping calculation & stock reservations ──
+  if (order.orderSource === 'manual') {
+    // Manual order: shipping já definido, sem flores/reservas
+    // Se já tem total definido → pending_payment
+    // Se ainda está draft sem total → permanece draft
+    return runInTransaction(payload, input.req, async (ctx) => {
+      await lockOrderForUpdate(ctx, input.orderId)
+
+      const freshOrder = await payload.findByID({
+        collection: 'orders',
+        id: input.orderId,
+        depth: 0,
+        req: ctx.req,
+        overrideAccess: true,
+      }) as any
+
+      if (!freshOrder) {
+        throw new CheckoutFinalizationError(`Order ${input.orderId} desapareceu entre leituras.`)
+      }
+
+      if (freshOrder.orderStatus !== 'draft') {
+        return {
+          order: freshOrder,
+          kind: 'already_prepared',
+          checkoutAttemptId: freshOrder.checkoutAttemptId,
+        }
+      }
+
+      const checkoutAttemptId = freshOrder.checkoutAttemptId || crypto.randomUUID()
+      const hasTotal = freshOrder.total !== null && freshOrder.total !== undefined
+      const nextStatus: 'pending_payment' | 'draft' = hasTotal ? 'pending_payment' : 'draft'
+
+      const updated = await payload.update({
+        collection: 'orders',
+        id: input.orderId,
+        data: {
+          checkoutAttemptId,
+          orderStatus: nextStatus,
+        } as any,
+        req: ctx.req,
+        overrideAccess: true,
+      })
+
+      return {
+        order: updated,
+        kind: hasTotal ? 'prepared' : 'draft' as const,
+        checkoutAttemptId,
+      }
+    })
+  }
+
   // Calcular subtotal a partir dos items da Order (server-side)
   const items = (order.items as any[]) || []
   const subtotal = items.reduce((acc: number, item: any) => acc + (Number(item.lineTotal) || 0), 0)

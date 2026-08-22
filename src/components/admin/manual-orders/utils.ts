@@ -41,10 +41,18 @@ export function buildManualOrderRequest(
     billingAddress: draft.billingSameAsShipping
       ? undefined
       : serializeAddress(draft.billingAddress),
-    items: draft.items.map(({ flowerId, qty }) => ({ flowerId, qty })),
+    items: draft.items.map(({ name, qty, price }) => ({
+      name: name.trim(),
+      qty,
+      price,
+    })),
     coupon: optional(draft.coupon)?.toUpperCase(),
     internalNote: optional(draft.internalNote),
     locale: "pt",
+    shipping: {
+      amount: draft.shipping.amount ?? undefined,
+      needsConfirmation: draft.shipping.needsConfirmation,
+    },
   };
 }
 

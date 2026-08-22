@@ -1,14 +1,3 @@
-export type ManualOrderProduct = {
-  id: number;
-  name: string;
-  sku?: string | null;
-  price: number;
-  availability?: string | null;
-  productionMode?: string | null;
-  shippingClass?: string | null;
-  stockQuantity?: number | null;
-};
-
 export type ManualSalesChannel =
   "phone" | "in_person" | "whatsapp" | "instagram" | "other";
 
@@ -33,9 +22,10 @@ export type CustomerInput = {
   taxId: string;
 };
 
-export type SelectedItem = {
-  flowerId: number;
+export type FreeItem = {
+  name: string;
   qty: number;
+  price: number;
 };
 
 export type ManualOrderDraft = {
@@ -45,9 +35,13 @@ export type ManualOrderDraft = {
   shippingAddress: AddressInput;
   billingSameAsShipping: boolean;
   billingAddress: AddressInput;
-  items: SelectedItem[];
+  items: FreeItem[];
   coupon: string;
   internalNote: string;
+  shipping: {
+    amount: number | null;
+    needsConfirmation: boolean;
+  };
 };
 
 export type ManualOrderRequest = {
@@ -80,15 +74,18 @@ export type ManualOrderRequest = {
     postalCode?: string;
     country: string;
   };
-  items: SelectedItem[];
+  items: FreeItem[];
   coupon?: string;
   internalNote?: string;
   locale: "pt";
+  shipping?: {
+    amount?: number | null;
+    needsConfirmation: boolean;
+  };
 };
 
 export type ManualOrderQuote = {
   items: Array<{
-    flowerId?: number;
     name: string;
     qty: number;
     price: number;

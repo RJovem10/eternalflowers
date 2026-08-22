@@ -7,6 +7,7 @@ import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ManualOrderDraft } from "./types";
 import { buildManualOrderRequest, createRequestId } from "./utils";
+import { validateDraft } from "./ManualOrderForm";
 
 const mockUseDocumentInfo = vi.fn();
 const mockUseFormFields = vi.fn();
@@ -47,9 +48,10 @@ function draft(): ManualOrderDraft {
       postalCode: "",
       country: "PT",
     },
-    items: [{ flowerId: 7, qty: 2 }],
+    items: [{ name: "Orquídea", qty: 2, price: 35 }],
     coupon: "",
     internalNote: "",
+    shipping: { amount: null, needsConfirmation: false },
   };
 }
 
@@ -68,7 +70,7 @@ describe("pedido enviado pelo formulário manual", () => {
 
     expect(request.customer).toEqual({ name: "Maria", phone: "912345678" });
     expect(request.billingAddress).toBeUndefined();
-    expect(request.items).toEqual([{ flowerId: 7, qty: 2 }]);
+    expect(request.items).toEqual([{ name: "Orquídea", qty: 2, price: 35 }]);
     expect(request.shippingAddress.country).toBe("PT");
     expect(request).not.toHaveProperty("price");
     expect(request).not.toHaveProperty("subtotal");
@@ -76,6 +78,10 @@ describe("pedido enviado pelo formulário manual", () => {
     expect(request).not.toHaveProperty("total");
     expect(request).not.toHaveProperty("orderStatus");
     expect(request).not.toHaveProperty("paymentStatus");
+    expect(request.shipping).toEqual({
+      amount: undefined,
+      needsConfirmation: false,
+    });
   });
 
   it("cria requestIds UUID v4", () => {
@@ -92,19 +98,7 @@ describe("segurança dos botões no formulário Payload", () => {
   });
 
   it('todos os botões da criação têm type="button" explícito', () => {
-    render(
-      <ManualOrderForm
-        products={[
-          {
-            id: 7,
-            name: "Orquídea",
-            price: 35,
-            availability: "available",
-            stockQuantity: 1,
-          },
-        ]}
-      />,
-    );
+    render(<ManualOrderForm />);
 
     for (const button of screen.getAllByRole("button")) {
       expect(button).toHaveAttribute("type", "button");
@@ -143,5 +137,149 @@ describe("segurança dos botões no formulário Payload", () => {
 
     const { container } = render(<ManualOrderPaymentActions />);
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe("validateDraft — validação do formulário manual", () => {
+  function validDraft(): ManualOrderDraft {
+    return {
+      requestId: "550e8400-e29b-41d4-a716-446655440000",
+      salesChannel: "whatsapp",
+      customer: { name: "Maria", phone: "912345678", email: "", taxId: "" },
+      shippingAddress: {
+        recipientName: "Maria",
+        phone: "",
+        line1: "Rua das Flores, 1",
+        line2: "",
+        city: "Braga",
+        region: "",
+        postalCode: "4700-000",
+        country: "PT",
+      },
+      billingSameAsShipping: true,
+      billingAddress: {
+        recipientName: "",
+        phone: "",
+        line1: "",
+        line2: "",
+        city: "",
+        region: "",
+        postalCode: "",
+        country: "PT",
+      },
+      items: [{ name: "Orquídea", qty: 2, price: 35 }],
+      coupon: "",
+      internalNote: "",
+      shipping: { amount: 5, needsConfirmation: false },
+    };
+  }
+
+  it("válido → null", () => {
+    expect(validateDraft(validDraft())).toBeNull();
+  });
+
+  it("items vazio → «Adiciona pelo menos um artigo.»", () => {
+    const result = validateDraft({ ...validDraft(), items: [] });
+    expect(result).toBe("Adiciona pelo menos um artigo.");
+  });
+
+  it("name vazio → «Preenche o nome de todos os artigos.»", () => {
+    const result = validateDraft({
+      ...validDraft(),
+      items: [{ name: "", qty: 2, price: 35 }],
+    });
+    expect(result).toBe("Preenche o nome de todos os artigos.");
+  });
+
+  it("name só espaços → «Preenche o nome de todos os artigos.»", () => {
+    const result = validateDraft({
+      ...validDraft(),
+      items: [{ name: "   ", qty: 2, price: 35 }],
+    });
+    expect(result).toBe("Preenche o nome de todos os artigos.");
+  });
+
+  it("price negativo → rejeitado", () => {
+    const result = validateDraft({
+      ...validDraft(),
+      items: [{ name: "Orquídea", qty: 2, price: -1 }],
+    });
+    expect(result).toBe(
+      "O preço de todos os artigos tem de ser um número válido maior ou igual a 0.",
+    );
+  });
+
+  it("price NaN → rejeitado", () => {
+    const result = validateDraft({
+      ...validDraft(),
+      items: [{ name: "Orquídea", qty: 2, price: NaN }],
+    });
+    expect(result).toBe(
+      "O preço de todos os artigos tem de ser um número válido maior ou igual a 0.",
+    );
+  });
+
+  it("price 0 → aceite", () => {
+    const result = validateDraft({
+      ...validDraft(),
+      items: [{ name: "Brinde", qty: 1, price: 0 }],
+    });
+    expect(result).toBeNull();
+  });
+
+  it("qty 0 → rejeitado", () => {
+    const result = validateDraft({
+      ...validDraft(),
+      items: [{ name: "Orquídea", qty: 0, price: 35 }],
+    });
+    expect(result).toBe(
+      "As quantidades dos artigos têm de ser números inteiros positivos.",
+    );
+  });
+
+  it("qty decimal → rejeitado", () => {
+    const result = validateDraft({
+      ...validDraft(),
+      items: [{ name: "Orquídea", qty: 1.5, price: 35 }],
+    });
+    expect(result).toBe(
+      "As quantidades dos artigos têm de ser números inteiros positivos.",
+    );
+  });
+
+  it("shipping vazio sem needsConfirmation → rejeitado", () => {
+    const result = validateDraft({
+      ...validDraft(),
+      shipping: { amount: null, needsConfirmation: false },
+    });
+    expect(result).toBe(
+      "Indica o valor dos portes ou seleciona «Portes a confirmar».",
+    );
+  });
+
+  it("shipping amount negativo → rejeitado", () => {
+    const result = validateDraft({
+      ...validDraft(),
+      shipping: { amount: -1, needsConfirmation: false },
+    });
+    expect(result).toBe(
+      "Indica o valor dos portes ou seleciona «Portes a confirmar».",
+    );
+  });
+
+  it("shipping 0 com needsConfirmation=false → aceite", () => {
+    const result = validateDraft({
+      ...validDraft(),
+      shipping: { amount: 0, needsConfirmation: false },
+    });
+    expect(result).toBeNull();
+  });
+
+  it("shipping needsConfirmation=true → amount ignorado", () => {
+    const result = validateDraft({
+      ...validDraft(),
+      shipping: { amount: null, needsConfirmation: true },
+    });
+    expect(result).toBeNull();
   });
 });

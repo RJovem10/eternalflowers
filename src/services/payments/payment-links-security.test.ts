@@ -48,7 +48,7 @@ function baseOrder(overrides: Record<string, any> = {}) {
     shippingCost: 8,
     total: 108,
     items: [{
-      flower: 1,
+      flower: null,
       name: 'Rosa',
       price: 50,
       qty: 2,
@@ -126,17 +126,9 @@ describe('secure manual Stripe payment links', () => {
     })
   })
 
-  it('K: caps link lifetime at the earliest stock-reservation expiry', async () => {
+  it('K: manual orders have no reservations — link lifetime = TTL (24h)', async () => {
     const payload = createPayload()
-    reservations.push({
-      id: 8,
-      order: 42,
-      flower: 1,
-      quantity: 0,
-      status: 'active',
-      expiresAt: '2030-01-01T04:00:00.000Z',
-    })
-
+    // Manual orders skip reservation validation, so link lifetime is the full TTL
     const issued = await issueManualPaymentLink(payload, {
       orderId: 42,
       issuedBy: 9,
@@ -144,7 +136,8 @@ describe('secure manual Stripe payment links', () => {
       ttlMs: 24 * 60 * 60 * 1000,
     })
 
-    expect(issued.expiresAt).toBe('2030-01-01T02:00:00.000Z')
+    // No reservations to cap — full TTL applies
+    expect(issued.expiresAt).toBe('2030-01-02T00:00:00.000Z')
   })
 
   it('L: resolves the order by token hash and asks Stripe to use only the stored order id', async () => {
@@ -174,10 +167,11 @@ describe('secure manual Stripe payment links', () => {
       now: NOW,
     })
 
+    // Manual orders have no reservations, so the link expires after the TTL (24h)
     await expect(createPaymentSessionFromLink(
       payload,
       issued.token,
-      new Date('2030-01-01T02:00:00.001Z'),
+      new Date('2030-01-03T00:00:00.001Z'),
     )).rejects.toMatchObject({ code: 'PAYMENT_LINK_EXPIRED' })
     expect(mocks.createPaymentForOrder).not.toHaveBeenCalled()
   })
@@ -211,16 +205,11 @@ describe('secure manual Stripe payment links', () => {
     expect(mocks.createPaymentForOrder).not.toHaveBeenCalled()
   })
 
-  it('K: fails closed when any required reservation is missing, mismatched, or inactive', async () => {
+  it('K: manual orders skip stock reservation validation — link issued regardless of reservation state', async () => {
     const payload = createPayload()
-    reservations[0].quantity = 1
-    await expect(issueManualPaymentLink(payload, { orderId: 42, issuedBy: 9, now: NOW }))
-      .rejects.toMatchObject({ code: 'PAYMENT_LINK_NOT_ALLOWED' })
-
-    reservations[0].quantity = 2
-    reservations[0].status = 'released'
-    await expect(issueManualPaymentLink(payload, { orderId: 42, issuedBy: 9, now: NOW }))
-      .rejects.toMatchObject({ code: 'PAYMENT_LINK_EXPIRED' })
-    expect(payload.update).not.toHaveBeenCalled()
+    // Manual orders skip reservation validation, so even invalid reservations don't block
+    const issued = await issueManualPaymentLink(payload, { orderId: 42, issuedBy: 9, now: NOW })
+    expect(issued.token).toMatch(/^[A-Za-z0-9_-]{43}$/)
+    expect(order.paymentLinkTokenHash).toBeDefined()
   })
 })

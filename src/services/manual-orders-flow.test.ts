@@ -44,10 +44,6 @@ let reservations: any[]
 let nextOrderID: number
 let nextReservationID: number
 
-function relationID(value: any): number {
-  return Number(typeof value === 'object' ? value?.id : value)
-}
-
 function createPayload() {
   const find = vi.fn(async ({ collection, where, limit = 10 }: any) => {
     if (collection === 'orders') {
@@ -86,7 +82,7 @@ function createPayload() {
         ))
       }
       if (where?.flower?.equals !== undefined) {
-        docs = docs.filter((reservation) => relationID(reservation.flower) === Number(where.flower.equals))
+        docs = docs.filter((reservation) => Number(reservation.flower) === Number(where.flower.equals))
       }
       if (where?.status?.equals) {
         docs = docs.filter((reservation) => reservation.status === where.status.equals)
@@ -156,9 +152,9 @@ function manualInput(overrides: Record<string, any> = {}): CreateManualOrderInpu
       country: 'PT',
     },
     billingSameAsShipping: true,
-    items: [{ flowerId: 1, qty: 2 }],
+    items: [{ name: 'Orquídea', qty: 2, price: 35 }],
     locale: 'pt',
-    internalNote: 'Pedido recebido no WhatsApp.',
+    shipping: { amount: 8, needsConfirmation: false },
     ...overrides,
   }
 }
@@ -193,6 +189,10 @@ describe('manual order domain flow', () => {
     nextReservationID = 0
   })
 
+  // ────────────────────────────────────────────────────────────────
+  //  A/B — Website (createOrder)
+  // ────────────────────────────────────────────────────────────────
+
   it('A/B: public checkout still requires email and retains website defaults', async () => {
     const payload = createPayload()
 
@@ -210,6 +210,29 @@ describe('manual order domain flow', () => {
     })
   })
 
+  it('website order rejects invalid locale', async () => {
+    const payload = createPayload()
+    await expect(createOrder(payload, websiteInput({ locale: 'zz' })))
+      .rejects.toThrow(OrderValidationError)
+  })
+
+  it('website order rejects invalid country', async () => {
+    const payload = createPayload()
+    await expect(createOrder(payload, websiteInput({
+      shippingAddress: {
+        recipientName: 'Fora UE',
+        line1: 'Via Roma, 1',
+        city: 'Roma',
+        postalCode: '00100',
+        country: 'XX',
+      },
+    }))).rejects.toThrow(OrderValidationError)
+  })
+
+  // ────────────────────────────────────────────────────────────────
+  //  C–E — Manual order creation (createManualOrder)
+  // ────────────────────────────────────────────────────────────────
+
   it('C: accepts a manual order without email without weakening the legacy column', async () => {
     const payload = createPayload()
     const result = await createManualOrder(payload, manualInput())
@@ -219,7 +242,6 @@ describe('manual order domain flow', () => {
     expect(result.order).toMatchObject({
       orderSource: 'manual',
       salesChannel: 'whatsapp',
-      internalNote: 'Pedido recebido no WhatsApp.',
       paymentProvider: null,
       paymentStatus: 'unpaid',
       orderStatus: 'draft',
@@ -240,36 +262,22 @@ describe('manual order domain flow', () => {
     expect(result.order.email).toBe('maria@example.com')
   })
 
-  it('E: ignores browser prices, totals and statuses and uses the database flower snapshot', async () => {
+  it('E: manual order uses free-item name/qty/price directly, items have flower=null', async () => {
     const payload = createPayload()
-    const malicious = manualInput({
-      items: [{
-        flowerId: 1,
-        qty: 2,
-        price: 0.01,
-        name: 'Produto forjado',
-        lineTotal: 0.02,
-      }],
-      subtotal: 0.02,
-      discount: 9999,
-      shippingCost: 0,
-      total: 0.01,
-      orderStatus: 'completed',
-      paymentStatus: 'paid',
-      paymentProvider: 'manual',
-      paidAt: '2000-01-01T00:00:00.000Z',
-    } as any)
+    const result = await createManualOrder(payload, manualInput({
+      items: [{ name: 'Orquídea', qty: 2, price: 35 }],
+    }))
 
-    const result = await createManualOrder(payload, malicious)
-    expect(result.order.items).toEqual([expect.objectContaining({
-      flower: 1,
-      name: 'Rosa de catálogo',
-      price: 25.5,
+    expect(result.order.items).toHaveLength(1)
+    expect(result.order.items[0]).toMatchObject({
+      flower: null,
+      name: 'Orquídea',
       qty: 2,
-      lineTotal: 51,
-    })])
+      price: 35,
+      lineTotal: 70,
+    })
     expect(result.order).toMatchObject({
-      subtotal: 51,
+      subtotal: 70,
       discount: 0,
       shippingCost: null,
       total: null,
@@ -277,91 +285,174 @@ describe('manual order domain flow', () => {
       paymentStatus: 'unpaid',
       paymentProvider: null,
     })
-    expect(result.order).not.toHaveProperty('paidAt')
   })
 
-  it('E/H: aggregates duplicate product rows before calculating and reserving stock', async () => {
+  it('E-bis: aggregates duplicate manual items by name+price', async () => {
     const payload = createPayload()
-    const created = await createManualOrder(payload, manualInput({
-      items: [{ flowerId: 1, qty: 1 }, { flowerId: 1, qty: 2 }],
+    const result = await createManualOrder(payload, manualInput({
+      items: [
+        { name: 'Orquídea', qty: 1, price: 35 },
+        { name: 'Orquídea', qty: 3, price: 35 },
+      ],
     }))
 
-    expect(created.order.items).toHaveLength(1)
-    expect(created.order.items[0]).toMatchObject({ flower: 1, qty: 3, lineTotal: 76.5 })
-
-    const prepared = await prepareOrderForPayment(payload, { orderId: created.order.id })
-    expect(prepared.order.orderStatus).toBe('pending_payment')
-    expect(reservations).toHaveLength(1)
-    expect(reservations[0]).toMatchObject({ flower: 1, quantity: 3, status: 'active', order: created.order.id })
+    expect(result.order.items).toHaveLength(1)
+    expect(result.order.items[0]).toMatchObject({
+      flower: null,
+      name: 'Orquídea',
+      qty: 4,
+      price: 35,
+      lineTotal: 140,
+    })
   })
 
-  it('F: previews and prepares standard shipping with the shared fixed-shipping rules', async () => {
+  it('E-ter: different manual item names are kept separate', async () => {
     const payload = createPayload()
-    const input = manualInput({ items: [{ flowerId: 1, qty: 2 }] })
+    const result = await createManualOrder(payload, manualInput({
+      items: [
+        { name: 'Orquídea', qty: 1, price: 35 },
+        { name: 'Ramo personalizado', qty: 1, price: 50 },
+      ],
+    }))
 
-    const preview = await previewManualOrder(payload, input)
+    expect(result.order.items).toHaveLength(2)
+    expect(result.order.items[0]).toMatchObject({ name: 'Orquídea', qty: 1, price: 35 })
+    expect(result.order.items[1]).toMatchObject({ name: 'Ramo personalizado', qty: 1, price: 50 })
+  })
+
+  // ────────────────────────────────────────────────────────────────
+  //  F–G — Manual order preview (previewManualOrder)
+  // ────────────────────────────────────────────────────────────────
+
+  it('F: preview manual order with shipping amount — pending_payment', async () => {
+    const payload = createPayload()
+    const preview = await previewManualOrder(payload, manualInput({
+      items: [{ name: 'Orquídea', qty: 2, price: 35 }],
+      shipping: { amount: 8, needsConfirmation: false },
+    }))
+
     expect(preview).toMatchObject({
-      subtotal: 51,
+      items: [{ name: 'Orquídea', qty: 2, price: 35, lineTotal: 70 }],
+      subtotal: 70,
       discount: 0,
       shippingCost: 8,
-      total: 59,
+      total: 78,
       orderStatus: 'pending_payment',
-    })
-
-    const created = await createManualOrder(payload, input)
-    const prepared = await prepareOrderForPayment(payload, { orderId: created.order.id })
-    expect(prepared.order).toMatchObject({
-      shippingCost: 8,
-      total: 59,
-      shippingProvider: 'fixed',
-      orderStatus: 'pending_payment',
-      paymentStatus: 'unpaid',
     })
   })
 
-  it('G: cúpula is reserved but remains awaiting_shipping with no payable total', async () => {
+  it('F-bis: preview with 0 shipping amount — free shipping, pending_payment', async () => {
     const payload = createPayload()
-    const input = manualInput({ items: [{ flowerId: 3, qty: 1 }] })
-
-    const preview = await previewManualOrder(payload, input)
-    expect(preview).toMatchObject({
-      subtotal: 120,
-      shippingCost: null,
-      total: null,
-      orderStatus: 'awaiting_shipping',
-    })
-
-    const created = await createManualOrder(payload, input)
-    const prepared = await prepareOrderForPayment(payload, { orderId: created.order.id })
-    expect(prepared.order).toMatchObject({
-      shippingCost: null,
-      total: null,
-      paymentProvider: null,
-      paymentStatus: 'unpaid',
-      orderStatus: 'awaiting_shipping',
-    })
-    expect(reservations).toHaveLength(1)
-    expect(new Date(reservations[0].expiresAt).getTime()).toBeGreaterThan(Date.now() + 47 * 60 * 60 * 1000)
-  })
-
-  it('H: unique product cannot reserve more than one unit', async () => {
-    const payload = createPayload()
-    const created = await createManualOrder(payload, manualInput({
-      items: [{ flowerId: 2, qty: 2 }],
+    const preview = await previewManualOrder(payload, manualInput({
+      items: [{ name: 'Orquídea', qty: 2, price: 35 }],
+      shipping: { amount: 0, needsConfirmation: false },
     }))
 
-    await expect(prepareOrderForPayment(payload, { orderId: created.order.id }))
-      .rejects.toThrow(/unique só aceita quantity=1/)
-    expect(reservations).toHaveLength(0)
+    expect(preview).toMatchObject({
+      subtotal: 70,
+      discount: 0,
+      shippingCost: 0,
+      total: 70,
+      orderStatus: 'pending_payment',
+    })
   })
 
-  it('rejects first-order-only coupons safely when a manual order has no email', async () => {
+  it('G: preview manual order with needsConfirmation — awaiting_shipping', async () => {
+    const payload = createPayload()
+    const preview = await previewManualOrder(payload, manualInput({
+      items: [{ name: 'Orquídea', qty: 2, price: 35 }],
+      shipping: { needsConfirmation: true },
+    }))
+
+    expect(preview).toMatchObject({
+      items: [{ name: 'Orquídea', qty: 2, price: 35, lineTotal: 70 }],
+      subtotal: 70,
+      discount: 0,
+      shippingCost: null,
+      total: null,
+      orderStatus: 'awaiting_shipping',
+    })
+  })
+
+  // ────────────────────────────────────────────────────────────────
+  //  H–J — Manual order validation errors
+  // ────────────────────────────────────────────────────────────────
+
+  it('H: manual order rejects missing shipping field', async () => {
+    const payload = createPayload()
+    await expect(createManualOrder(payload, manualInput({ shipping: undefined })))
+      .rejects.toThrow(OrderValidationError)
+  })
+
+  it('I: manual order rejects invalid salesChannel', async () => {
+    const payload = createPayload()
+    await expect(createManualOrder(payload, manualInput({ salesChannel: 'telegram' } as any)))
+      .rejects.toThrow(OrderValidationError)
+  })
+
+  it('J: manual order rejects first-order-only coupon when no email', async () => {
     const payload = createPayload()
     await expect(createManualOrder(payload, manualInput({ coupon: 'FIRST' })))
       .rejects.toThrow(CouponValidationError)
   })
 
-  it('Q: namespaces manual idempotency separately from existing website orders', async () => {
+  it('J-bis: manual order with email can use first-order coupon', async () => {
+    const payload = createPayload()
+    const result = await createManualOrder(payload, manualInput({
+      customer: {
+        name: 'Maria Silva',
+        phone: '+351 912 345 678',
+        email: 'maria@example.com',
+      },
+      coupon: 'FIRST',
+    }))
+
+    expect(result.order.coupon).toBe('FIRST')
+    // 10% de 70 = 7
+    expect(result.order.discount).toBe(7)
+  })
+
+  // ────────────────────────────────────────────────────────────────
+  //  K — Manual order validation: negative price / empty name
+  // ────────────────────────────────────────────────────────────────
+
+  it('K: manual order rejects item with negative price', async () => {
+    const payload = createPayload()
+    await expect(createManualOrder(payload, manualInput({
+      items: [{ name: 'Item mau', qty: 1, price: -5 }],
+    }))).rejects.toThrow(/preço inválido|negativo/i)
+  })
+
+  it('K-bis: manual order rejects item with empty name', async () => {
+    const payload = createPayload()
+    await expect(createManualOrder(payload, manualInput({
+      items: [{ name: '  ', qty: 1, price: 10 }],
+    }))).rejects.toThrow(OrderValidationError)
+  })
+
+  // ────────────────────────────────────────────────────────────────
+  //  L — Manual order validation: shipping amount must be >= 0
+  // ────────────────────────────────────────────────────────────────
+
+  it('L: manual order rejects negative shipping amount', async () => {
+    const payload = createPayload()
+    await expect(createManualOrder(payload, manualInput({
+      shipping: { amount: -5, needsConfirmation: false },
+    }))).rejects.toThrow(OrderValidationError)
+  })
+
+  it('L-bis: manual order rejects missing amount when needsConfirmation=false', async () => {
+    const payload = createPayload()
+    await expect(createManualOrder(payload, manualInput({
+      shipping: { needsConfirmation: false },
+    } as any))).rejects.toThrow(OrderValidationError)
+  })
+
+  // ────────────────────────────────────────────────────────────────
+  //  M — Manual order idempotency
+  // ────────────────────────────────────────────────────────────────
+
+  it('M: namespaces manual idempotency separately from existing website orders', async () => {
     const payload = createPayload()
     const website = await createOrder(payload, websiteInput())
     const manual = await createManualOrder(payload, manualInput())
@@ -370,5 +461,99 @@ describe('manual order domain flow', () => {
     expect(website.order.orderSource).toBe('website')
     expect(manual.order.orderSource).toBe('manual')
     expect(website.order.checkoutRequestHash).not.toBe(manual.order.checkoutRequestHash)
+  })
+
+  it('M-bis: same manual checkoutRequestId returns existing order (idempotency)', async () => {
+    const payload = createPayload()
+    const first = await createManualOrder(payload, manualInput())
+    const second = await createManualOrder(payload, manualInput())
+
+    expect(second.order.id).toBe(first.order.id)
+  })
+
+  // ────────────────────────────────────────────────────────────────
+  //  N — Manual order: prepareOrderForPayment does NOT reserve stock
+  // ────────────────────────────────────────────────────────────────
+
+  it('N: prepareOrderForPayment for manual order skips stock reservations', async () => {
+    const payload = createPayload()
+    const created = await createManualOrder(payload, manualInput({
+      items: [{ name: 'Orquídea', qty: 2, price: 35 }],
+      shipping: { amount: 8, needsConfirmation: false },
+    }))
+
+    // Order created with null total/shipping — draft
+    expect(created.order.orderStatus).toBe('draft')
+    expect(created.order.total).toBeNull()
+
+    // prepareOrderForPayment: hasTotal=false → stays draft (no stock reservations)
+    const prepared = await prepareOrderForPayment(payload, { orderId: created.order.id })
+    expect(prepared.order.orderStatus).toBe('draft')
+    expect(reservations).toHaveLength(0)
+  })
+
+  it('N-bis: manual order with total set transitions to pending_payment on prepare', async () => {
+    const payload = createPayload()
+    const created = await createManualOrder(payload, manualInput({
+      items: [{ name: 'Orquídea', qty: 2, price: 35 }],
+      shipping: { amount: 8, needsConfirmation: false },
+    }))
+
+    // Simulate an admin setting the shipping and total on the order
+    // (the admin endpoint would do this before prepareOrderForPayment)
+    await payload.update({
+      collection: 'orders',
+      id: created.order.id,
+      data: { shippingCost: 8, total: 78 },
+    })
+
+    const prepared = await prepareOrderForPayment(payload, { orderId: created.order.id })
+    expect(prepared.order.orderStatus).toBe('pending_payment')
+    expect(prepared.kind).toBe('prepared')
+    expect(reservations).toHaveLength(0)
+  })
+
+  // ────────────────────────────────────────────────────────────────
+  //  O — Manual order Coupon with discount
+  // ────────────────────────────────────────────────────────────────
+
+  it('O: manual order applies coupon discount to subtotal', async () => {
+    const payload = createPayload()
+    // Use a valid coupon code — we need one that doesn't require firstOrderOnly
+    // Patch the mock to return a non-firstOrder coupon
+    const find = vi.fn(async ({ collection, where }: any) => {
+      if (collection === 'orders') return { docs: [], totalDocs: 0 }
+      if (collection === 'coupons') {
+        if (where?.code?.equals === 'PCT10') {
+          return {
+            docs: [{
+              id: 2,
+              code: 'PCT10',
+              type: 'percent',
+              value: 10,
+              active: true,
+              firstOrderOnly: false,
+              usesCount: 0,
+              maxUses: 0,
+            }],
+            totalDocs: 1,
+          }
+        }
+        return { docs: [], totalDocs: 0 }
+      }
+      if (collection === 'stock-reservations') return { docs: [], totalDocs: 0 }
+      return { docs: [], totalDocs: 0 }
+    })
+
+    const payload2 = { ...createPayload(), find }
+    const result = await createManualOrder(payload2, manualInput({
+      items: [{ name: 'Orquídea', qty: 2, price: 50 }],
+      coupon: 'PCT10',
+    }))
+
+    // subtotal = 100, 10% discount = 10
+    expect(result.order.subtotal).toBe(100)
+    expect(result.order.discount).toBe(10)
+    expect(result.order.coupon).toBe('PCT10')
   })
 })

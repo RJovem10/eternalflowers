@@ -145,6 +145,9 @@ export async function validateActiveOrderReservations(
   now: Date,
   req?: any,
 ): Promise<Date | null> {
+  // Manual orders não têm stock reservations
+  if (order.orderSource === 'manual') return null
+
   const expected = new Map<number, number>()
   for (const item of (order.items as any[]) || []) {
     if (item.productionMode === 'made_to_order') continue

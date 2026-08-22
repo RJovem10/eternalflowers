@@ -208,7 +208,7 @@ async function prePaymentCancel(
     }
 
     // Libertar reservas
-    const reservationsReleased = await releaseOrderReservations(ctx, payload, orderId)
+    const reservationsReleased = await releaseOrderReservations(ctx, payload, orderId, freshOrder.orderSource)
     const now = new Date().toISOString()
 
     // Marcar Order como cancelled
@@ -370,7 +370,7 @@ async function manualPaidRefundCancel(
       )
     }
 
-    const stockRestored = await restoreConfirmedOrderStock(ctx, payload, orderId)
+    const stockRestored = await restoreConfirmedOrderStock(ctx, payload, orderId, 'manual')
     const refundedAt = new Date().toISOString()
 
     await payload.update({
@@ -479,7 +479,7 @@ async function paidRefundCancel(
 
     // Restaurar stock físico (unique/reproducible)
     console.log('[order-cancel] stage=stock-restore:start orderId=' + orderId)
-    const stockRestored = await restoreConfirmedOrderStock(ctx, payload, orderId)
+    const stockRestored = await restoreConfirmedOrderStock(ctx, payload, orderId, freshOrder.orderSource)
     console.log('[order-cancel] stage=stock-restore:done orderId=' + orderId + ' restored=' + stockRestored)
 
     if (freshOrder.stripeRefundId && freshOrder.stripeRefundId !== refundId) {
@@ -630,7 +630,11 @@ async function releaseOrderReservations(
   ctx: TransactionCtx,
   payload: Payload,
   orderId: number,
+  orderSource?: string,
 ): Promise<boolean> {
+  // Manual orders não têm reservas — nunca libertar
+  if (orderSource === 'manual') return false
+
   const reservations = await payload.find({
     collection: 'stock-reservations' as any,
     where: {
@@ -668,7 +672,11 @@ async function restoreConfirmedOrderStock(
   ctx: TransactionCtx,
   payload: Payload,
   orderId: number,
+  orderSource?: string,
 ): Promise<boolean> {
+  // Manual orders não têm reservas de stock — nunca restaurar
+  if (orderSource === 'manual') return false
+
   const items = await payload.find({
     collection: 'stock-reservations' as any,
     where: {

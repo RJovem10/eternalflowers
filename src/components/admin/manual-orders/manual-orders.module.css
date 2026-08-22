@@ -223,6 +223,26 @@
   font-weight: 600;
 }
 
+.priceInputWrapper {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+  position: relative;
+}
+
+.pricePrefix {
+  color: var(--theme-elevation-600, #666);
+  font-size: 14px;
+  font-weight: 600;
+  user-select: none;
+}
+
+.priceInput {
+  composes: input;
+  max-width: 120px;
+  padding-left: 6px;
+}
+
 .productMeta {
   color: var(--theme-elevation-600, #666);
   display: block;

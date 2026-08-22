@@ -67,7 +67,10 @@ export async function confirmCupulaShippingQuote(
       throw new CupulaShippingConfirmationError('Já existe um pagamento Stripe associado.')
     }
 
-    await validateActiveOrderReservations(payload, order, new Date(), ctx.req)
+    // Manual orders não têm stock reservations para validar
+    if (order.orderSource !== 'manual') {
+      await validateActiveOrderReservations(payload, order, new Date(), ctx.req)
+    }
     const subtotal = Number(order.subtotal)
     const discount = Number(order.discount) || 0
     const total = Number((subtotal - discount + shippingCost).toFixed(2))

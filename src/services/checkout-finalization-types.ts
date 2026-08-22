@@ -34,7 +34,7 @@ export interface PrepareOrderInput {
 export interface PrepareOrderResult {
   order: any
   /** Indica se foi criada desta vez ou reutilizada existente */
-  kind: 'prepared' | 'already_prepared'
+  kind: 'prepared' | 'already_prepared' | 'draft'
   checkoutAttemptId: string
 }
 

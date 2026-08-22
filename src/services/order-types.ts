@@ -41,6 +41,14 @@ export interface OrderItemInput {
   qty: number
 }
 
+// ─── Manual order item input (sem catálogo — nome + preço livre) ─
+
+export interface ManualOrderItemInput {
+  name: string
+  qty: number
+  price: number
+}
+
 // ─── CreateOrderInput ─────────────────────────────────────────
 
 export interface CreateOrderInput {
@@ -65,6 +73,13 @@ export const MANUAL_SALES_CHANNELS = [
 
 export type ManualSalesChannel = (typeof MANUAL_SALES_CHANNELS)[number]
 
+// ─── Manual shipping input ──────────────────────────────────────
+
+export interface ManualShippingInput {
+  amount?: number
+  needsConfirmation: boolean
+}
+
 /**
  * Input exclusivo do fluxo administrativo. Mantém email opcional sem
  * enfraquecer o contrato do checkout público (`CreateOrderInput`).
@@ -75,17 +90,17 @@ export interface CreateManualOrderInput {
   shippingAddress: OrderAddressInput
   billingSameAsShipping: boolean
   billingAddress?: OrderAddressInput
-  items: OrderItemInput[]
+  items: ManualOrderItemInput[]
   coupon?: string
   locale: Locale | string
   salesChannel: ManualSalesChannel
   internalNote?: string
+  shipping?: ManualShippingInput
   req?: any
 }
 
 export interface ManualOrderPreview {
   items: Array<{
-    flowerId: number
     name: string
     qty: number
     price: number
@@ -114,7 +129,7 @@ export interface OrderAddressSnapshot {
 // ─── OrderItemSnapshot (calculado server-side) ────────────────
 
 export interface OrderItemSnapshot {
-  flower: number
+  flower?: number | null | undefined
   name: string
   price: number
   qty: number

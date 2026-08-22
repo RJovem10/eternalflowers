@@ -91,8 +91,11 @@ export async function settleOrderPayment(
       return { kind: 'already_processed', orderId: order.id }
     }
 
-    const reservations = await loadOrderReservations(payload, order.id, ctx.req)
-    await confirmExactReservations(ctx, payload, order, reservations)
+    // Manual orders don't go through stock reservation flow — no reservations to confirm
+    if (order.orderSource !== 'manual') {
+      const reservations = await loadOrderReservations(payload, order.id, ctx.req)
+      await confirmExactReservations(ctx, payload, order, reservations)
+    }
     const now = new Date().toISOString()
     const couponRedeemed = await redeemCouponIfNeeded(ctx, payload, order)
 
