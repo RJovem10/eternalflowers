@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
@@ -81,7 +82,14 @@ export default function Header({
             href={`/${locale}`}
             className="flex items-center gap-3 group"
           >
-            <span className="text-2xl">🌺</span>
+            <Image
+              src="/images/eternal-flowers-logo.jpg"
+              alt="Eternal Flowers"
+              width={40}
+              height={40}
+              className="rounded-full object-cover w-9 h-9 lg:w-10 lg:h-10"
+              priority
+            />
             <div>
               <span className="font-display text-lg font-light tracking-wide text-brand-charcoal group-hover:text-brand-gold transition-colors">
                 Eternal Flowers
@@ -117,13 +125,7 @@ export default function Header({
                 </span>
               )}
             </Link>
-            <Link
-              href="/admin"
-              className="text-[10px] uppercase tracking-[0.15em] text-brand-wood/40 hover:text-brand-charcoal/60 transition-colors font-body"
-            >
-              {dict.admin}
-            </Link>
-          </nav>
+            </nav>
 
           {/* Right: Locale + Mobile menu */}
           <div className="flex items-center gap-3">
@@ -214,14 +216,6 @@ export default function Header({
                 </span>
               )}
             </Link>
-            <Link
-              href="/admin"
-              onClick={closeMobileMenu}
-              className="px-3 py-4 text-xs uppercase tracking-[0.15em] hover:text-brand-gold transition-colors duration-300 font-body font-medium"
-            >
-              {dict.admin}
-            </Link>
-
             <div className="mt-4 border-t border-brand-wood/10 px-3 pt-6">
               <LocaleSelector
                 locale={locale}
