@@ -82,7 +82,7 @@ const validBody = {
     country: 'PT',
   },
   billingSameAsShipping: true,
-  items: [{ flowerId: 1, qty: 2 }],
+  items: [{ name: 'Orquídea', qty: 2, price: 35 }],
   locale: 'pt',
 }
 
@@ -270,5 +270,79 @@ describe('manual-order admin endpoint security', () => {
       expect.anything(),
       expect.objectContaining({ orderId: 42, issuedBy: 9 }),
     )
+  })
+
+  it('E: price="abc" no preview → 400 sem criar encomenda', async () => {
+    const body = {
+      ...validBody,
+      items: [{ name: 'Orquídea', qty: 2, price: 'abc' }],
+    }
+    const request = makeRequest({ body })
+    const response = await previewManualOrderHandler(request)
+    const data = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(data.ok).toBe(false)
+    expect(data.code).toBe('ORDER_VALIDATION_ERROR')
+    expect(mocks.previewManualOrder).not.toHaveBeenCalled()
+  })
+
+  it('E: price="abc" no create → 400 sem criar encomenda', async () => {
+    const body = {
+      ...validBody,
+      items: [{ name: 'Orquídea', qty: 2, price: 'abc' }],
+      paymentChoice: 'stripe',
+    }
+    const request = makeRequest({ body })
+    const response = await createManualOrderHandler(request)
+    const data = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(data.ok).toBe(false)
+    expect(data.code).toBe('ORDER_VALIDATION_ERROR')
+    expect(mocks.createManualOrder).not.toHaveBeenCalled()
+  })
+
+  it('E: price=0 no preview → aceite (gratuito)', async () => {
+    const body = {
+      ...validBody,
+      items: [{ name: 'Brinde', qty: 1, price: 0 }],
+    }
+    const request = makeRequest({ body })
+    const response = await previewManualOrderHandler(request)
+    expect(response.status).toBe(200)
+    const mapped = mocks.previewManualOrder.mock.calls[0][1]
+    expect(mapped.items).toEqual([{ name: 'Brinde', qty: 1, price: 0 }])
+  })
+
+  it('E: qty inválido no create → 400', async () => {
+    const body = {
+      ...validBody,
+      items: [{ name: 'Orquídea', qty: 'abc', price: 35 }],
+      paymentChoice: 'stripe',
+    }
+    const request = makeRequest({ body })
+    const response = await createManualOrderHandler(request)
+    const data = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(data.ok).toBe(false)
+    expect(data.code).toBe('ORDER_VALIDATION_ERROR')
+    expect(mocks.createManualOrder).not.toHaveBeenCalled()
+  })
+
+  it('E: name vazio no preview → 400', async () => {
+    const body = {
+      ...validBody,
+      items: [{ name: '', qty: 2, price: 35 }],
+    }
+    const request = makeRequest({ body })
+    const response = await previewManualOrderHandler(request)
+    const data = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(data.ok).toBe(false)
+    expect(data.code).toBe('ORDER_VALIDATION_ERROR')
+    expect(mocks.previewManualOrder).not.toHaveBeenCalled()
   })
 })

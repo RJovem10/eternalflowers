@@ -110,7 +110,7 @@ function paymentStatusLabel(status: string): string {
   return labels[status] || status;
 }
 
-function validateDraft(draft: ManualOrderDraft): string | null {
+export function validateDraft(draft: ManualOrderDraft): string | null {
   if (!draft.customer.name.trim()) return "Preenche o nome do cliente.";
   if (!draft.customer.phone.trim()) return "Preenche o telefone do cliente.";
   if (
@@ -119,9 +119,28 @@ function validateDraft(draft: ManualOrderDraft): string | null {
   ) {
     return "Confirma o email do cliente ou deixa esse campo vazio.";
   }
-  if (draft.items.length === 0) return "Adiciona pelo menos um produto.";
+  if (draft.items.length === 0) return "Adiciona pelo menos um artigo.";
+  if (draft.items.some((item) => !item.name.trim())) {
+    return "Preenche o nome de todos os artigos.";
+  }
   if (draft.items.some((item) => !Number.isInteger(item.qty) || item.qty < 1)) {
-    return "As quantidades dos produtos têm de ser números inteiros positivos.";
+    return "As quantidades dos artigos têm de ser números inteiros positivos.";
+  }
+  if (
+    draft.items.some(
+      (item) => !Number.isFinite(item.price) || item.price < 0,
+    )
+  ) {
+    return "O preço de todos os artigos tem de ser um número válido maior ou igual a 0.";
+  }
+
+  if (
+    !draft.shipping.needsConfirmation &&
+    (draft.shipping.amount === null ||
+      !Number.isFinite(draft.shipping.amount) ||
+      draft.shipping.amount < 0)
+  ) {
+    return "Indica o valor dos portes ou seleciona «Portes a confirmar».";
   }
 
   const shippingError = validateAddress(draft.shippingAddress, "entrega");

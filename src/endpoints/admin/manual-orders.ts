@@ -226,9 +226,22 @@ async function readBody(req: PayloadRequest): Promise<Record<string, unknown>> {
 
 function mapManualInput(body: Record<string, unknown>, req: PayloadRequest): CreateManualOrderInput {
   const rawItems = Array.isArray(body.items) ? body.items : []
+  const errors: string[] = []
   const items = rawItems
     .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
-    .map((item) => ({ name: String(item.name || ''), qty: Number(item.qty) || 0, price: Number(item.price) || 0 }))
+    .map((item, i) => {
+      const name = String(item.name || '')
+      const qty = Number(item.qty)
+      const price = Number(item.price)
+
+      if (!name.trim()) errors.push(`items[${i}].name é obrigatório.`)
+      if (!Number.isInteger(qty) || qty < 1) errors.push(`items[${i}].qty deve ser um inteiro positivo.`)
+      if (!Number.isFinite(price) || price < 0) errors.push(`items[${i}].price deve ser um número não negativo.`)
+
+      return { name: name.trim(), qty, price }
+    })
+
+  if (errors.length > 0) throw new OrderValidationError(errors)
 
   const rawShipping = asObject(body.shipping)
   const shipping: CreateManualOrderInput['shipping'] = rawShipping
