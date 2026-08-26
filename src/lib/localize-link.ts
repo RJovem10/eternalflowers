@@ -3,10 +3,10 @@
  *
  * Rules:
  *   - null/undefined/empty → null
- *   - http://, https://, mailto:, tel:, # → returned as-is (external/special)
+ *   - http://, https://, mailto:, tel:, #... → returned as-is (external/special)
+ *   - anything not starting with "/" → returned as-is (bare word, relative)
  *   - /{locale}/... or /{locale} → replaces existing locale prefix with current
  *   - /... (internal without locale) → prepends /{locale}
- *   - anything else → returned as-is (relative paths, etc.)
  */
 const LOCALE_PREFIX = /^\/(pt|en|es|it|de)(\/|$)/
 
@@ -22,12 +22,17 @@ export function localizeLink(
     link.startsWith('https://') ||
     link.startsWith('mailto:') ||
     link.startsWith('tel:') ||
-    link === '#'
+    link.startsWith('#')
   ) {
     return link
   }
 
-  // Strip existing locale prefix if present, then prepend current locale
+  // Non-absolute paths (no leading "/") — pass through unchanged
+  if (!link.startsWith('/')) {
+    return link
+  }
+
+  // Strip existing locale prefix, then prepend current locale
   const stripped = link.replace(LOCALE_PREFIX, '/')
   const normalized = stripped === '/' ? '' : stripped
   return `/${locale}${normalized}`

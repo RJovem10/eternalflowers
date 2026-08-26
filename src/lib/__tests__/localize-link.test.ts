@@ -7,7 +7,7 @@ import { describe, it, expect } from 'vitest'
 import { localizeLink } from '@/lib/localize-link'
 
 describe('localizeLink — internal links get locale prefix', () => {
-  it('prepends locale to bare internal link', () => {
+  it('/catalog → /{locale}/catalog', () => {
     expect(localizeLink('/catalog', 'en')).toBe('/en/catalog')
     expect(localizeLink('/about', 'pt')).toBe('/pt/about')
   })
@@ -18,9 +18,14 @@ describe('localizeLink — internal links get locale prefix', () => {
     expect(localizeLink('/es/contacto', 'de')).toBe('/de/contacto')
   })
 
-  it('handles locale-only links like /pt', () => {
+  it('handles locale-only links like /pt → /{locale}', () => {
     expect(localizeLink('/pt', 'en')).toBe('/en')
     expect(localizeLink('/en', 'pt')).toBe('/pt')
+  })
+
+  it('bare word without leading "/" is passed through unchanged', () => {
+    expect(localizeLink('catalog', 'en')).toBe('catalog')
+    expect(localizeLink('about', 'pt')).toBe('about')
   })
 
   it('returns external URLs unchanged', () => {
@@ -33,8 +38,10 @@ describe('localizeLink — internal links get locale prefix', () => {
     expect(localizeLink('tel:+351123456789', 'pt')).toBe('tel:+351123456789')
   })
 
-  it('returns # unchanged', () => {
+  it('returns # and #... links unchanged', () => {
     expect(localizeLink('#', 'pt')).toBe('#')
+    expect(localizeLink('#atelier', 'pt')).toBe('#atelier')
+    expect(localizeLink('#section-2', 'en')).toBe('#section-2')
   })
 
   it('returns null for null/undefined/empty', () => {
