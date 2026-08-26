@@ -1,9 +1,16 @@
 import Image from 'next/image'
 import Button from './Button'
+import { localizeLink } from '@/lib/localize-link'
 
 interface FounderHeroProps {
   heroTitle?: string
   heroSubtitle?: string
+  heroImage?: { url?: string | null } | number | null
+  heroImagePosition?: string | null
+  primaryButtonText?: string | null
+  primaryButtonLink?: string | null
+  secondaryButtonText?: string | null
+  secondaryButtonLink?: string | null
   locale?: string
   dict: any
 }
@@ -23,9 +30,25 @@ interface FounderHeroProps {
 export default function FounderHero({
   heroTitle = 'Joias Botânicas\nFeitas à Mão',
   heroSubtitle = 'Cada peça é uma história que o tempo não apaga. Flores verdadeiras, eternizadas em resina pela Marina, em Braga.',
+  heroImage,
+  heroImagePosition,
+  primaryButtonText,
+  primaryButtonLink,
+  secondaryButtonText,
+  secondaryButtonLink,
   locale = 'pt',
   dict,
 }: FounderHeroProps) {
+  // Use Payload image if available, fallback to static
+  const imageUrl = (heroImage && typeof heroImage === 'object' && 'url' in heroImage && heroImage.url) || '/marina-hero.jpg'
+  const objectPosition = heroImagePosition || 'center 30%'
+
+  // Button text/link: Payload first, then dict fallback, then hardcoded fallback
+  const primaryText = primaryButtonText || dict.heroCtaDiscover
+  const primaryHref = localizeLink(primaryButtonLink, locale) || `/${locale}/catalog`
+  const secondaryText = secondaryButtonText || dict.heroCtaAbout
+  const secondaryHref = localizeLink(secondaryButtonLink, locale) || `/${locale}/about`
+
   return (
     <section className="relative min-h-screen bg-brand-cream flex flex-col lg:flex-row overflow-hidden">
       {/* ─── LADO ESQUERDO: TEXTO ─── */}
@@ -54,11 +77,11 @@ export default function FounderHero({
 
           {/* CTAs */}
           <div className="mt-10 lg:mt-12 flex flex-col sm:flex-row gap-4">
-            <Button variant="primary" href={`/${locale}/catalog`}>
-              {dict.heroCtaDiscover}
+            <Button variant="primary" href={primaryHref}>
+              {primaryText}
             </Button>
-            <Button variant="secondary" href={`/${locale}/about`}>
-              {dict.heroCtaAbout}
+            <Button variant="secondary" href={secondaryHref}>
+              {secondaryText}
             </Button>
           </div>
 
@@ -79,10 +102,11 @@ export default function FounderHero({
       <div className="relative w-full lg:w-1/2 min-h-[60vh] lg:min-h-screen bg-brand-charcoal/5 overflow-hidden">
         <div className="absolute inset-0">
           <Image
-            src="/marina-hero.jpg"
+            src={imageUrl}
             alt="Marina no atelier Eternal Flowers, a trabalhar na desidratação de orquídeas"
             fill
-            className="object-cover object-[center_30%]"
+            className="object-cover"
+            style={{ objectPosition }}
             sizes="50vw"
             priority
           />

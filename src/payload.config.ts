@@ -665,6 +665,10 @@ const Categories: CollectionConfig = {
     { name: 'name', type: 'text', required: true, unique: true, label: 'Nome', localized: true },
     { name: 'slug', type: 'text', required: true, unique: true, label: 'Slug' },
     { name: 'description', type: 'textarea', label: 'Descrição', localized: true },
+    { name: 'icon', type: 'text', label: 'Ícone / Emoji' },
+    { name: 'image', type: 'upload', relationTo: 'media', label: 'Imagem' },
+    { name: 'sortOrder', type: 'number', label: 'Ordem', defaultValue: 100 },
+    { name: 'isActive', type: 'checkbox', label: 'Visível', defaultValue: true },
   ],
 }
 
@@ -736,6 +740,21 @@ const Homepage: GlobalConfig = {
         { name: 'primaryButtonLink', type: 'text', required: true, label: 'Link (botão primário)' },
         { name: 'secondaryButtonText', type: 'text', label: 'Texto (botão secundário)', localized: true },
         { name: 'secondaryButtonLink', type: 'text', label: 'Link (botão secundário)' },
+        {
+          name: 'heroImagePosition',
+          type: 'select',
+          label: 'Posição da Imagem',
+          defaultValue: 'center 30%',
+          options: [
+            { label: 'Centro', value: 'center center' },
+            { label: 'Topo', value: 'center top' },
+            { label: 'Fundo', value: 'center bottom' },
+            { label: 'Centro superior', value: 'center 30%' },
+            { label: 'Centro inferior', value: 'center 70%' },
+            { label: 'Esquerda', value: 'left center' },
+            { label: 'Direita', value: 'right center' },
+          ],
+        },
       ],
     },
     {
@@ -745,6 +764,16 @@ const Homepage: GlobalConfig = {
       fields: [
         { name: 'title', type: 'text', required: true, label: 'Título', localized: true },
         { name: 'subtitle', type: 'textarea', label: 'Subtítulo', localized: true },
+        {
+          name: 'flowers',
+          type: 'array',
+          label: 'Flores',
+          fields: [
+            { name: 'name', type: 'text', required: true, label: 'Nome', localized: true },
+            { name: 'scientificName', type: 'text', required: true, label: 'Nome Científico' },
+            { name: 'image', type: 'upload', relationTo: 'media', label: 'Imagem' },
+          ],
+        },
       ],
     },
     {
@@ -797,6 +826,48 @@ const Homepage: GlobalConfig = {
         { name: 'phone', type: 'text', label: 'Telefone' },
         { name: 'instagramUrl', type: 'text', label: 'URL Instagram' },
         { name: 'whatsappUrl', type: 'text', label: 'URL WhatsApp' },
+      ],
+    },
+  ],
+}
+
+// ─── Site Settings Global ──────────────────────────────────────
+
+const SiteSettings: GlobalConfig = {
+  slug: 'site-settings',
+  label: 'Configurações do Site',
+  fields: [
+    {
+      type: 'group',
+      name: 'contacts',
+      label: 'Contactos',
+      fields: [
+        { name: 'email', type: 'text', label: 'Email' },
+        { name: 'phone', type: 'text', label: 'Telefone' },
+        { name: 'whatsapp', type: 'text', label: 'WhatsApp' },
+      ],
+    },
+    {
+      type: 'group',
+      name: 'social',
+      label: 'Redes Sociais',
+      fields: [
+        { name: 'instagramUrl', type: 'text', label: 'Instagram' },
+        { name: 'facebookUrl', type: 'text', label: 'Facebook' },
+        { name: 'tiktokUrl', type: 'text', label: 'TikTok' },
+      ],
+    },
+    {
+      type: 'group',
+      name: 'company',
+      label: 'Empresa',
+      fields: [
+        { name: 'address', type: 'text', label: 'Morada' },
+        { name: 'postalCode', type: 'text', label: 'Código Postal' },
+        { name: 'city', type: 'text', label: 'Cidade' },
+        { name: 'country', type: 'text', label: 'País' },
+        { name: 'companyName', type: 'text', label: 'Nome da Empresa' },
+        { name: 'taxId', type: 'text', label: 'NIF / VAT' },
       ],
     },
   ],
@@ -924,7 +995,7 @@ const EmailNotifications: CollectionConfig = {
 export default buildConfig({
   serverURL: process.env.NEXT_PUBLIC_SERVER_URL || '',
   collections: [Flowers, Categories, Collections, Media, Coupons, Orders, StockReservations, EmailNotifications],
-  globals: [Homepage],
+  globals: [Homepage, SiteSettings],
   db,
   localization: {
     locales: [

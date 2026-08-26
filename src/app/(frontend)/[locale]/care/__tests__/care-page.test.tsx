@@ -286,18 +286,18 @@ describe('Page content (source-level checks)', () => {
   })
 
   // ═══════════════════════════════════════════════════════════════
-  // 9. WhatsApp — usa NEXT_PUBLIC_WHATSAPP_NUMBER
+  // 9. WhatsApp — usa site-settings com fallback
   // ═══════════════════════════════════════════════════════════════
 
-  it('whatsapp href usa process.env.NEXT_PUBLIC_WHATSAPP_NUMBER', () => {
-    expect(pageContent).toContain('process.env.NEXT_PUBLIC_WHATSAPP_NUMBER')
+  it('whatsapp usa site-settings ou env var', () => {
+    expect(pageContent).toContain("formatWhatsAppUrl")
   })
 
-  it('whatsapp href constrói wa.me/<numero>', () => {
-    expect(pageContent).toContain("`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER")
+  it('whatsapp href usa whatsappUrl', () => {
+    expect(pageContent).toContain("href={whatsappUrl}")
   })
 
-  it('whatsapp href tem fallback 351000000000', () => {
+  it('whatsapp tem fallback env var e default 351000000000', () => {
     expect(pageContent).toContain("process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '351000000000'")
   })
 })

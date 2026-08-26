@@ -104,16 +104,20 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
     process.env.NEXT_PUBLIC_SERVER_URL ||
     'https://eternalflowers.pt'
   const payload = await getPayloadClient()
-  const homepage = await payload.findGlobal({
-    slug: 'homepage',
-    ...payloadLocaleOptions(locale as Locale),
-  })
 
-  const [categoriesData, collectionsData, flowersData] = await Promise.all([
+  const [homepage, siteSettings, categoriesData, collectionsData, flowersData] = await Promise.all([
+    payload.findGlobal({
+      slug: 'homepage',
+      ...payloadLocaleOptions(locale as Locale),
+      depth: 1,
+    }),
+    payload.findGlobal({
+      slug: 'site-settings',
+    }),
     payload.find({
       collection: 'categories',
       limit: 20,
-      sort: 'name',
+      sort: 'sortOrder',
       ...payloadLocaleOptions(locale as Locale),
     }),
     payload.find({
@@ -143,6 +147,21 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
   const instagram = homepage.instagram
   const cta = homepage.cta
   const footer = homepage.footer
+
+  // Site-settings: primary source for contacts, fallback to footer
+  const contactsEmail = siteSettings?.contacts?.email || footer?.email
+  const contactsPhone = siteSettings?.contacts?.phone || footer?.phone
+  const contactsWhatsapp = siteSettings?.contacts?.whatsapp || footer?.whatsappUrl
+  const socialInstagram = siteSettings?.social?.instagramUrl || footer?.instagramUrl
+  const socialFacebook = siteSettings?.social?.facebookUrl
+  const socialTiktok = siteSettings?.social?.tiktokUrl
+
+  // Company address from site-settings, with fallback
+  const company = siteSettings?.company
+  const companyAddress = company?.address || null
+  const companyPostalCode = company?.postalCode || null
+  const companyCity = company?.city || null
+  const companyCountry = company?.country || null
 
   const nfName =
     ({ pt: 'namePt', en: 'nameEn', es: 'nameEs', it: 'nameIt', de: 'nameDe' }[locale] || 'namePt') as string
@@ -181,6 +200,12 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
       <Hero
         heroTitle={hero.heroTitle || 'Joias Botânicas\nFeitas à Mão'}
         heroSubtitle={hero.heroSubtitle || 'Cada peça é uma história que o tempo não apaga. Flores verdadeiras, eternizadas em resina pela Marina, em Braga.'}
+        heroImage={hero.heroImage}
+        heroImagePosition={hero.heroImagePosition}
+        primaryButtonText={hero.primaryButtonText}
+        primaryButtonLink={hero.primaryButtonLink}
+        secondaryButtonText={hero.secondaryButtonText}
+        secondaryButtonLink={hero.secondaryButtonLink}
         locale={locale}
         dict={dict}
       />
@@ -190,6 +215,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
       <RealFlowers
         title={realFlowers?.title || dict.realFlowersTitle}
         subtitle={realFlowers?.subtitle}
+        flowers={realFlowers?.flowers}
         dict={dict}
         locale={locale}
       />
@@ -202,6 +228,9 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
           name: c.name,
           slug: c.slug,
           description: c.description,
+          icon: c.icon,
+          sortOrder: c.sortOrder,
+          isActive: c.isActive,
         }))}
         locale={locale}
         dict={dict}
@@ -273,10 +302,14 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
       {/* Footer */}
       <Footer
         brandDescription={footer?.brandDescription}
-        email={footer?.email}
-        phone={footer?.phone}
-        instagramUrl={footer?.instagramUrl}
-        whatsappUrl={footer?.whatsappUrl}
+        email={contactsEmail}
+        phone={contactsPhone}
+        instagramUrl={socialInstagram}
+        whatsappUrl={contactsWhatsapp}
+        address={companyAddress}
+        postalCode={companyPostalCode}
+        city={companyCity}
+        country={companyCountry}
         locale={locale}
         dict={dict}
       />
