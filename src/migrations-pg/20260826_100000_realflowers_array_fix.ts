@@ -46,7 +46,9 @@ interface MigrateArgs {
  *   - seed das 6 flores legacy é feito APENAS se o array estiver vazio e a
  *     homepage existir.
  *
- * DOWN: reversível sem destruir conteúdo guardado.
+ * DOWN: reversível APENAS quando o array está vazio.
+ *   - Guards: ABORTA se ANY row existir (não apaga editorial nem converte IDs).
+ *   - Restaura schema original: id serial/sequence, name varchar NOT NULL, FK integer→integer.
  */
 export async function up({ db }: MigrateArgs): Promise<void> {
   const flowersTable = await db.execute(
@@ -134,14 +136,20 @@ async function seedLegacyFlowers(db: any): Promise<void> {
     return
   }
 
-  // A homepage (Global) tem de existir — senão a FK _parent_id falharia
+  // A homepage (Global) tem de existir — senão a FK _parent_id falharia.
+  // Se o row ainda não existir (migração a correr antes do Payload boot),
+  // criamo-lo com os valores mínimos obrigatórios.
   const hpRes = await db.execute(
     sql`SELECT "id" FROM "homepage" ORDER BY "id" LIMIT 1;`,
   )
-  const hpId = hpRes?.rows?.[0]?.id
+  let hpId = hpRes?.rows?.[0]?.id
   if (hpId === undefined || hpId === null) {
-    // Sem homepage → não há onde pendurar as flores; não seedar
-    return
+    await db.execute(
+      sql`INSERT INTO "homepage" ("id", "hero_primary_button_link", "instagram_handle", "cta_button_link", "hero_hero_image_position")
+          VALUES (1, '/catalog', '@eternalflowers', '/contact', 'center 30%')
+          ON CONFLICT (id) DO NOTHING;`,
+    )
+    hpId = 1
   }
 
   const flowers = [
@@ -175,54 +183,81 @@ export async function down({ db }: MigrateArgs): Promise<void> {
     return // nothing to undo
   }
 
-  // ── 1. Reverter seed se foi criada por esta migration (ids prefixados "seed_") ──
-  const seedCount = await db.execute(
-    sql`SELECT COUNT(*)::int AS cnt FROM "homepage_real_flowers_flowers" WHERE "id" LIKE 'seed_%';`,
+  // ── 0. DATA-LOSS GUARD — fazer TODAS as verificações ANTES de qualquer DELETE/ALTER ──
+  // A Marina pode ter editado rows seeded; nesse momento são conteúdo editorial real.
+  // Independemente do prefixo do id, se existir QUALQUER row, o DOWN é inviável:
+  //   - NÃO podem ser apagadas automaticamente; e
+  //   - os IDs Payload (hex 24 chars) não são convertíveis para integer.
+  // Se o array (ou a locales correspondente) tiver qualquer row, ABORTAR.
+  const rowCount = await db.execute(
+    sql`SELECT COUNT(*)::int AS cnt FROM "homepage_real_flowers_flowers";`,
   )
-  const seedN = seedCount?.rows?.[0]?.cnt ?? 0
-  if (seedN > 0) {
-    await db.execute(
-      sql`DELETE FROM "homepage_real_flowers_flowers_locales" WHERE "_parent_id" LIKE 'seed_%';`,
+  const cnt = rowCount?.rows?.[0]?.cnt ?? 0
+  if (cnt > 0) {
+    throw new Error(
+      `[DOWN] ABORTED: ${cnt} row(s) exist in "homepage_real_flowers_flowers". ` +
+        'Cannot convert Payload varchar ids to integer nor delete editorial content. ' +
+        'Empty the array (and its _locales children) through the Payload admin before rolling back.',
     )
-    await db.execute(
-      sql`DELETE FROM "homepage_real_flowers_flowers" WHERE "id" LIKE 'seed_%';`,
+  }
+  const localesCount = await db.execute(
+    sql`SELECT COUNT(*)::int AS cnt FROM "homepage_real_flowers_flowers_locales";`,
+  )
+  const lcnt = localesCount?.rows?.[0]?.cnt ?? 0
+  if (lcnt > 0) {
+    throw new Error(
+      `[DOWN] ABORTED: ${lcnt} row(s) exist in "homepage_real_flowers_flowers_locales". ` +
+        'Orphan locale rows would be fatal after restoring the integer schema.',
     )
   }
 
-  // ── 2. Reverter a FK e a estrutura ────────────────────────────────────────
+  // Só aqui, com o array e locales vazios, se faz a restauração estrutural.
+  // ── 1. Drop FK da locales (aponta para o id varchar) ────────────────
   await db.execute(
     sql`ALTER TABLE "homepage_real_flowers_flowers_locales" DROP CONSTRAINT IF EXISTS "homepage_real_flowers_flowers_locales__parent_id_fkey";`,
   )
+  // ── 2. Converter _parent_id da locales de varchar(24) → integer ─────
   await db.execute(
-    sql`ALTER TABLE "homepage_real_flowers_flowers_locales" ALTER COLUMN "_parent_id" TYPE integer USING "_parent_id"::integer;`,
+    sql`ALTER TABLE "homepage_real_flowers_flowers_locales" ALTER COLUMN "_parent_id" TYPE integer USING NULLIF("_parent_id", '')::integer;`,
   )
+  // ── 3. Tabela principal: id → integer serial ────────────────────────
   await db.execute(
     sql`ALTER TABLE "homepage_real_flowers_flowers" DROP CONSTRAINT IF EXISTS "homepage_real_flowers_flowers_pkey";`,
   )
+  // Drop default/sequence actual (varchar não tem default agora, mas por segurança)
   await db.execute(
     sql`ALTER TABLE "homepage_real_flowers_flowers" ALTER COLUMN "id" DROP DEFAULT;`,
   )
-  // Cria a sequence apenas se não existir
+  // Converter id → integer (array está vazio, cast é seguro)
   await db.execute(
-    sql`CREATE SEQUENCE IF NOT EXISTS "homepage_real_flowers_flowers_id_seq";`,
+    sql`ALTER TABLE "homepage_real_flowers_flowers" ALTER COLUMN "id" TYPE integer USING NULL::integer;`,
+  )
+  // Recriar a sequence, associar (OWNED BY) e colocar como DEFAULT nextval
+  await db.execute(
+    sql`CREATE SEQUENCE IF NOT EXISTS "homepage_real_flowers_flowers_id_seq" OWNED BY "homepage_real_flowers_flowers"."id";`,
   )
   await db.execute(
-    sql`ALTER TABLE "homepage_real_flowers_flowers" ALTER COLUMN "id" TYPE integer USING "id"::integer;`,
+    sql`SELECT setval('"homepage_real_flowers_flowers_id_seq"', COALESCE((SELECT MAX("id") FROM "homepage_real_flowers_flowers"), 1));`,
   )
+  await db.execute(
+    sql`ALTER TABLE "homepage_real_flowers_flowers" ALTER COLUMN "id" SET DEFAULT nextval('"homepage_real_flowers_flowers_id_seq"'::regclass);`,
+  )
+  // Re-aplicar PK em integer
   await db.execute(
     sql`ALTER TABLE "homepage_real_flowers_flowers" ADD CONSTRAINT "homepage_real_flowers_flowers_pkey" PRIMARY KEY ("id");`,
   )
-  // Repõe a coluna name (nullable) tal como foi criada originalmente
+  // Re-adicionar coluna "name" — NOT NULL tal como a migration original criou.
+  // Como o array está vazio, ADD COLUMN NOT NULL é aceite sem DEFAULT.
   const nameCol = await db.execute(
     sql`SELECT COUNT(*)::int AS cnt FROM information_schema.columns
         WHERE table_schema = 'public' AND table_name = 'homepage_real_flowers_flowers' AND column_name = 'name';`,
   )
   if (nameCol?.rows?.[0]?.cnt === 0) {
     await db.execute(
-      sql`ALTER TABLE "homepage_real_flowers_flowers" ADD COLUMN "name" varchar;`,
+      sql`ALTER TABLE "homepage_real_flowers_flowers" ADD COLUMN "name" varchar NOT NULL;`,
     )
   }
-  // Re-cria a FK original (integer → integer)
+  // Re-criar a FK original (integer → integer)
   await db.execute(
     sql`ALTER TABLE "homepage_real_flowers_flowers_locales" ADD CONSTRAINT "homepage_real_flowers_flowers_locales__parent_id_fkey" FOREIGN KEY ("_parent_id") REFERENCES "public"."homepage_real_flowers_flowers"("id") ON DELETE CASCADE ON UPDATE no action;`,
   )

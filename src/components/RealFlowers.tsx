@@ -3,6 +3,7 @@ import Link from 'next/link'
 import Section from './Section'
 
 interface FlowerData {
+  id?: string | null
   name: string
   scientificName: string
   image?: { url?: string | null } | number | null
@@ -22,6 +23,7 @@ interface DisplayFlower {
   image: string
 }
 
+// ─── Legacy fallback flowers (6 hardcoded) ─────────────────────────────
 const fallbackFlowers: DisplayFlower[] = [
   { name: 'Orquídea Vanda', species: 'Vanda coerulea', image: '/instagram/3893196693588849020.jpg' },
   { name: 'Paphiopedilum', species: 'Paphiopedilum Pinocchio', image: '/instagram/3874976971600823469.jpg' },
@@ -31,7 +33,21 @@ const fallbackFlowers: DisplayFlower[] = [
   { name: 'Cattleya', species: 'Cattleya spp.', image: '/instagram/3949769286870927720.jpg' },
 ]
 
-// Build a lookup from scientificName → legacy image for hybrid fallback
+// ─── Legacy image lookup by seed ID (primary) ──────────────────────────
+// These are the IDs assigned by the seed migration to each legacy flower.
+// Using `id` as the stable key means Marina can change scientificName
+// without losing the legacy image until she uploads a new one.
+const legacyImageBySeedId = new Map<string, string>([
+  ['seed_vanda_0001', '/instagram/3893196693588849020.jpg'],
+  ['seed_paphiopedilum_0002', '/instagram/3874976971600823469.jpg'],
+  ['seed_sobralia_0003', '/instagram/3907793258139193626.jpg'],
+  ['seed_cambria_0004', '/instagram/3914898543066761710.jpg'],
+  ['seed_laelia_0005', '/instagram/3920110427486042976.jpg'],
+  ['seed_cattleya_0006', '/instagram/3949769286870927720.jpg'],
+])
+
+// ─── Legacy image lookup by scientificName (secondary) ──────────────────
+// Fallback for pre-seed content or if the id doesn't match a seed id.
 const fallbackBySpecies = new Map<string, string>(
   fallbackFlowers.map(f => [f.species, f.image]),
 )
@@ -71,9 +87,12 @@ function isCmsFlowerWithImage(f: FlowerData): f is FlowerData & { image: { url: 
  * B. CMS has entries:
  *    - For each CMS flower in CMS order:
  *      1. If has image.url → use Payload image
- *      2. If no image AND scientificName matches a legacy flower → use legacy image
- *      3. New flower (no legacy match) without image → skip (don't render)
+ *      2. If no image AND id matches a seeded legacy id → use legacy image
+ *      3. If no image AND scientificName matches a legacy flower → use legacy image
+ *      4. New flower without image → skip (don't render)
  *    - Renders only resolved entries (never empty src)
+ *
+ * Priority: id (seed ID) > scientificName > skip
  */
 export default function RealFlowers({ title, subtitle, flowers, dict, locale }: RealFlowersProps) {
   const cmsFlowers = flowers || []
@@ -87,6 +106,7 @@ export default function RealFlowers({ title, subtitle, flowers, dict, locale }: 
     // B. CMS has entries → resolve each one
     displayFlowers = cmsFlowers
       .map((f): DisplayFlower | null => {
+        // 1. Payload image
         if (isCmsFlowerWithImage(f)) {
           return {
             name: f.name,
@@ -94,16 +114,26 @@ export default function RealFlowers({ title, subtitle, flowers, dict, locale }: 
             image: f.image.url,
           }
         }
-        // No Payload image — check if it matches a legacy flower
-        const legacyImage = f.scientificName ? fallbackBySpecies.get(f.scientificName) : undefined
-        if (legacyImage) {
+        // 2. Legacy image by seed id (stable — survives scientificName changes)
+        if (f.id && legacyImageBySeedId.has(f.id)) {
           return {
             name: f.name,
             species: f.scientificName,
-            image: legacyImage,
+            image: legacyImageBySeedId.get(f.id)!,
           }
         }
-        // New flower without image → skip
+        // 3. Legacy image by scientificName (secondary)
+        if (f.scientificName) {
+          const legacyImage = fallbackBySpecies.get(f.scientificName)
+          if (legacyImage) {
+            return {
+              name: f.name,
+              species: f.scientificName,
+              image: legacyImage,
+            }
+          }
+        }
+        // 4. New flower without image → skip
         return null
       })
       .filter((f): f is DisplayFlower => f !== null)
