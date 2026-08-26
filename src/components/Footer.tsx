@@ -1,9 +1,15 @@
+import { formatWhatsAppUrl } from '@/lib/whatsapp'
+
 interface FooterProps {
   brandDescription?: string | null
   email?: string | null
   phone?: string | null
   instagramUrl?: string | null
   whatsappUrl?: string | null
+  address?: string | null
+  postalCode?: string | null
+  city?: string | null
+  country?: string | null
   locale: string
   dict: any
 }
@@ -14,9 +20,15 @@ export default function Footer({
   phone,
   instagramUrl,
   whatsappUrl,
+  address,
+  postalCode,
+  city,
+  country,
   locale,
   dict,
 }: FooterProps) {
+  const whatsappHref = formatWhatsAppUrl(whatsappUrl)
+
   return (
     <footer className="bg-brand-charcoal text-white/55">
       <div className="max-w-content mx-auto px-6 lg:px-8 py-16 lg:py-20">
@@ -58,9 +70,18 @@ export default function Footer({
               )}
               {phone && <li>{phone}</li>}
               <li className="text-white/25 text-xs leading-relaxed">
-                Av. Quinta da Rocha, Loja 30
-                <br />
-                Prado, Braga · Portugal
+                {address || 'Av. Quinta da Rocha, Loja 30'}
+                {city || postalCode || country ? (
+                  <>
+                    <br />
+                    {[city, postalCode, country].filter(Boolean).join(', ') || 'Prado, Braga · Portugal'}
+                  </>
+                ) : (
+                  <>
+                    <br />
+                    Prado, Braga · Portugal
+                  </>
+                )}
               </li>
             </ul>
           </div>
@@ -84,10 +105,10 @@ export default function Footer({
                   </a>
                 </li>
               )}
-              {whatsappUrl && (
+              {whatsappHref && (
                 <li>
                   <a
-                    href={whatsappUrl}
+                    href={whatsappHref}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="group inline-flex items-center gap-2 text-white/45 hover:text-white/80 transition-colors duration-300 font-body font-light"

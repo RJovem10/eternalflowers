@@ -3,6 +3,8 @@ import type { Locale } from '@/i18n/dictionaries'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
+import { getPayloadClient } from '@/payload'
+import { formatWhatsAppUrl } from '@/lib/whatsapp'
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ||
@@ -125,6 +127,11 @@ export default async function CarePage({
 }) {
   const { locale } = await params
   const dict = getDictionary(locale)
+
+  const payload = await getPayloadClient()
+  const siteSettings = await payload.findGlobal({ slug: 'site-settings' })
+  const rawWhatsapp = siteSettings?.contacts?.whatsapp || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '351000000000'
+  const whatsappUrl = formatWhatsAppUrl(rawWhatsapp) || `https://wa.me/351000000000`
 
   const posterMap: Record<string, { file: string; download: string }> = {
     pt: { file: 'eternal-flowers-care-guide-pt.png', download: 'guia-cuidados-eternal-flowers.png' },
@@ -282,7 +289,7 @@ export default async function CarePage({
             {dict.careWarranty}
           </p>
           <a
-            href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '351000000000'}`}
+            href={whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center px-8 py-3.5 bg-brand-gold text-white text-sm font-medium tracking-wider uppercase hover:bg-brand-gold-dark transition-all duration-300 font-body"

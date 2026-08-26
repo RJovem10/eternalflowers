@@ -2,14 +2,21 @@ import Image from 'next/image'
 import Link from 'next/link'
 import Section from './Section'
 
+interface FlowerData {
+  name: string
+  scientificName: string
+  image?: { url?: string | null } | number | null
+}
+
 interface RealFlowersProps {
   title: string
   subtitle?: string | null
+  flowers?: FlowerData[] | null
   dict: any
   locale?: string
 }
 
-const flowers = [
+const fallbackFlowers = [
   { name: 'Orquídea Vanda', species: 'Vanda coerulea', color: 'from-[#7B5EA7] to-[#C9B1D0]', emoji: '💜', image: '/instagram/3893196693588849020.jpg' },
   { name: 'Paphiopedilum', species: 'Paphiopedilum Pinocchio', color: 'from-[#8B7355] to-[#C5D0BE]', emoji: '🤎', image: '/instagram/3874976971600823469.jpg' },
   { name: 'Sobrália', species: 'Sobralia rosea', color: 'from-[#E8B4B8] to-[#F5D0D4]', emoji: '🩷', image: '/instagram/3907793258139193626.jpg' },
@@ -34,7 +41,24 @@ const linkLabel: Record<string, string> = {
   de: 'Mehr über botanischen Schmuck →',
 }
 
-export default function RealFlowers({ title, subtitle, dict, locale }: RealFlowersProps) {
+const cloudFlowerColor = 'from-[#C9B1D0] to-[#E8D5A3]' // generic gradient fallback
+
+export default function RealFlowers({ title, subtitle, flowers, dict, locale }: RealFlowersProps) {
+  // Use CMS flowers only if they have at least one with a valid image URL,
+  // otherwise fallback to hardcoded (which has real Instagram photos)
+  const hasCmsImages = flowers && flowers.length > 0 && flowers.some(f => {
+    const img = f.image
+    return img && typeof img === 'object' && 'url' in img && img.url
+  })
+
+  const displayFlowers = hasCmsImages
+    ? flowers!.map(f => ({
+        name: f.name,
+        species: f.scientificName,
+        image: (f.image && typeof f.image === 'object' && 'url' in f.image && f.image.url) || '',
+      }))
+    : fallbackFlowers
+
   return (
     <Section
       title={title}
@@ -44,9 +68,9 @@ export default function RealFlowers({ title, subtitle, dict, locale }: RealFlowe
       size="compact"
     >
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-8 gap-y-12">
-        {flowers.map((f, i) => (
-          <div key={f.name} className="group text-center">
-            {/* Círculo com fotografia real do Instagram */}
+        {displayFlowers.map((f, i) => (
+          <div key={f.name || `flower-${i}`} className="group text-center">
+            {/* Círculo com fotografia */}
             <div className="relative mx-auto w-24 h-24 lg:w-28 lg:h-28 rounded-full overflow-hidden mb-4 ring-1 ring-brand-wood/10 group-hover:ring-brand-gold/30 transition-all duration-500">
               <Image
                 src={f.image}
@@ -56,14 +80,16 @@ export default function RealFlowers({ title, subtitle, dict, locale }: RealFlowe
                 sizes="112px"
               />
               {/* Overlay gradiente para dar profundidade */}
-              <div className={`absolute inset-0 bg-gradient-to-br ${f.color} opacity-10 group-hover:opacity-0 transition-opacity duration-500`} />
+              <div className={`absolute inset-0 bg-gradient-to-br ${cloudFlowerColor} opacity-10 group-hover:opacity-0 transition-opacity duration-500`} />
             </div>
             <p className="font-display text-sm lg:text-base font-light text-brand-charcoal/80 tracking-wide">
               {f.name}
             </p>
-            <p className="text-[11px] italic text-brand-charcoal/35 font-body font-light mt-0.5">
-              {f.species}
-            </p>
+            {f.species && (
+              <p className="text-[11px] italic text-brand-charcoal/35 font-body font-light mt-0.5">
+                {f.species}
+              </p>
+            )}
           </div>
         ))}
       </div>
