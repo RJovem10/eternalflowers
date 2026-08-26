@@ -16,14 +16,25 @@ interface RealFlowersProps {
   locale?: string
 }
 
-const fallbackFlowers = [
-  { name: 'Orquídea Vanda', species: 'Vanda coerulea', color: 'from-[#7B5EA7] to-[#C9B1D0]', emoji: '💜', image: '/instagram/3893196693588849020.jpg' },
-  { name: 'Paphiopedilum', species: 'Paphiopedilum Pinocchio', color: 'from-[#8B7355] to-[#C5D0BE]', emoji: '🤎', image: '/instagram/3874976971600823469.jpg' },
-  { name: 'Sobrália', species: 'Sobralia rosea', color: 'from-[#E8B4B8] to-[#F5D0D4]', emoji: '🩷', image: '/instagram/3907793258139193626.jpg' },
-  { name: 'Cambria', species: 'Cambria Africana', color: 'from-[#C97B6B] to-[#E8C5B8]', emoji: '🧡', image: '/instagram/3914898543066761710.jpg' },
-  { name: 'Laelia', species: 'Laelia purpurata', color: 'from-[#D4A853] to-[#E8D5A3]', emoji: '💛', image: '/instagram/3920110427486042976.jpg' },
-  { name: 'Cattleya', species: 'Cattleya spp.', color: 'from-[#E8B4B8] to-[#C9B1D0]', emoji: '🩷', image: '/instagram/3949769286870927720.jpg' },
+interface DisplayFlower {
+  name: string
+  species: string
+  image: string
+}
+
+const fallbackFlowers: DisplayFlower[] = [
+  { name: 'Orquídea Vanda', species: 'Vanda coerulea', image: '/instagram/3893196693588849020.jpg' },
+  { name: 'Paphiopedilum', species: 'Paphiopedilum Pinocchio', image: '/instagram/3874976971600823469.jpg' },
+  { name: 'Sobrália', species: 'Sobralia rosea', image: '/instagram/3907793258139193626.jpg' },
+  { name: 'Cambria', species: 'Cambria Africana', image: '/instagram/3914898543066761710.jpg' },
+  { name: 'Laelia', species: 'Laelia purpurata', image: '/instagram/3920110427486042976.jpg' },
+  { name: 'Cattleya', species: 'Cattleya spp.', image: '/instagram/3949769286870927720.jpg' },
 ]
+
+// Build a lookup from scientificName → legacy image for hybrid fallback
+const fallbackBySpecies = new Map<string, string>(
+  fallbackFlowers.map(f => [f.species, f.image]),
+)
 
 const landingSlug: Record<string, string> = {
   pt: 'joias-botanicas',
@@ -41,8 +52,6 @@ const linkLabel: Record<string, string> = {
   de: 'Mehr über botanischen Schmuck →',
 }
 
-const cloudFlowerColor = 'from-[#C9B1D0] to-[#E8D5A3]' // generic gradient fallback
-
 // Type guard: a CMS flower is usable only when it has a `url` string on its image object.
 function isCmsFlowerWithImage(f: FlowerData): f is FlowerData & { image: { url: string } } {
   const img = f.image
@@ -55,20 +64,50 @@ function isCmsFlowerWithImage(f: FlowerData): f is FlowerData & { image: { url: 
   )
 }
 
+/**
+ * Hybrid fallback logic:
+ *
+ * A. CMS array null/empty → fallbackFlowers (6 legacy)
+ * B. CMS has entries:
+ *    - For each CMS flower in CMS order:
+ *      1. If has image.url → use Payload image
+ *      2. If no image AND scientificName matches a legacy flower → use legacy image
+ *      3. New flower (no legacy match) without image → skip (don't render)
+ *    - Renders only resolved entries (never empty src)
+ */
 export default function RealFlowers({ title, subtitle, flowers, dict, locale }: RealFlowersProps) {
-  // Extract only CMS flowers with a valid image object and a non-empty image.url.
-  // If at least one valid flower exists, render only the valid ones.
-  // If none exist, fallback to hardcoded (which has real Instagram photos).
-  const cmsFlowersWithImage = (flowers || []).filter(isCmsFlowerWithImage)
-  const hasValidCmsImages = cmsFlowersWithImage.length > 0
+  const cmsFlowers = flowers || []
 
-  const displayFlowers = hasValidCmsImages
-    ? cmsFlowersWithImage.map(f => ({
-        name: f.name,
-        species: f.scientificName,
-        image: f.image.url,
-      }))
-    : fallbackFlowers
+  let displayFlowers: DisplayFlower[]
+
+  if (cmsFlowers.length === 0) {
+    // A. No CMS data → full legacy fallback
+    displayFlowers = fallbackFlowers
+  } else {
+    // B. CMS has entries → resolve each one
+    displayFlowers = cmsFlowers
+      .map((f): DisplayFlower | null => {
+        if (isCmsFlowerWithImage(f)) {
+          return {
+            name: f.name,
+            species: f.scientificName,
+            image: f.image.url,
+          }
+        }
+        // No Payload image — check if it matches a legacy flower
+        const legacyImage = f.scientificName ? fallbackBySpecies.get(f.scientificName) : undefined
+        if (legacyImage) {
+          return {
+            name: f.name,
+            species: f.scientificName,
+            image: legacyImage,
+          }
+        }
+        // New flower without image → skip
+        return null
+      })
+      .filter((f): f is DisplayFlower => f !== null)
+  }
 
   return (
     <Section
@@ -80,7 +119,7 @@ export default function RealFlowers({ title, subtitle, flowers, dict, locale }: 
     >
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-8 gap-y-12">
         {displayFlowers.map((f, i) => (
-          <div key={f.name || `flower-${i}`} className="group text-center">
+          <div key={f.species || `flower-${i}`} className="group text-center">
             {/* Círculo com fotografia */}
             <div className="relative mx-auto w-24 h-24 lg:w-28 lg:h-28 rounded-full overflow-hidden mb-4 ring-1 ring-brand-wood/10 group-hover:ring-brand-gold/30 transition-all duration-500">
               <Image
@@ -90,8 +129,6 @@ export default function RealFlowers({ title, subtitle, flowers, dict, locale }: 
                 className="object-cover group-hover:scale-110 transition-transform duration-500"
                 sizes="112px"
               />
-              {/* Overlay gradiente para dar profundidade */}
-              <div className={`absolute inset-0 bg-gradient-to-br ${cloudFlowerColor} opacity-10 group-hover:opacity-0 transition-opacity duration-500`} />
             </div>
             <p className="font-display text-sm lg:text-base font-light text-brand-charcoal/80 tracking-wide">
               {f.name}

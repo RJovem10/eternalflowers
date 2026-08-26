@@ -20,6 +20,7 @@ import * as migration_20260819_183000_awaiting_shipping_enum from './20260819_18
 import * as migration_20260820_000000_is_public from './20260820_000000_is_public';
 import * as migration_20260822_000000_manual_orders from './20260822_000000_manual_orders';
 import * as migration_20260826_083000_commercial_content_cms from './20260826_083000_commercial_content_cms';
+import * as migration_20260826_100000_realflowers_array_fix from './20260826_100000_realflowers_array_fix';
 
 export const migrations = [
   { up: migration_20260731_000000_baseline.up, down: migration_20260731_000000_baseline.down, name: '20260731_000000_baseline' },
@@ -45,4 +46,5 @@ export const migrations = [
   { up: migration_20260820_000000_is_public.up, down: migration_20260820_000000_is_public.down, name: '20260820_000000_is_public' },
   { up: migration_20260822_000000_manual_orders.up, down: migration_20260822_000000_manual_orders.down, name: '20260822_000000_manual_orders' },
   { up: migration_20260826_083000_commercial_content_cms.up, down: migration_20260826_083000_commercial_content_cms.down, name: '20260826_083000_commercial_content_cms' },
+  { up: migration_20260826_100000_realflowers_array_fix.up, down: migration_20260826_100000_realflowers_array_fix.down, name: '20260826_100000_realflowers_array_fix' },
 ];
