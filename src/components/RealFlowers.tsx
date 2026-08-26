@@ -43,19 +43,30 @@ const linkLabel: Record<string, string> = {
 
 const cloudFlowerColor = 'from-[#C9B1D0] to-[#E8D5A3]' // generic gradient fallback
 
-export default function RealFlowers({ title, subtitle, flowers, dict, locale }: RealFlowersProps) {
-  // Use CMS flowers only if they have at least one with a valid image URL,
-  // otherwise fallback to hardcoded (which has real Instagram photos)
-  const hasCmsImages = flowers && flowers.length > 0 && flowers.some(f => {
-    const img = f.image
-    return img && typeof img === 'object' && 'url' in img && img.url
-  })
+// Type guard: a CMS flower is usable only when it has a `url` string on its image object.
+function isCmsFlowerWithImage(f: FlowerData): f is FlowerData & { image: { url: string } } {
+  const img = f.image
+  return Boolean(
+    img &&
+      typeof img === 'object' &&
+      'url' in img &&
+      typeof img.url === 'string' &&
+      img.url.length > 0,
+  )
+}
 
-  const displayFlowers = hasCmsImages
-    ? flowers!.map(f => ({
+export default function RealFlowers({ title, subtitle, flowers, dict, locale }: RealFlowersProps) {
+  // Extract only CMS flowers with a valid image object and a non-empty image.url.
+  // If at least one valid flower exists, render only the valid ones.
+  // If none exist, fallback to hardcoded (which has real Instagram photos).
+  const cmsFlowersWithImage = (flowers || []).filter(isCmsFlowerWithImage)
+  const hasValidCmsImages = cmsFlowersWithImage.length > 0
+
+  const displayFlowers = hasValidCmsImages
+    ? cmsFlowersWithImage.map(f => ({
         name: f.name,
         species: f.scientificName,
-        image: (f.image && typeof f.image === 'object' && 'url' in f.image && f.image.url) || '',
+        image: f.image.url,
       }))
     : fallbackFlowers
 

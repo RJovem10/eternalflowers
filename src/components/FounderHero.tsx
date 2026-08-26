@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import Button from './Button'
+import { localizeLink } from '@/lib/localize-link'
 
 interface FounderHeroProps {
   heroTitle?: string
@@ -44,9 +45,9 @@ export default function FounderHero({
 
   // Button text/link: Payload first, then dict fallback, then hardcoded fallback
   const primaryText = primaryButtonText || dict.heroCtaDiscover
-  const primaryHref = primaryButtonLink || `/${locale}/catalog`
+  const primaryHref = localizeLink(primaryButtonLink, locale) || `/${locale}/catalog`
   const secondaryText = secondaryButtonText || dict.heroCtaAbout
-  const secondaryHref = secondaryButtonLink || `/${locale}/about`
+  const secondaryHref = localizeLink(secondaryButtonLink, locale) || `/${locale}/about`
 
   return (
     <section className="relative min-h-screen bg-brand-cream flex flex-col lg:flex-row overflow-hidden">
