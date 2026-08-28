@@ -118,6 +118,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
       collection: 'categories',
       limit: 20,
       sort: 'sortOrder',
+      depth: 1,
       ...payloadLocaleOptions(locale as Locale),
     }),
     payload.find({
@@ -228,7 +229,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
           name: c.name,
           slug: c.slug,
           description: c.description,
-          icon: c.icon,
+          image: c.image,
           sortOrder: c.sortOrder,
           isActive: c.isActive,
         }))}
