@@ -89,4 +89,9 @@ describe('FounderHero — button links locale-aware', () => {
     const secondary = links.find(l => l.textContent === 'Sobre Nós')
     expect(secondary).toHaveAttribute('href', '/en/about')
   })
+
+  it('badge contains "Lisboa" no Hero', () => {
+    renderHero({ locale: 'pt' })
+    expect(screen.getByText(/Lisboa/)).toBeInTheDocument()
+  })
 })

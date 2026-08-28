@@ -58,7 +58,7 @@ export default function FounderHero({
           <div className="inline-flex items-center gap-2.5 mb-8 lg:mb-10">
             <span className="w-1 h-1 rounded-full bg-brand-gold" />
             <span className="text-[10px] uppercase tracking-[0.25em] text-brand-charcoal/40 font-body font-medium">
-              Artesanato · Braga · Portugal
+              Artesanato · Lisboa · Braga · Portugal
             </span>
           </div>
 
