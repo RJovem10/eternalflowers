@@ -10,6 +10,14 @@ function getLocaleFromCookie(req: NextRequest): string | undefined {
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
+  // ── /return-policy → rewrite interno para /pt/return-policy ──
+  // O browser continua a mostrar /return-policy.
+  if (pathname === '/return-policy') {
+    const url = req.nextUrl.clone()
+    url.pathname = `/${defaultLocale}/return-policy`
+    return NextResponse.rewrite(url)
+  }
+
   // não tocar em /admin (Painel da Marina), assets, api, ficheiros estáticos,
   // ou rotas SEO de raiz (robots.txt, sitemap.xml)
   if (
@@ -36,5 +44,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next|api|admin|media|favicon\\.ico|robots\\.txt|sitemap\.xml|.*\\.(?:jpg|jpeg|png|gif|svg|webp|ico|css|js|woff2?|ttf|eot|pdf)).*)'],
+  matcher: ['/((?!_next|api|admin|media|favicon\\.ico|robots\\.txt|sitemap\\.xml|.*\\.(?:jpg|jpeg|png|gif|svg|webp|ico|css|js|woff2?|ttf|eot|pdf)).*)'],
 }
