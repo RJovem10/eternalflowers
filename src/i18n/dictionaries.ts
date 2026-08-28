@@ -191,6 +191,10 @@ type Dict = {
   careSeoDescription: string
   careSaveButton: string
   careOpenButton: string
+  returnPolicyLink: string
+  returnPolicyTitle: string
+  returnPolicySeoTitle: string
+  returnPolicySeoDescription: string
   internationalPresence: CountryData[]
 }
 
@@ -383,6 +387,10 @@ export const dictionaries: Record<Locale, Dict> = {
         careSeoDescription: 'Descubra como cuidar da sua joia botânica Eternal Flowers: água, perfume, resina, limpeza, armazenamento e cuidados para preservar a sua peça.',
         careSaveButton: 'Guardar guia',
         careOpenButton: 'Abrir imagem',
+        returnPolicyLink: 'Política de Devoluções',
+        returnPolicyTitle: 'Política de Devoluções e Reembolsos',
+        returnPolicySeoTitle: 'Política de Devoluções e Reembolsos | Eternal Flowers',
+        returnPolicySeoDescription: 'Conheça a política de devoluções e reembolsos da Eternal Flowers. Saiba como exercer o direito de livre resolução, devoluções, reembolsos e garantia legal.',
         internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lisboa', description: 'Atelier e loja física' },
       { code: 'ES', country: 'Espanha', cities: 'Exposições', description: 'Feiras de orquídeas' },
@@ -570,6 +578,10 @@ export const dictionaries: Record<Locale, Dict> = {
         careSeoDescription: 'Learn how to care for your Eternal Flowers botanical jewellery, including resin care, water, perfume, cleaning and storage.',
         careSaveButton: 'Save guide',
         careOpenButton: 'Open image',
+        returnPolicyLink: 'Returns & Refunds',
+        returnPolicyTitle: 'Returns & Refunds Policy',
+        returnPolicySeoTitle: 'Returns & Refunds Policy | Eternal Flowers',
+        returnPolicySeoDescription: 'Learn about Eternal Flowers\' returns and refunds policy. How to exercise your right of withdrawal, returns, refunds, and legal guarantee.',
         internationalPresence: [
           { code: 'PT', country: 'Portugal', cities: 'Braga · Lisbon', description: 'Workshop and physical store' },
           { code: 'ES', country: 'Spain', cities: 'Exhibitions', description: 'Orchid fairs' },
@@ -757,6 +769,10 @@ export const dictionaries: Record<Locale, Dict> = {
             careSeoDescription: 'Descubre cómo cuidar tu joya botánica Eternal Flowers: resina, agua, perfume, limpieza y conservación de la pieza.',
             careSaveButton: 'Guardar guía',
             careOpenButton: 'Abrir imagen',
+            returnPolicyLink: 'Política de devoluciones',
+            returnPolicyTitle: 'Política de devoluciones y reembolsos',
+            returnPolicySeoTitle: 'Política de devoluciones y reembolsos | Eternal Flowers',
+            returnPolicySeoDescription: 'Conozca la política de devoluciones y reembolsos de Eternal Flowers. Cómo ejercer el derecho de desistimiento, devoluciones, reembolsos y garantía legal.',
     internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lisboa', description: 'Taller y tienda física' },
       { code: 'ES', country: 'España', cities: 'Exposiciones', description: 'Ferias de orquídeas' },
@@ -944,6 +960,10 @@ export const dictionaries: Record<Locale, Dict> = {
             careSeoDescription: 'Scopri come prenderti cura del tuo gioiello botanico Eternal Flowers: resina, acqua, profumo, pulizia e conservazione.',
             careSaveButton: 'Salva guida',
             careOpenButton: 'Apri immagine',
+            returnPolicyLink: 'Politica di reso',
+            returnPolicyTitle: 'Politica di reso e rimborso',
+            returnPolicySeoTitle: 'Politica di reso e rimborso | Eternal Flowers',
+            returnPolicySeoDescription: 'Scopri la politica di reso e rimborso di Eternal Flowers. Come esercitare il diritto di recesso, resi, rimborsi e garanzia legale.',
     internationalPresence: [
       { code: 'PT', country: 'Portogallo', cities: 'Braga · Lisbona', description: 'Laboratorio e negozio fisico' },
       { code: 'ES', country: 'Spagna', cities: 'Esposizioni', description: 'Fiere di orchidee' },
@@ -1131,6 +1151,10 @@ export const dictionaries: Record<Locale, Dict> = {
             careSeoDescription: 'Erfahren Sie, wie Sie Ihren botanischen Schmuck von Eternal Flowers richtig pflegen: Harz, Wasser, Parfum, Reinigung und Aufbewahrung.',
             careSaveButton: 'Leitfaden speichern',
             careOpenButton: 'Bild öffnen',
+            returnPolicyLink: 'Rückgabe & Erstattung',
+            returnPolicyTitle: 'Rückgabe & Erstattung',
+            returnPolicySeoTitle: 'Rückgabe & Erstattung | Eternal Flowers',
+            returnPolicySeoDescription: 'Erfahren Sie mehr über die Rückgabe- und Erstattungsrichtlinie von Eternal Flowers. Widerrufsrecht, Rücksendungen, Rückerstattungen und gesetzliche Gewährleistung.',
     internationalPresence: [
       { code: 'PT', country: 'Portugal', cities: 'Braga · Lissabon', description: 'Atelier und Ladengeschäft' },
       { code: 'ES', country: 'Spanien', cities: 'Ausstellungen', description: 'Orchideenmessen' },

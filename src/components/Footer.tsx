@@ -1,4 +1,5 @@
 import { formatWhatsAppUrl } from '@/lib/whatsapp'
+import Image from 'next/image'
 
 interface FooterProps {
   brandDescription?: string | null
@@ -35,7 +36,13 @@ export default function Footer({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 lg:gap-16">
           {/* Brand — a alma da marca */}
           <div className="md:col-span-1">
-            <span className="text-2xl block mb-3">🌺</span>
+            <Image
+              src="/images/eternal-flowers-logo.jpg"
+              alt=""
+              width={24}
+              height={24}
+              className="w-6 h-6 rounded-full object-cover block mb-3"
+            />
             <h3 className="font-display text-xl font-light text-white/85 mb-2">
               Eternal Flowers
             </h3>
@@ -119,12 +126,19 @@ export default function Footer({
                 </li>
               )}
             </ul>
-            <div className="mt-6 pt-6 border-t border-white/8">
+            <div className="mt-6 pt-6 border-t border-white/8 space-y-3">
               <a
                 href={`/${locale}/care`}
                 className="group inline-flex items-center gap-2 text-white/45 hover:text-white/80 transition-colors duration-300 font-body font-light text-sm"
               >
                 {dict.careGuide}
+                <span className="text-brand-gold/40 group-hover:text-brand-gold/80 transition-colors duration-300">→</span>
+              </a>
+              <a
+                href={locale === 'pt' ? '/return-policy' : `/${locale}/return-policy`}
+                className="group inline-flex items-center gap-2 text-white/45 hover:text-white/80 transition-colors duration-300 font-body font-light text-sm"
+              >
+                {dict.returnPolicyLink}
                 <span className="text-brand-gold/40 group-hover:text-brand-gold/80 transition-colors duration-300">→</span>
               </a>
             </div>

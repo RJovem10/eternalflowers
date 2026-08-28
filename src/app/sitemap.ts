@@ -27,6 +27,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
+  // ── Return policy (non-default locales only; PT canoniza para /return-policy) ──
+  for (const locale of locales) {
+    if (locale === 'pt') {
+      entries.push({
+        url: `${siteUrl}/return-policy`,
+        changeFrequency: 'monthly',
+        priority: 0.3,
+      })
+    } else {
+      entries.push({
+        url: `${siteUrl}/${locale}/return-policy`,
+        changeFrequency: 'monthly',
+        priority: 0.3,
+      })
+    }
+  }
+
   // ── Semantic landing pages (botanical + orchid) ────────────
   for (const locale of locales) {
     for (const type of Object.keys(landingSlugs) as Array<keyof typeof landingSlugs>) {
