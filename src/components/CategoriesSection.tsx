@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import type { Media } from '@/payload-types'
 import Section from './Section'
 
 interface CategoryData {
@@ -7,7 +8,7 @@ interface CategoryData {
   name: string
   slug: string
   description?: string | null
-  image?: any
+  image?: (number | null) | Media
   sortOrder?: number | null
   isActive?: boolean | null
 }
@@ -18,7 +19,7 @@ interface CategoriesSectionProps {
   dict: any
 }
 
-function getCategoryImageUrl(image: any): string | null {
+function getCategoryImageUrl(image: (number | null) | Media | undefined): string | null {
   if (!image || typeof image !== 'object') return null
   // Prefer card size
   if (image.sizes?.card?.url) return image.sizes.card.url
