@@ -3,8 +3,8 @@ import type { Locale } from '@/i18n/dictionaries'
 import type { Metadata } from 'next'
 import { getPayloadClient } from '@/payload'
 import { returnPolicyContent } from '@/content/return-policy'
+import type { ReturnPolicyContent } from '@/content/return-policy'
 import Footer from '@/components/Footer'
-import { payloadLocaleOptions } from '@/lib/payload-locale'
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ||
@@ -29,7 +29,11 @@ export async function generateMetadata({
 
   const languages: Record<string, string> = {}
   for (const l of locales) {
-    languages[l] = `${siteUrl}/${l}/return-policy`
+    if (l === 'pt') {
+      languages[l] = `${siteUrl}/return-policy`
+    } else {
+      languages[l] = `${siteUrl}/${l}/return-policy`
+    }
   }
   languages['x-default'] = `${siteUrl}/return-policy`
 
@@ -67,6 +71,46 @@ function Section({
   )
 }
 
+function buildCompanyLines(company: any): string[] {
+  const lines: string[] = []
+  if (company?.companyName) lines.push(company.companyName)
+  if (company?.taxId) lines.push(company.taxId)
+  if (company?.address) lines.push(company.address)
+  const cityLine = [company?.postalCode, company?.city].filter(Boolean).join(' ')
+  if (cityLine) lines.push(cityLine)
+  if (company?.country) lines.push(company.country)
+  return lines
+}
+
+function buildModelFormHtml(
+  content: ReturnPolicyContent,
+  companyName: string | null | undefined,
+  companyLines: string[],
+  email: string | null | undefined,
+): string {
+  const lines: string[] = []
+  lines.push(content.modelFormRecipientLine)
+  lines.push(companyName || content.modelFormLabels.recipient)
+  for (const line of companyLines.slice(1)) {
+    lines.push(line)
+  }
+  if (email) lines.push(email)
+  lines.push('')
+  lines.push(content.modelFormLabels.declaration)
+  lines.push('')
+  lines.push(content.modelFormLabels.products)
+  lines.push(content.modelFormLabels.orderNumber)
+  lines.push(content.modelFormLabels.orderDate)
+  lines.push(content.modelFormLabels.receiptDate)
+  lines.push('')
+  lines.push(content.modelFormLabels.consumerName)
+  lines.push(content.modelFormLabels.consumerAddress)
+  lines.push('')
+  lines.push(content.modelFormLabels.date)
+  lines.push(content.modelFormLabels.signature)
+  return lines.join('\n')
+}
+
 export default async function ReturnPolicyPage({
   params,
 }: {
@@ -86,6 +130,10 @@ export default async function ReturnPolicyPage({
   const contactsWhatsapp = siteSettings?.contacts?.whatsapp || null
   const socialInstagram = siteSettings?.social?.instagramUrl || null
   const company = siteSettings?.company
+
+  const companyName = company?.companyName || content.modelFormLabels.recipient
+  const companyLines = buildCompanyLines(company || {})
+  const modelFormText = buildModelFormHtml(content, companyName, companyLines, contactsEmail)
 
   return (
     <>
@@ -141,13 +189,13 @@ export default async function ReturnPolicyPage({
                 {section.body}
               </p>
 
-              {/* Modelo de formulário */}
+              {/* Modelo de formulário montado com dados reais */}
               <div className="bg-brand-cream/50 border border-brand-sage-light/20 rounded-sm p-6 lg:p-8">
                 <h3 className="font-display text-lg font-light text-brand-charcoal mb-4">
                   {content.modelFormTitle}
                 </h3>
                 <pre className="font-body text-sm text-brand-charcoal/70 leading-relaxed whitespace-pre-wrap font-light">
-                  {content.modelForm}
+                  {modelFormText}
                 </pre>
               </div>
               <p className="mt-4 text-xs text-brand-charcoal/40 font-body font-light">
@@ -165,6 +213,13 @@ export default async function ReturnPolicyPage({
             {dict.contact}
           </h2>
           <div className="text-brand-charcoal/70 font-body font-light text-sm leading-relaxed space-y-2">
+            {company?.companyName && <p className="font-medium">{company.companyName}</p>}
+            {company?.taxId && <p className="text-xs">{company.taxId}</p>}
+            {company?.address && <p>{company.address}</p>}
+            {[company?.postalCode, company?.city].filter(Boolean).length > 0 && (
+              <p>{[company?.postalCode, company?.city].filter(Boolean).join(' ')}</p>
+            )}
+            {company?.country && <p>{company.country}</p>}
             {contactsEmail && (
               <p>
                 <a
@@ -176,12 +231,11 @@ export default async function ReturnPolicyPage({
               </p>
             )}
             {contactsPhone && <p>{contactsPhone}</p>}
-            {company?.companyName && <p className="text-xs text-brand-charcoal/50">{company.companyName}</p>}
           </div>
         </div>
       </Section>
 
-      {/* Footer */}
+      {/* Footer — sem fallback de endereço hardcoded */}
       <Footer
         email={contactsEmail}
         phone={contactsPhone}
@@ -193,6 +247,7 @@ export default async function ReturnPolicyPage({
         country={company?.country}
         locale={locale}
         dict={dict}
+        allowAddressFallback={false}
       />
     </>
   )

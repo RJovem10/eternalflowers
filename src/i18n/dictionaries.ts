@@ -192,7 +192,6 @@ type Dict = {
   careSaveButton: string
   careOpenButton: string
   returnPolicyLink: string
-  returnPolicyTitle: string
   returnPolicySeoTitle: string
   returnPolicySeoDescription: string
   internationalPresence: CountryData[]
@@ -388,7 +387,6 @@ export const dictionaries: Record<Locale, Dict> = {
         careSaveButton: 'Guardar guia',
         careOpenButton: 'Abrir imagem',
         returnPolicyLink: 'Política de Devoluções',
-        returnPolicyTitle: 'Política de Devoluções e Reembolsos',
         returnPolicySeoTitle: 'Política de Devoluções e Reembolsos | Eternal Flowers',
         returnPolicySeoDescription: 'Conheça a política de devoluções e reembolsos da Eternal Flowers. Saiba como exercer o direito de livre resolução, devoluções, reembolsos e garantia legal.',
         internationalPresence: [
@@ -579,7 +577,6 @@ export const dictionaries: Record<Locale, Dict> = {
         careSaveButton: 'Save guide',
         careOpenButton: 'Open image',
         returnPolicyLink: 'Returns & Refunds',
-        returnPolicyTitle: 'Returns & Refunds Policy',
         returnPolicySeoTitle: 'Returns & Refunds Policy | Eternal Flowers',
         returnPolicySeoDescription: 'Learn about Eternal Flowers\' returns and refunds policy. How to exercise your right of withdrawal, returns, refunds, and legal guarantee.',
         internationalPresence: [
@@ -770,7 +767,6 @@ export const dictionaries: Record<Locale, Dict> = {
             careSaveButton: 'Guardar guía',
             careOpenButton: 'Abrir imagen',
             returnPolicyLink: 'Política de devoluciones',
-            returnPolicyTitle: 'Política de devoluciones y reembolsos',
             returnPolicySeoTitle: 'Política de devoluciones y reembolsos | Eternal Flowers',
             returnPolicySeoDescription: 'Conozca la política de devoluciones y reembolsos de Eternal Flowers. Cómo ejercer el derecho de desistimiento, devoluciones, reembolsos y garantía legal.',
     internationalPresence: [
@@ -961,7 +957,6 @@ export const dictionaries: Record<Locale, Dict> = {
             careSaveButton: 'Salva guida',
             careOpenButton: 'Apri immagine',
             returnPolicyLink: 'Politica di reso',
-            returnPolicyTitle: 'Politica di reso e rimborso',
             returnPolicySeoTitle: 'Politica di reso e rimborso | Eternal Flowers',
             returnPolicySeoDescription: 'Scopri la politica di reso e rimborso di Eternal Flowers. Come esercitare il diritto di recesso, resi, rimborsi e garanzia legale.',
     internationalPresence: [
@@ -1152,7 +1147,6 @@ export const dictionaries: Record<Locale, Dict> = {
             careSaveButton: 'Leitfaden speichern',
             careOpenButton: 'Bild öffnen',
             returnPolicyLink: 'Rückgabe & Erstattung',
-            returnPolicyTitle: 'Rückgabe & Erstattung',
             returnPolicySeoTitle: 'Rückgabe & Erstattung | Eternal Flowers',
             returnPolicySeoDescription: 'Erfahren Sie mehr über die Rückgabe- und Erstattungsrichtlinie von Eternal Flowers. Widerrufsrecht, Rücksendungen, Rückerstattungen und gesetzliche Gewährleistung.',
     internationalPresence: [

@@ -93,3 +93,35 @@ describe('Footer — translated labels are unique per locale', () => {
     expect(unique.size).toBe(locales.length)
   })
 })
+
+describe('Footer — allowAddressFallback', () => {
+  it('allowAddressFallback={false} sem address não mostra endereço', () => {
+    const dict = { ...dictionaries.pt }
+    const { container, unmount } = render(
+      <Footer locale="pt" dict={dict} allowAddressFallback={false} />
+    )
+
+    // O endereço hardcoded não deve aparecer
+    expect(container.innerHTML).not.toContain('Av. Quinta da Rocha')
+    expect(container.innerHTML).not.toContain('Prado, Braga')
+    unmount()
+  })
+
+  it('allowAddressFallback={false} com address real mostra o address', () => {
+    const dict = { ...dictionaries.pt }
+    const { container, unmount } = render(
+      <Footer
+        locale="pt"
+        dict={dict}
+        address="Rua Teste, 123"
+        city="Lisboa"
+        country="Portugal"
+        allowAddressFallback={false}
+      />
+    )
+
+    expect(container.innerHTML).toContain('Rua Teste, 123')
+    expect(container.innerHTML).toContain('Lisboa')
+    unmount()
+  })
+})

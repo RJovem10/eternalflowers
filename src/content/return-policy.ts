@@ -5,6 +5,19 @@ export type ReturnPolicySection = {
   body: string
 }
 
+export type ModelFormLabels = {
+  recipient: string
+  declaration: string
+  products: string
+  orderNumber: string
+  orderDate: string
+  receiptDate: string
+  consumerName: string
+  consumerAddress: string
+  date: string
+  signature: string
+}
+
 export type ReturnPolicyContent = {
   title: string
   lastUpdated: string
@@ -12,7 +25,8 @@ export type ReturnPolicyContent = {
   sections: ReturnPolicySection[]
   modelFormTitle: string
   modelFormNote: string
-  modelForm: string
+  modelFormLabels: ModelFormLabels
+  modelFormRecipientLine: string
 }
 
 export const returnPolicyContent: Record<Locale, ReturnPolicyContent> = {
@@ -24,7 +38,7 @@ export const returnPolicyContent: Record<Locale, ReturnPolicyContent> = {
     sections: [
       {
         title: '1. Direito de livre resolução',
-        body: 'Se adquiriu um produto online (fora do estabelecimento comercial), tem o direito de resolver o contrato sem necessidade de indicar qualquer motivo, no prazo de 14 dias de calendário, nos termos do artigo 10.º do Decreto-Lei n.º 24/2014.\n\nPara bens, o prazo de 14 dias conta-se a partir da data em que o consumidor ou um terceiro por si indicado (que não o transportador) receba fisicamente os bens.',
+        body: 'Se adquiriu um produto através da nossa loja online, mediante contrato celebrado à distância, tem o direito de resolver o contrato sem necessidade de indicar qualquer motivo, no prazo de 14 dias de calendário, nos termos do artigo 10.º do Decreto-Lei n.º 24/2014.\n\nPara bens, o prazo de 14 dias conta-se a partir da data em que o consumidor ou um terceiro por si indicado (que não o transportador) receba fisicamente os bens.',
       },
       {
         title: '2. Como exercer o direito de livre resolução',
@@ -40,7 +54,7 @@ export const returnPolicyContent: Record<Locale, ReturnPolicyContent> = {
       },
       {
         title: '5. Custos da devolução',
-        body: 'Nas devoluções decorrentes do exercício do direito de livre resolução (por simples mudança de decisão), o consumidor suporta os custos diretos da devolução dos bens.\n\nCaso o problema seja um defeito do produto, um artigo incorreto ou uma falta de conformidade imputável à Eternal Flowers, o consumidor não suporta os custos de devolução.',
+        body: 'Nas devoluções decorrentes do exercício do direito de livre resolução (por simples mudança de decisão), o consumidor suporta os custos diretos da devolução dos bens.\n\nCaso o problema seja um defeito do produto, um artigo incorreto ou uma falta de conformidade abrangida pelo regime legal aplicável, o consumidor não suporta os custos de devolução.',
       },
       {
         title: '6. Reembolsos',
@@ -48,7 +62,7 @@ export const returnPolicyContent: Record<Locale, ReturnPolicyContent> = {
       },
       {
         title: '7. Produtos personalizados',
-        body: 'Os bens confecionados de acordo com as especificações do consumidor ou manifestamente personalizados não beneficiam do direito de livre resolução, nos termos do artigo 4.º, n.º 1, alínea a) do Decreto-Lei n.º 24/2014, salvo se a Eternal Flowers acordar condições mais favoráveis.\n\nEsta exceção não elimina os direitos legais do consumidor em caso de defeito ou falta de conformidade dos produtos.',
+        body: 'Os bens confecionados de acordo com as especificações do consumidor ou manifestamente personalizados não beneficiam do direito de livre resolução, nos termos do artigo 17.º, n.º 1, alínea c) do Decreto-Lei n.º 24/2014, salvo se a Eternal Flowers acordar condições mais favoráveis.\n\nEsta exceção não elimina os direitos legais do consumidor em caso de defeito ou falta de conformidade dos produtos.',
       },
       {
         title: '8. Produtos danificados, incorretos ou não conformes',
@@ -56,11 +70,11 @@ export const returnPolicyContent: Record<Locale, ReturnPolicyContent> = {
       },
       {
         title: '9. Garantia legal / falta de conformidade',
-        body: 'Nos termos do Decreto-Lei n.º 84/2021, a Eternal Flowers responde por qualquer falta de conformidade que se manifeste no prazo de três anos após a entrega do bem móvel.\n\nEm caso de falta de conformidade, o consumidor tem direito a que esta seja reposta sem encargos, através da reparação ou substituição do bem, ou, se tal não for possível ou não se mostrar adequado, à redução proporcional do preço ou à resolução do contrato, nos termos previstos na lei.',
+        body: 'Nos termos do Decreto-Lei n.º 84/2021, a Eternal Flowers responde por qualquer falta de conformidade que se manifeste no prazo de três anos após a entrega do bem móvel. Se a falta de conformidade se manifestar nos primeiros 30 dias após a entrega, a lei prevê ainda o direito de solicitar a substituição imediata do bem ou a resolução do contrato.\n\nEm caso de falta de conformidade, o consumidor dispõe dos direitos à reposição da conformidade através de reparação ou substituição e, nas condições previstas na lei, à redução proporcional do preço ou à resolução do contrato.',
       },
       {
         title: '10. Contactos e endereço para devoluções',
-        body: 'Para qualquer questão relacionada com devoluções ou reembolsos, contacte-nos através do email disponível na secção de Contacto desta página.\n\nO endereço para devoluções será fornecido após contacto prévio, de modo a garantirmos o correto processamento da sua devolução. Recomendamos que nos contacte antes de enviar qualquer artigo.',
+        body: 'Os dados de contacto e o endereço para devoluções encontram-se abaixo. Recomendamos que nos contacte antes do envio para facilitar a identificação e processamento da devolução; esse contacto prévio não condiciona o exercício do direito legal.',
       },
       {
         title: '11. Modelo de formulário de livre resolução',
@@ -70,23 +84,19 @@ export const returnPolicyContent: Record<Locale, ReturnPolicyContent> = {
     modelFormTitle: 'Formulário de Livre Resolução',
     modelFormNote:
       'O uso deste modelo não é obrigatório. O consumidor pode utilizar qualquer outra declaração inequívoca.',
-    modelForm: `Destinatário:
-Eternal Flowers by Mar&Natur®
-[Endereço — solicitar após contacto]
-[Email — disponível na secção de Contacto]
-
-Declaro que pretendo exercer o direito de livre resolução relativamente ao seguinte contrato de compra dos seguintes bens:
-
-Produto(s):
-Número da encomenda:
-Data da encomenda:
-Data de receção:
-
-Nome do consumidor:
-Endereço do consumidor:
-
-Data:
-Assinatura (apenas se enviado em papel):`,
+    modelFormRecipientLine: 'Destinatário:',
+    modelFormLabels: {
+      recipient: 'Eternal Flowers by Mar&Natur®',
+      declaration: 'Declaro que pretendo exercer o direito de livre resolução relativamente ao seguinte contrato de compra dos seguintes bens:',
+      products: 'Produto(s):',
+      orderNumber: 'Número da encomenda:',
+      orderDate: 'Data da encomenda:',
+      receiptDate: 'Data de receção:',
+      consumerName: 'Nome do consumidor:',
+      consumerAddress: 'Endereço do consumidor:',
+      date: 'Data:',
+      signature: 'Assinatura (apenas se enviado em papel):',
+    },
   },
 
   en: {
@@ -97,7 +107,7 @@ Assinatura (apenas se enviado em papel):`,
     sections: [
       {
         title: '1. Right of withdrawal',
-        body: 'If you purchased a product online (off-premises), you have the right to withdraw from the contract without giving any reason within 14 calendar days, in accordance with Article 10 of Decree-Law No. 24/2014.\n\nFor goods, the 14-day period begins on the day you or a third party indicated by you (other than the carrier) physically receives the goods.',
+        body: 'If you purchased a product through our online store, by means of a distance contract, you have the right to withdraw from the contract without giving any reason within 14 calendar days, in accordance with Article 10 of Decree-Law No. 24/2014.\n\nFor goods, the 14-day period begins on the day you or a third party indicated by you (other than the carrier) physically receives the goods.',
       },
       {
         title: '2. How to exercise the right of withdrawal',
@@ -113,7 +123,7 @@ Assinatura (apenas se enviado em papel):`,
       },
       {
         title: '5. Return shipping costs',
-        body: 'For returns resulting from the exercise of the right of withdrawal (change of mind), the consumer bears the direct cost of returning the goods.\n\nIf the issue is a defective product, an incorrect item, or a lack of conformity attributable to Eternal Flowers, the consumer does not bear the return costs.',
+        body: 'For returns resulting from the exercise of the right of withdrawal (change of mind), the consumer bears the direct cost of returning the goods.\n\nIf the issue is a defective product, an incorrect item, or a lack of conformity covered by the applicable legal regime, the consumer does not bear the return costs.',
       },
       {
         title: '6. Refunds',
@@ -121,7 +131,7 @@ Assinatura (apenas se enviado em papel):`,
       },
       {
         title: '7. Customised products',
-        body: 'Goods made to the consumer\'s specifications or clearly personalised do not benefit from the right of withdrawal, in accordance with Article 4(1)(a) of Decree-Law No. 24/2014, unless Eternal Flowers agrees to more favourable conditions.\n\nThis exception does not affect your legal rights in the event of a defect or lack of conformity of the products.',
+        body: 'Goods made to the consumer\'s specifications or clearly personalised do not benefit from the right of withdrawal, in accordance with Article 17(1)(c) of Decree-Law No. 24/2014, unless Eternal Flowers agrees to more favourable conditions.\n\nThis exception does not affect your legal rights in the event of a defect or lack of conformity of the products.',
       },
       {
         title: '8. Damaged, incorrect or non-conforming products',
@@ -129,11 +139,11 @@ Assinatura (apenas se enviado em papel):`,
       },
       {
         title: '9. Legal guarantee / lack of conformity',
-        body: 'Under Decree-Law No. 84/2021, Eternal Flowers is liable for any lack of conformity that becomes apparent within three years of delivery of the goods.\n\nIn the event of a lack of conformity, the consumer is entitled to have the goods brought into conformity at no cost, through repair or replacement, or, if this is not possible or appropriate, to a proportional price reduction or termination of the contract, under the terms provided by law.',
+        body: 'Under Decree-Law No. 84/2021, Eternal Flowers is liable for any lack of conformity that becomes apparent within three years of delivery of the goods. If the lack of conformity becomes apparent within the first 30 days after delivery, the law also provides the right to request immediate replacement of the goods or termination of the contract.\n\nIn the event of a lack of conformity, the consumer is entitled to have the goods brought into conformity through repair or replacement and, under the conditions provided by law, to a proportional price reduction or termination of the contract.',
       },
       {
         title: '10. Contacts and return address',
-        body: 'For any questions related to returns or refunds, please contact us via the email provided in the Contact section of this page.\n\nThe return address will be provided after prior contact to ensure correct processing of your return. We recommend that you contact us before sending any item.',
+        body: 'The contact details and return address are set out below. We recommend that you contact us before sending the goods to facilitate identification and processing of the return; this prior contact does not affect the exercise of your legal right.',
       },
       {
         title: '11. Model withdrawal form',
@@ -143,23 +153,19 @@ Assinatura (apenas se enviado em papel):`,
     modelFormTitle: 'Model Withdrawal Form',
     modelFormNote:
       'The use of this form is not mandatory. The consumer may use any other unequivocal statement.',
-    modelForm: `To:
-Eternal Flowers by Mar&Natur®
-[Address — request after contact]
-[Email — available in the Contact section]
-
-I/We hereby give notice that I/we withdraw from the contract of sale of the following goods:
-
-Product(s):
-Order number:
-Order date:
-Date of receipt:
-
-Name of consumer(s):
-Address of consumer(s):
-
-Date:
-Signature (only if this form is sent on paper):`,
+    modelFormRecipientLine: 'To:',
+    modelFormLabels: {
+      recipient: 'Eternal Flowers by Mar&Natur®',
+      declaration: 'I/We hereby give notice that I/we withdraw from the contract of sale of the following goods:',
+      products: 'Product(s):',
+      orderNumber: 'Order number:',
+      orderDate: 'Order date:',
+      receiptDate: 'Date of receipt:',
+      consumerName: 'Name of consumer(s):',
+      consumerAddress: 'Address of consumer(s):',
+      date: 'Date:',
+      signature: 'Signature (only if this form is sent on paper):',
+    },
   },
 
   es: {
@@ -170,7 +176,7 @@ Signature (only if this form is sent on paper):`,
     sections: [
       {
         title: '1. Derecho de desistimiento',
-        body: 'Si ha adquirido un producto en línea (fuera del establecimiento comercial), tiene derecho a desistir del contrato sin necesidad de indicar motivo alguno en un plazo de 14 días naturales, de conformidad con el artículo 10 del Decreto-Ley n.º 24/2014.\n\nPara los bienes, el plazo de 14 días se computa desde la fecha en que el consumidor o un tercero por él indicado (distinto del transportista) reciba físicamente los bienes.',
+        body: 'Si ha adquirido un producto a través de nuestra tienda online, mediante un contrato celebrado a distancia, tiene derecho a desistir del contrato sin necesidad de indicar motivo alguno en un plazo de 14 días naturales, de conformidad con el artículo 10 del Decreto-Ley n.º 24/2014.\n\nPara los bienes, el plazo de 14 días se computa desde la fecha en que el consumidor o un tercero por él indicado (distinto del transportista) reciba físicamente los bienes.',
       },
       {
         title: '2. Cómo ejercer el derecho de desistimiento',
@@ -186,7 +192,7 @@ Signature (only if this form is sent on paper):`,
       },
       {
         title: '5. Costes de la devolución',
-        body: 'En las devoluciones derivadas del ejercicio del derecho de desistimiento (por simple cambio de opinión), el consumidor asume los costes directos de la devolución de los bienes.\n\nSi el problema es un defecto del producto, un artículo incorrecto o una falta de conformidad imputable a Eternal Flowers, el consumidor no asume los costes de devolución.',
+        body: 'En las devoluciones derivadas del ejercicio del derecho de desistimiento (por simple cambio de opinión), el consumidor asume los costes directos de la devolución de los bienes.\n\nSi el problema es un defecto del producto, un artículo incorrecto o una falta de conformidad cubierta por el régimen legal aplicable, el consumidor no asume los costes de devolución.',
       },
       {
         title: '6. Reembolsos',
@@ -194,7 +200,7 @@ Signature (only if this form is sent on paper):`,
       },
       {
         title: '7. Productos personalizados',
-        body: 'Los bienes confeccionados según las especificaciones del consumidor o manifiestamente personalizados no se benefician del derecho de desistimiento, de conformidad con el artículo 4, apartado 1, letra a) del Decreto-Ley n.º 24/2014, salvo que Eternal Flowers acuerde condiciones más favorables.\n\nEsta excepción no elimina los derechos legales del consumidor en caso de defecto o falta de conformidad de los productos.',
+        body: 'Los bienes confeccionados según las especificaciones del consumidor o manifiestamente personalizados no se benefician del derecho de desistimiento, de conformidad con el artículo 17, apartado 1, letra c) del Decreto-Ley n.º 24/2014, salvo que Eternal Flowers acuerde condiciones más favorables.\n\nEsta excepción no elimina los derechos legales del consumidor en caso de defecto o falta de conformidad de los productos.',
       },
       {
         title: '8. Productos dañados, incorrectos o no conformes',
@@ -202,11 +208,11 @@ Signature (only if this form is sent on paper):`,
       },
       {
         title: '9. Garantía legal / falta de conformidad',
-        body: 'En virtud del Decreto-Ley n.º 84/2021, Eternal Flowers responde por cualquier falta de conformidad que se manifieste en un plazo de tres años desde la entrega del bien mueble.\n\nEn caso de falta de conformidad, el consumidor tiene derecho a que se restablezca la conformidad sin cargo, mediante la reparación o sustitución del bien, o, si ello no es posible o no resulta adecuado, a una reducción proporcional del precio o a la resolución del contrato, en los términos previstos por la ley.',
+        body: 'En virtud del Decreto-Ley n.º 84/2021, Eternal Flowers responde por cualquier falta de conformidad que se manifieste en un plazo de tres años desde la entrega del bien mueble. Si la falta de conformidad se manifiesta en los primeros 30 días tras la entrega, la ley prevé además el derecho a solicitar la sustitución inmediata del bien o la resolución del contrato.\n\nEn caso de falta de conformidad, el consumidor dispone de los derechos a la reposición de la conformidad mediante reparación o sustitución y, en las condiciones previstas por la ley, a la reducción proporcional del precio o a la resolución del contrato.',
       },
       {
         title: '10. Contactos y dirección para devoluciones',
-        body: 'Para cualquier consulta relacionada con devoluciones o reembolsos, póngase en contacto con nosotros a través del correo electrónico disponible en la sección de Contacto de esta página.\n\nLa dirección de devolución se proporcionará después del contacto previo para garantizar el correcto procesamiento de su devolución. Le recomendamos que se ponga en contacto con nosotros antes de enviar cualquier artículo.',
+        body: 'Los datos de contacto y la dirección para devoluciones se indican a continuación. Le recomendamos que se ponga en contacto con nosotros antes del envío para facilitar la identificación y el procesamiento de la devolución; ese contacto previo no condiciona el ejercicio del derecho legal.',
       },
       {
         title: '11. Modelo de formulario de desistimiento',
@@ -216,23 +222,19 @@ Signature (only if this form is sent on paper):`,
     modelFormTitle: 'Formulario de Desistimiento',
     modelFormNote:
       'El uso de este modelo no es obligatorio. El consumidor puede utilizar cualquier otra declaración inequívoca.',
-    modelForm: `Destinatario:
-Eternal Flowers by Mar&Natur®
-[Dirección — solicitar después del contacto]
-[Correo electrónico — disponible en la sección de Contacto]
-
-Por la presente comunico/comunicamos que desisto/desistimos del contrato de venta de los siguientes bienes:
-
-Producto(s):
-Número de pedido:
-Fecha del pedido:
-Fecha de recepción:
-
-Nombre del consumidor:
-Dirección del consumidor:
-
-Fecha:
-Firma (solo si se envía en papel):`,
+    modelFormRecipientLine: 'Destinatario:',
+    modelFormLabels: {
+      recipient: 'Eternal Flowers by Mar&Natur®',
+      declaration: 'Por la presente comunico/comunicamos que desisto/desistimos del contrato de venta de los siguientes bienes:',
+      products: 'Producto(s):',
+      orderNumber: 'Número de pedido:',
+      orderDate: 'Fecha del pedido:',
+      receiptDate: 'Fecha de recepción:',
+      consumerName: 'Nombre del consumidor:',
+      consumerAddress: 'Dirección del consumidor:',
+      date: 'Fecha:',
+      signature: 'Firma (solo si se envía en papel):',
+    },
   },
 
   it: {
@@ -243,7 +245,7 @@ Firma (solo si se envía en papel):`,
     sections: [
       {
         title: '1. Diritto di recesso',
-        body: 'Se ha acquistato un prodotto online (fuori dai locali commerciali), ha il diritto di recedere dal contratto senza dover indicare alcun motivo entro 14 giorni di calendario, ai sensi dell\'articolo 10 del Decreto-Legge n. 24/2014.\n\nPer i beni, il periodo di 14 giorni decorre dal giorno in cui il consumatore o un terzo da lui indicato (diverso dal vettore) riceve fisicamente i beni.',
+        body: 'Se ha acquistato un prodotto attraverso il nostro negozio online, mediante contratto a distanza, ha il diritto di recedere dal contratto senza dover indicare alcun motivo entro 14 giorni di calendario, ai sensi dell\'articolo 10 del Decreto-Legge n. 24/2014.\n\nPer i beni, il periodo di 14 giorni decorre dal giorno in cui il consumatore o un terzo da lui indicato (diverso dal vettore) riceve fisicamente i beni.',
       },
       {
         title: '2. Come esercitare il diritto di recesso',
@@ -259,7 +261,7 @@ Firma (solo si se envía en papel):`,
       },
       {
         title: '5. Costi della restituzione',
-        body: 'Per i resi derivanti dall\'esercizio del diritto di recesso (semplice cambiamento di idea), il consumatore sostiene i costi diretti della restituzione dei beni.\n\nSe il problema è un difetto del prodotto, un articolo errato o un difetto di conformità imputabile a Eternal Flowers, il consumatore non sostiene i costi di restituzione.',
+        body: 'Per i resi derivanti dall\'esercizio del diritto di recesso (semplice cambiamento di idea), il consumatore sostiene i costi diretti della restituzione dei beni.\n\nSe il problema è un difetto del prodotto, un articolo errato o un difetto di conformità coperto dal regime legale applicabile, il consumatore non sostiene i costi di restituzione.',
       },
       {
         title: '6. Rimborsi',
@@ -267,7 +269,7 @@ Firma (solo si se envía en papel):`,
       },
       {
         title: '7. Prodotti personalizzati',
-        body: 'I beni realizzati secondo le specifiche del consumatore o chiaramente personalizzati non beneficiano del diritto di recesso, ai sensi dell\'articolo 4, paragrafo 1, lettera a) del Decreto-Legge n. 24/2014, salvo che Eternal Flowers concordi condizioni più favorevoli.\n\nQuesta eccezione non elimina i diritti legali del consumatore in caso di difetto o difetto di conformità dei prodotti.',
+        body: 'I beni realizzati secondo le specifiche del consumatore o chiaramente personalizzati non beneficiano del diritto di recesso, ai sensi dell\'articolo 17, paragrafo 1, lettera c) del Decreto-Legge n. 24/2014, salvo che Eternal Flowers concordi condizioni più favorevoli.\n\nQuesta eccezione non elimina i diritti legali del consumatore in caso di difetto o difetto di conformità dei prodotti.',
       },
       {
         title: '8. Prodotti danneggiati, errati o non conformi',
@@ -275,11 +277,11 @@ Firma (solo si se envía en papel):`,
       },
       {
         title: '9. Garanzia legale / difetto di conformità',
-        body: 'Ai sensi del Decreto-Legge n. 84/2021, Eternal Flowers è responsabile per qualsiasi difetto di conformità che si manifesti entro tre anni dalla consegna del bene mobile.\n\nIn caso di difetto di conformità, il consumatore ha diritto al ripristino della conformità senza spese, mediante riparazione o sostituzione del bene, o, se ciò non è possibile o non appropriato, a una riduzione proporzionale del prezzo o alla risoluzione del contratto, secondo i termini previsti dalla legge.',
+        body: 'Ai sensi del Decreto-Legge n. 84/2021, Eternal Flowers è responsabile per qualsiasi difetto di conformità che si manifesti entro tre anni dalla consegna del bene mobile. Se il difetto di conformità si manifesta nei primi 30 giorni dalla consegna, la legge prevede inoltre il diritto di richiedere la sostituzione immediata del bene o la risoluzione del contratto.\n\nIn caso di difetto di conformità, il consumatore dispone dei diritti al ripristino della conformità mediante riparazione o sostituzione e, alle condizioni previste dalla legge, alla riduzione proporzionale del prezzo o alla risoluzione del contratto.',
       },
       {
         title: '10. Contatti e indirizzo per i resi',
-        body: 'Per qualsiasi domanda relativa a resi o rimborsi, ci contatti tramite l\'email disponibile nella sezione Contatti di questa pagina.\n\nL\'indirizzo per la restituzione sarà fornito dopo il contatto preventivo per garantire la corretta elaborazione del reso. Raccomandiamo di contattarci prima di inviare qualsiasi articolo.',
+        body: 'I dati di contatto e l\'indirizzo per la restituzione sono indicati di seguito. Ti consigliamo di contattarci prima della spedizione per facilitare l\'identificazione e l\'elaborazione del reso; questo contatto preventivo non condiziona l\'esercizio del diritto legale.',
       },
       {
         title: '11. Modulo tipo di recesso',
@@ -289,23 +291,19 @@ Firma (solo si se envía en papel):`,
     modelFormTitle: 'Modulo di Recesso',
     modelFormNote:
       'L\'uso di questo modulo non è obbligatorio. Il consumatore può utilizzare qualsiasi altra dichiarazione inequivocabile.',
-    modelForm: `Destinatario:
-Eternal Flowers by Mar&Natur®
-[Indirizzo — richiedere dopo il contatto]
-[Email — disponibile nella sezione Contatti]
-
-Con la presente comunico/dichiariamo di recedere dal contratto di vendita dei seguenti beni:
-
-Prodotto(i):
-Numero d'ordine:
-Data dell'ordine:
-Data di ricevimento:
-
-Nome del consumatore:
-Indirizzo del consumatore:
-
-Data:
-Firma (solo se inviato su carta):`,
+    modelFormRecipientLine: 'Destinatario:',
+    modelFormLabels: {
+      recipient: 'Eternal Flowers by Mar&Natur®',
+      declaration: 'Con la presente comunico/dichiariamo di recedere dal contratto di vendita dei seguenti beni:',
+      products: 'Prodotto(i):',
+      orderNumber: 'Numero d\'ordine:',
+      orderDate: 'Data dell\'ordine:',
+      receiptDate: 'Data di ricevimento:',
+      consumerName: 'Nome del consumatore:',
+      consumerAddress: 'Indirizzo del consumatore:',
+      date: 'Data:',
+      signature: 'Firma (solo se inviato su carta):',
+    },
   },
 
   de: {
@@ -316,7 +314,7 @@ Firma (solo se inviato su carta):`,
     sections: [
       {
         title: '1. Widerrufsrecht',
-        body: 'Wenn Sie ein Produkt online (außerhalb von Geschäftsräumen) erworben haben, haben Sie das Recht, den Vertrag ohne Angabe von Gründen innerhalb von 14 Kalendertagen zu widerrufen, gemäß Artikel 10 des Dekret-Gesetzes Nr. 24/2014.\n\nBei Waren beginnt die 14-Tage-Frist an dem Tag, an dem Sie oder ein von Ihnen benannter Dritter (der nicht der Beförderer ist) die Waren physisch in Besitz nehmen.',
+        body: 'Wenn Sie ein Produkt über unseren Online-Shop, durch einen Fernabsatzvertrag, erworben haben, haben Sie das Recht, den Vertrag ohne Angabe von Gründen innerhalb von 14 Kalendertagen zu widerrufen, gemäß Artikel 10 des Dekret-Gesetzes Nr. 24/2014.\n\nBei Waren beginnt die 14-Tage-Frist an dem Tag, an dem Sie oder ein von Ihnen benannter Dritter (der nicht der Beförderer ist) die Waren physisch in Besitz nehmen.',
       },
       {
         title: '2. Wie Sie Ihr Widerrufsrecht ausüben',
@@ -332,7 +330,7 @@ Firma (solo se inviato su carta):`,
       },
       {
         title: '5. Kosten der Rücksendung',
-        body: 'Bei Rücksendungen aufgrund der Ausübung des Widerrufsrechts (bloße Meinungsänderung) trägt der Verbraucher die unmittelbaren Kosten der Rücksendung der Waren.\n\nHandelt es sich um einen Produktfehler, einen falschen Artikel oder eine dem Verkäufer zuzurechnende Vertragswidrigkeit, trägt der Verbraucher keine Rücksendekosten.',
+        body: 'Bei Rücksendungen aufgrund der Ausübung des Widerrufsrechts (bloße Meinungsänderung) trägt der Verbraucher die unmittelbaren Kosten der Rücksendung der Waren.\n\nHandelt es sich um einen Produktfehler, einen falschen Artikel oder eine Vertragswidrigkeit, die unter das anwendbare gesetzliche Regime fällt, trägt der Verbraucher keine Rücksendekosten.',
       },
       {
         title: '6. Rückerstattung',
@@ -340,7 +338,7 @@ Firma (solo se inviato su carta):`,
       },
       {
         title: '7. Personalisierte Produkte',
-        body: 'Waren, die nach Kundenspezifikationen angefertigt werden oder eindeutig personalisiert sind, sind vom Widerrufsrecht ausgeschlossen, gemäß Artikel 4 Absatz 1 Buchstabe a) des Dekret-Gesetzes Nr. 24/2014, es sei denn, Eternal Flowers vereinbart günstigere Bedingungen.\n\nDiese Ausnahme berührt nicht Ihre gesetzlichen Rechte im Falle eines Mangels oder einer Vertragswidrigkeit der Produkte.',
+        body: 'Waren, die nach Kundenspezifikationen angefertigt werden oder eindeutig personalisiert sind, sind vom Widerrufsrecht ausgeschlossen, gemäß Artikel 17 Absatz 1 Buchstabe c) des Dekret-Gesetzes Nr. 24/2014, es sei denn, Eternal Flowers vereinbart günstigere Bedingungen.\n\nDiese Ausnahme berührt nicht Ihre gesetzlichen Rechte im Falle eines Mangels oder einer Vertragswidrigkeit der Produkte.',
       },
       {
         title: '8. Beschädigte, falsche oder nicht vertragsgemäße Produkte',
@@ -348,11 +346,11 @@ Firma (solo se inviato su carta):`,
       },
       {
         title: '9. Gesetzliche Gewährleistung / Mangelhaftigkeit',
-        body: 'Gemäß Dekret-Gesetz Nr. 84/2021 haftet Eternal Flowers für jede Vertragswidrigkeit, die innerhalb von drei Jahren nach Lieferung der beweglichen Sache auftritt.\n\nIm Falle einer Vertragswidrigkeit hat der Verbraucher Anspruch auf unentgeltliche Nachbesserung oder Ersatzlieferung oder, wenn dies nicht möglich oder nicht angemessen ist, auf Minderung des Kaufpreises oder Rücktritt vom Vertrag, zu den gesetzlich vorgesehenen Bedingungen.',
+        body: 'Gemäß Dekret-Gesetz Nr. 84/2021 haftet Eternal Flowers für jede Vertragswidrigkeit, die innerhalb von drei Jahren nach Lieferung der beweglichen Sache auftritt. Wenn die Vertragswidrigkeit innerhalb der ersten 30 Tage nach Lieferung auftritt, sieht das Gesetz außerdem das Recht vor, sofortigen Ersatz oder Rücktritt vom Vertrag zu verlangen.\n\nIm Falle einer Vertragswidrigkeit steht dem Verbraucher das Recht auf Nachbesserung oder Ersatzlieferung und, unter den gesetzlich vorgesehenen Bedingungen, auf Minderung des Kaufpreises oder Rücktritt vom Vertrag zu.',
       },
       {
         title: '10. Kontakt und Rücksendeadresse',
-        body: 'Bei Fragen zu Rücksendungen oder Rückerstattungen kontaktieren Sie uns bitte per E-Mail (siehe Kontaktbereich auf dieser Seite).\n\nDie Rücksendeadresse wird nach vorheriger Kontaktaufnahme mitgeteilt, um die korrekte Bearbeitung Ihrer Rücksendung zu gewährleisten. Wir empfehlen, uns vor dem Versand eines Artikels zu kontaktieren.',
+        body: 'Die Kontaktdaten und die Rücksendeadresse sind unten aufgeführt. Wir empfehlen, uns vor dem Versand zu kontaktieren, um die Identifizierung und Bearbeitung der Rücksendung zu erleichtern; diese vorherige Kontaktaufnahme beeinträchtigt nicht die Ausübung des gesetzlichen Rechts.',
       },
       {
         title: '11. Muster-Widerrufsformular',
@@ -361,23 +359,19 @@ Firma (solo se inviato su carta):`,
     ],
     modelFormTitle: 'Muster-Widerrufsformular',
     modelFormNote:
-      'Die Verwendung dieses Formulars ist nicht verpflichtend. Der Verbraucher kann jede andere eindeutige Erklärung verwenden.',
-    modelForm: `An:
-Eternal Flowers by Mar&Natur®
-[Adresse — nach Kontaktaufnahme erfragen]
-[E-Mail — im Kontaktbereich verfügbar]
-
-Hiermit widerrufe(n) ich/wir den von mir/uns abgeschlossenen Kaufvertrag über die folgenden Waren:
-
-Produkt(e):
-Bestellnummer:
-Bestelldatum:
-Erhalten am:
-
-Name des/der Verbraucher(s):
-Anschrift des/der Verbraucher(s):
-
-Datum:
-Unterschrift (nur bei Mitteilung auf Papier):`,
+      'Die Verwendung dieses Formulars nicht verpflichtend. Der Verbraucher kann jede andere eindeutige Erklärung verwenden.',
+    modelFormRecipientLine: 'An:',
+    modelFormLabels: {
+      recipient: 'Eternal Flowers by Mar&Natur®',
+      declaration: 'Hiermit widerrufe(n) ich/wir den von mir/uns abgeschlossenen Kaufvertrag über die folgenden Waren:',
+      products: 'Produkt(e):',
+      orderNumber: 'Bestellnummer:',
+      orderDate: 'Bestelldatum:',
+      receiptDate: 'Erhalten am:',
+      consumerName: 'Name des/der Verbraucher(s):',
+      consumerAddress: 'Anschrift des/der Verbraucher(s):',
+      date: 'Datum:',
+      signature: 'Unterschrift (nur bei Mitteilung auf Papier):',
+    },
   },
 }

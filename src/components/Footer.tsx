@@ -13,6 +13,7 @@ interface FooterProps {
   country?: string | null
   locale: string
   dict: any
+  allowAddressFallback?: boolean
 }
 
 export default function Footer({
@@ -27,8 +28,11 @@ export default function Footer({
   country,
   locale,
   dict,
+  allowAddressFallback = true,
 }: FooterProps) {
   const whatsappHref = formatWhatsAppUrl(whatsappUrl)
+
+  const hasRealAddress = !!(address || city || postalCode || country)
 
   return (
     <footer className="bg-brand-charcoal text-white/55">
@@ -76,20 +80,22 @@ export default function Footer({
                 </li>
               )}
               {phone && <li>{phone}</li>}
-              <li className="text-white/25 text-xs leading-relaxed">
-                {address || 'Av. Quinta da Rocha, Loja 30'}
-                {city || postalCode || country ? (
-                  <>
-                    <br />
-                    {[city, postalCode, country].filter(Boolean).join(', ') || 'Prado, Braga · Portugal'}
-                  </>
-                ) : (
-                  <>
-                    <br />
-                    Prado, Braga · Portugal
-                  </>
-                )}
-              </li>
+              {hasRealAddress || allowAddressFallback ? (
+                <li className="text-white/25 text-xs leading-relaxed">
+                  {address || 'Av. Quinta da Rocha, Loja 30'}
+                  {city || postalCode || country ? (
+                    <>
+                      <br />
+                      {[city, postalCode, country].filter(Boolean).join(', ') || 'Prado, Braga · Portugal'}
+                    </>
+                  ) : (
+                    <>
+                      <br />
+                      Prado, Braga · Portugal
+                    </>
+                  )}
+                </li>
+              ) : null}
             </ul>
           </div>
 
