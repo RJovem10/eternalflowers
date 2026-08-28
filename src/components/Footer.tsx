@@ -33,6 +33,7 @@ export default function Footer({
   const whatsappHref = formatWhatsAppUrl(whatsappUrl)
 
   const hasRealAddress = !!(address || city || postalCode || country)
+  const realCityLine = [city, postalCode, country].filter(Boolean).join(', ')
 
   return (
     <footer className="bg-brand-charcoal text-white/55">
@@ -82,16 +83,17 @@ export default function Footer({
               {phone && <li>{phone}</li>}
               {hasRealAddress || allowAddressFallback ? (
                 <li className="text-white/25 text-xs leading-relaxed">
-                  {address || 'Av. Quinta da Rocha, Loja 30'}
-                  {city || postalCode || country ? (
+                  {allowAddressFallback ? (
                     <>
+                      {address || 'Av. Quinta da Rocha, Loja 30'}
                       <br />
-                      {[city, postalCode, country].filter(Boolean).join(', ') || 'Prado, Braga · Portugal'}
+                      {realCityLine || 'Prado, Braga · Portugal'}
                     </>
                   ) : (
                     <>
-                      <br />
-                      Prado, Braga · Portugal
+                      {address}
+                      {address && realCityLine && <br />}
+                      {realCityLine}
                     </>
                   )}
                 </li>

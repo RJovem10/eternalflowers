@@ -4,7 +4,7 @@
  * e regras jurídicas específicas.
  */
 import { describe, it, expect } from 'vitest'
-import { returnPolicyContent } from '@/content/return-policy'
+import { returnPolicyContent, buildModelFormText } from '@/content/return-policy'
 import { locales, defaultLocale } from '@/i18n/dictionaries'
 
 describe('Return policy content — exists in all 5 locales', () => {
@@ -160,6 +160,37 @@ describe('Model form — no placeholders', () => {
   })
 })
 
+describe('Model form builder — buildModelFormText', () => {
+  it('companyName undefined — nenhuma linha real perdida', () => {
+    const text = buildModelFormText(returnPolicyContent.pt, {
+      address: 'Rua Teste',
+      postalCode: '1000-000',
+      city: 'Lisboa',
+      country: 'Portugal',
+    }, 'email@example.com')
+    expect(text).toContain('Eternal Flowers by Mar&Natur®')
+    expect(text).toContain('Rua Teste')
+    expect(text).toContain('1000-000 Lisboa')
+    expect(text).toContain('Portugal')
+    expect(text).toContain('email@example.com')
+  })
+
+  it('sem dados — apenas fallback do nome, sem linhas inventadas', () => {
+    const text = buildModelFormText(returnPolicyContent.pt, {}, null)
+    expect(text).toContain('Eternal Flowers by Mar&Natur®')
+    expect(text).not.toContain('solicitar após contacto')
+  })
+
+  it('companyName presente — usado o nome real', () => {
+    const text = buildModelFormText(returnPolicyContent.pt, {
+      companyName: 'Eternal Flowers Unipessoal, Lda.',
+      address: 'Rua Teste',
+    }, null)
+    expect(text).toContain('Eternal Flowers Unipessoal, Lda.')
+    expect(text).toContain('Rua Teste')
+  })
+})
+
 describe('Middleware — /return-policy rewrite', () => {
   const middlewareContent = (() => {
     try {
@@ -220,6 +251,10 @@ describe('SEO / Metadata', () => {
 
   it('não usa payloadLocaleOptions (import removido)', () => {
     expect(pageContent).not.toContain('payloadLocaleOptions')
+  })
+
+  it('usa buildModelFormText importado do content module', () => {
+    expect(pageContent).toContain('buildModelFormText')
   })
 })
 

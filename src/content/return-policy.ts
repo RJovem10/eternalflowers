@@ -29,6 +29,66 @@ export type ReturnPolicyContent = {
   modelFormRecipientLine: string
 }
 
+/**
+ * Campos reais da empresa vindos de site-settings (company group).
+ * Todos opcionais — nenhum valor é inventado.
+ */
+export type CompanyFields = {
+  companyName?: string | null
+  taxId?: string | null
+  address?: string | null
+  postalCode?: string | null
+  city?: string | null
+  country?: string | null
+}
+
+/**
+ * Linhas de endereço/identificação da empresa (SEM companyName,
+ * que é tratado separadamente no formulário). Apenas campos reais.
+ */
+export function buildCompanyLines(company: CompanyFields | null | undefined): string[] {
+  const lines: string[] = []
+  if (company?.taxId) lines.push(company.taxId)
+  if (company?.address) lines.push(company.address)
+  const cityLine = [company?.postalCode, company?.city].filter(Boolean).join(' ')
+  if (cityLine) lines.push(cityLine)
+  if (company?.country) lines.push(company.country)
+  return lines
+}
+
+/**
+ * Monta o texto do modelo de livre resolução com os dados reais.
+ * O único fallback permitido é o nome da marca.
+ * Nenhuma linha real é perdida, independentemente de companyName existir.
+ */
+export function buildModelFormText(
+  content: ReturnPolicyContent,
+  company: CompanyFields | null | undefined,
+  email: string | null | undefined,
+): string {
+  const lines: string[] = []
+  lines.push(content.modelFormRecipientLine)
+  lines.push(company?.companyName || content.modelFormLabels.recipient)
+  for (const line of buildCompanyLines(company)) {
+    lines.push(line)
+  }
+  if (email) lines.push(email)
+  lines.push('')
+  lines.push(content.modelFormLabels.declaration)
+  lines.push('')
+  lines.push(content.modelFormLabels.products)
+  lines.push(content.modelFormLabels.orderNumber)
+  lines.push(content.modelFormLabels.orderDate)
+  lines.push(content.modelFormLabels.receiptDate)
+  lines.push('')
+  lines.push(content.modelFormLabels.consumerName)
+  lines.push(content.modelFormLabels.consumerAddress)
+  lines.push('')
+  lines.push(content.modelFormLabels.date)
+  lines.push(content.modelFormLabels.signature)
+  return lines.join('\n')
+}
+
 export const returnPolicyContent: Record<Locale, ReturnPolicyContent> = {
   pt: {
     title: 'Política de Devoluções e Reembolsos',

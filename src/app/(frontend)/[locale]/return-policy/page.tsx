@@ -2,8 +2,7 @@ import { getDictionary, locales, defaultLocale } from '@/i18n/dictionaries'
 import type { Locale } from '@/i18n/dictionaries'
 import type { Metadata } from 'next'
 import { getPayloadClient } from '@/payload'
-import { returnPolicyContent } from '@/content/return-policy'
-import type { ReturnPolicyContent } from '@/content/return-policy'
+import { returnPolicyContent, buildModelFormText } from '@/content/return-policy'
 import Footer from '@/components/Footer'
 
 const siteUrl =
@@ -71,46 +70,6 @@ function Section({
   )
 }
 
-function buildCompanyLines(company: any): string[] {
-  const lines: string[] = []
-  if (company?.companyName) lines.push(company.companyName)
-  if (company?.taxId) lines.push(company.taxId)
-  if (company?.address) lines.push(company.address)
-  const cityLine = [company?.postalCode, company?.city].filter(Boolean).join(' ')
-  if (cityLine) lines.push(cityLine)
-  if (company?.country) lines.push(company.country)
-  return lines
-}
-
-function buildModelFormHtml(
-  content: ReturnPolicyContent,
-  companyName: string | null | undefined,
-  companyLines: string[],
-  email: string | null | undefined,
-): string {
-  const lines: string[] = []
-  lines.push(content.modelFormRecipientLine)
-  lines.push(companyName || content.modelFormLabels.recipient)
-  for (const line of companyLines.slice(1)) {
-    lines.push(line)
-  }
-  if (email) lines.push(email)
-  lines.push('')
-  lines.push(content.modelFormLabels.declaration)
-  lines.push('')
-  lines.push(content.modelFormLabels.products)
-  lines.push(content.modelFormLabels.orderNumber)
-  lines.push(content.modelFormLabels.orderDate)
-  lines.push(content.modelFormLabels.receiptDate)
-  lines.push('')
-  lines.push(content.modelFormLabels.consumerName)
-  lines.push(content.modelFormLabels.consumerAddress)
-  lines.push('')
-  lines.push(content.modelFormLabels.date)
-  lines.push(content.modelFormLabels.signature)
-  return lines.join('\n')
-}
-
 export default async function ReturnPolicyPage({
   params,
 }: {
@@ -131,9 +90,7 @@ export default async function ReturnPolicyPage({
   const socialInstagram = siteSettings?.social?.instagramUrl || null
   const company = siteSettings?.company
 
-  const companyName = company?.companyName || content.modelFormLabels.recipient
-  const companyLines = buildCompanyLines(company || {})
-  const modelFormText = buildModelFormHtml(content, companyName, companyLines, contactsEmail)
+  const modelFormText = buildModelFormText(content, company, contactsEmail)
 
   return (
     <>

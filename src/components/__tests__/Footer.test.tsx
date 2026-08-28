@@ -124,4 +124,42 @@ describe('Footer — allowAddressFallback', () => {
     expect(container.innerHTML).toContain('Lisboa')
     unmount()
   })
+
+  it('A: allowAddressFallback=false, address undefined, city=Lisboa, country=Portugal → só city/country, sem fallback', () => {
+    const dict = { ...dictionaries.pt }
+    const { container, unmount } = render(
+      <Footer
+        locale="pt"
+        dict={dict}
+        city="Lisboa"
+        country="Portugal"
+        allowAddressFallback={false}
+      />
+    )
+
+    const html = container.innerHTML
+    expect(html).toContain('Lisboa')
+    expect(html).toContain('Portugal')
+    expect(html).not.toContain('Av. Quinta da Rocha')
+    expect(html).not.toContain('Prado, Braga')
+    unmount()
+  })
+
+  it('B: allowAddressFallback=false, address="Rua Teste", rest undefined → só address, sem fallback', () => {
+    const dict = { ...dictionaries.pt }
+    const { container, unmount } = render(
+      <Footer
+        locale="pt"
+        dict={dict}
+        address="Rua Teste"
+        allowAddressFallback={false}
+      />
+    )
+
+    const html = container.innerHTML
+    expect(html).toContain('Rua Teste')
+    expect(html).not.toContain('Av. Quinta da Rocha')
+    expect(html).not.toContain('Prado, Braga')
+    unmount()
+  })
 })
