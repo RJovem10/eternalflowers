@@ -419,7 +419,7 @@ export const returnPolicyContent: Record<Locale, ReturnPolicyContent> = {
     ],
     modelFormTitle: 'Muster-Widerrufsformular',
     modelFormNote:
-      'Die Verwendung dieses Formulars nicht verpflichtend. Der Verbraucher kann jede andere eindeutige Erklärung verwenden.',
+      'Die Verwendung dieses Formulars ist nicht verpflichtend. Der Verbraucher kann jede andere eindeutige Erklärung verwenden.',
     modelFormRecipientLine: 'An:',
     modelFormLabels: {
       recipient: 'Eternal Flowers by Mar&Natur®',
