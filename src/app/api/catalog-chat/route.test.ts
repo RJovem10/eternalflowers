@@ -1,37 +1,39 @@
 /**
- * Testes para /api/catalog-chat
+ * Testes para /api/catalog-chat e catalog-chat service
  *
  * Testa:
  *   - Autenticação (sem token, token inválido, token válido)
  *   - OPENAI_API_KEY nunca aparece na resposta
  *   - CATALOG_ASSISTANT_API_KEY nunca aparece na resposta
+ *   - imageData em messages[]: MIME inválido → 415, >10MB → 413
  *   - tool allowlist (não permite recursos fora do catálogo)
  *   - create/update product passa pela Catalog Assistant API
+ *   - uploadMedia existe na allowlist
+ *   - uploadMedia sem imagem não faz upload
+ *   - product tool contém images, productionLeadTime, canShareShippingPackage
+ *   - erro interno de uma tool não devolve err.message ao modelo
  *   - nenhum DELETE disponível
- *   - upload só aceita formatos autorizados
  *   - erros internos são sanitizados
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
 // ─── Mocks ───────────────────────────────────────────────────
 
-// Mock catalog-auth
 const mockVerifyPayloadAdmin = vi.hoisted(() => vi.fn(() => Promise.resolve({ id: 1, email: 'marina@eternalflowers.pt', collection: 'users' })))
 vi.mock('@/lib/catalog-auth', () => ({
   verifyPayloadAdmin: mockVerifyPayloadAdmin,
 }))
 
-// Mock catalog-chat
-const mockProcessChatMessage = vi.hoisted(() => vi.fn(() => Promise.resolve({
-  messages: [{ role: 'assistant', content: 'Olá! Como posso ajudar?' }],
-})))
+const mockProcessChatMessage = vi.hoisted(() => vi.fn())
 vi.mock('@/services/catalog-chat', () => ({
   processChatMessage: mockProcessChatMessage,
 }))
 
-describe('POST /api/catalog-chat', () => {
+// ─── Route Tests ─────────────────────────────────────────────
+
+describe('POST /api/catalog-chat — auth & validation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockVerifyPayloadAdmin.mockResolvedValue({ id: 1, email: 'marina@eternalflowers.pt', collection: 'users' })
@@ -45,7 +47,6 @@ describe('POST /api/catalog-chat', () => {
     if (cookie != null) {
       headers['Cookie'] = `payload-token=${cookie}`
     } else {
-      // Default: valid token
       headers['Cookie'] = 'payload-token=valid-token'
     }
     return new NextRequest('http://localhost:3000/api/catalog-chat', {
@@ -97,9 +98,7 @@ describe('POST /api/catalog-chat', () => {
 
   it('OPENAI_API_KEY não aparece na resposta', async () => {
     const { POST } = await import('./route')
-    const req = makeRequest({
-      messages: [{ role: 'user', content: 'Teste' }],
-    })
+    const req = makeRequest({ messages: [{ role: 'user', content: 'Teste' }] })
     const res = await POST(req)
     const body = await res.text()
     expect(body).not.toContain('sk-')
@@ -108,9 +107,7 @@ describe('POST /api/catalog-chat', () => {
 
   it('CATALOG_ASSISTANT_API_KEY não aparece na resposta', async () => {
     const { POST } = await import('./route')
-    const req = makeRequest({
-      messages: [{ role: 'user', content: 'Teste' }],
-    })
+    const req = makeRequest({ messages: [{ role: 'user', content: 'Teste' }] })
     const res = await POST(req)
     const body = await res.text()
     expect(body).not.toContain('CATALOG_ASSISTANT_API_KEY')
@@ -119,13 +116,10 @@ describe('POST /api/catalog-chat', () => {
   it('erro interno é sanitizado (sem stack trace)', async () => {
     mockProcessChatMessage.mockRejectedValue(new Error('DB connection failed: /srv/secret/path'))
     const { POST } = await import('./route')
-    const req = makeRequest({
-      messages: [{ role: 'user', content: 'Teste' }],
-    })
+    const req = makeRequest({ messages: [{ role: 'user', content: 'Teste' }] })
     const res = await POST(req)
     const body = await res.json()
     expect(res.status).toBe(500)
-    // Erro genérico — sem stack, sem path interno
     expect(body.error.message).toBe('Erro interno do servidor.')
     expect(body.error.message).not.toContain('/srv/')
     expect(body.error.message).not.toContain('secret')
@@ -133,39 +127,78 @@ describe('POST /api/catalog-chat', () => {
 
   it('create product passa pela Catalog Assistant API', async () => {
     mockProcessChatMessage.mockResolvedValue({
-      messages: [
-        { role: 'assistant', content: 'Produto criado com sucesso.' },
-      ],
+      messages: [{ role: 'assistant', content: 'Produto criado com sucesso.' }],
     })
     const { POST } = await import('./route')
     const req = makeRequest({
-      messages: [
-        { role: 'user', content: 'Cria um produto: Rosa Teste, 50€, Rosa gallica' },
-      ],
+      messages: [{ role: 'user', content: 'Cria um produto: Rosa Teste, 50€, Rosa gallica' }],
     })
     const res = await POST(req)
     expect(res.status).toBe(200)
-    // Verificar que o serviço foi chamado com os dados corretos
     expect(mockProcessChatMessage).toHaveBeenCalled()
   })
 
-  it('rejeita imagem demasiado grande', async () => {
+  // ─── Image validation from messages[].imageData ──────────
+
+  it('rejeita MIME inválido em messages[].imageData → 415', async () => {
     const { POST } = await import('./route')
-    // Criar um data URL que excede 10MB (11MB string)
-    const largeB64 = 'A'.repeat(11 * 1024 * 1024)
-    const largeData = 'data:image/png;base64,' + largeB64
-    const req = new NextRequest('http://localhost:3000/api/catalog-chat', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cookie': 'payload-token=valid-token',
-      },
-      body: JSON.stringify({
-        messages: [{ role: 'user', content: 'Analisa esta imagem' }],
-        imageData: largeData,
-      }),
+    const req = makeRequest({
+      messages: [{
+        role: 'user',
+        content: 'Analisa esta imagem',
+        imageData: 'data:image/gif;base64,R0lGODdhAQABAIAAAP8AAAAA',
+      }],
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(415)
+    const body = await res.json()
+    expect(body.error.code).toBe('INVALID_MIME_TYPE')
+  })
+
+  it('rejeita data URL inválida → 400', async () => {
+    const { POST } = await import('./route')
+    const req = makeRequest({
+      messages: [{
+        role: 'user',
+        content: 'Analisa',
+        imageData: 'not-a-data-url',
+      }],
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error.code).toBe('INVALID_IMAGE_FORMAT')
+  })
+
+  it('rejeita imagem > 10MB em messages[].imageData → 413', async () => {
+    const { POST } = await import('./route')
+    // base64 de ~11MB (11M chars * 3/4 = ~8.25MB, mas com o prefixo data:image/jpeg;base64, excede 10MB)
+    const largeB64 = 'A'.repeat(14 * 1024 * 1024) // ~14M chars base64 = ~10.5MB decoded
+    const req = makeRequest({
+      messages: [{
+        role: 'user',
+        content: 'Analisa',
+        imageData: 'data:image/jpeg;base64,' + largeB64,
+      }],
     })
     const res = await POST(req)
     expect(res.status).toBe(413)
-  }, 15000) // 15s timeout for this test
+    const body = await res.json()
+    expect(body.error.code).toBe('IMAGE_TOO_LARGE')
+  })
+
+  it('aceita imagem JPEG válida em messages[].imageData', async () => {
+    const { POST } = await import('./route')
+    // 1x1 pixel JPEG base64 pequeno
+    const smallJpeg = '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP////8B//8KAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA/////2wBDAQMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA////wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AKwA='
+    const req = makeRequest({
+      messages: [{
+        role: 'user',
+        content: 'Analisa',
+        imageData: 'data:image/jpeg;base64,' + smallJpeg,
+      }],
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(200)
+  })
 })

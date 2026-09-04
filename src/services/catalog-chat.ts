@@ -1,7 +1,7 @@
 /**
- * catalog-chat.ts — Serviço de chat com OpenAI Responses API
+ * catalog-chat.ts — Serviço de chat com OpenAI Chat Completions API
  *
- * Integra a OpenAI Responses API com function/tool calling.
+ * Integra a OpenAI Chat Completions API com function/tool calling.
  * Todas as chamadas à Catalog Assistant API são feitas server-side.
  */
 
@@ -11,21 +11,21 @@ import type { ChatMessage } from '@/components/chat/types'
 // ─── Constantes ──────────────────────────────────────────────
 
 const CATALOG_API_PREFIX = '/api/catalog-assistant'
+const ALLOWED_IMAGE_MIME = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
 // ─── Tipos ───────────────────────────────────────────────────
 
 export interface ChatRequest {
   messages: ChatMessage[]
-  imageData?: string // base64 data URL da imagem
 }
 
 export interface ChatResponse {
   messages: ChatMessage[]
 }
 
-// ─── Tools (Function Calling) ────────────────────────────────
+// ─── Tools (Function Calling) — 15 tools ────────────────────
 
-const CATALOG_TOOLS: OpenAI.ChatCompletionTool[] = [
+export const CATALOG_TOOLS: OpenAI.ChatCompletionTool[] = [
   // ── Products ──────────────────────────────────────────────
   {
     type: 'function',
@@ -80,16 +80,33 @@ const CATALOG_TOOLS: OpenAI.ChatCompletionTool[] = [
           descriptionIt: { type: 'string', description: 'Descrição (IT)' },
           descriptionDe: { type: 'string', description: 'Descrição (DE)' },
           image: { type: 'integer', description: 'ID da media (foto principal)' },
+          images: {
+            type: 'array',
+            description: 'Galeria de imagens',
+            items: {
+              type: 'object',
+              properties: { image: { type: 'integer', description: 'ID da media' } },
+            },
+          },
           availability: { type: 'string', enum: ['available', 'reserved', 'sold', 'preparing'], description: 'Disponibilidade' },
           sku: { type: 'string', description: 'Código (SKU)' },
           productionMode: { type: 'string', enum: ['unique', 'reproducible', 'made_to_order'], description: 'Modo de Produção' },
+          productionLeadTime: { type: 'integer', description: 'Prazo de produção (dias úteis, apenas made_to_order)' },
           stockQuantity: { type: 'integer', description: 'Quantidade em stock' },
           shippingClass: { type: 'string', enum: ['standard', 'cupula'], description: 'Classe de Expedição' },
+          canShareShippingPackage: { type: 'boolean', description: 'Pode partilhar embalagem de envio' },
           category: { type: 'integer', description: 'ID da categoria' },
           collections: { type: 'array', items: { type: 'integer' }, description: 'IDs das coleções' },
           story: {
-            type: 'string',
-            description: 'História da Peça. Pode ser texto (locale pt) ou JSON com {pt, en, es, it, de}',
+            type: 'object',
+            description: 'História da Peça por locale',
+            properties: {
+              pt: { type: 'string' },
+              en: { type: 'string' },
+              es: { type: 'string' },
+              it: { type: 'string' },
+              de: { type: 'string' },
+            },
           },
         },
         required: ['namePt', 'price', 'scientificName'],
@@ -120,16 +137,32 @@ const CATALOG_TOOLS: OpenAI.ChatCompletionTool[] = [
           descriptionIt: { type: 'string' },
           descriptionDe: { type: 'string' },
           image: { type: 'integer' },
+          images: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: { image: { type: 'integer' } },
+            },
+          },
           availability: { type: 'string', enum: ['available', 'reserved', 'sold', 'preparing'] },
           sku: { type: 'string' },
           productionMode: { type: 'string', enum: ['unique', 'reproducible', 'made_to_order'] },
+          productionLeadTime: { type: 'integer' },
           stockQuantity: { type: 'integer' },
           shippingClass: { type: 'string', enum: ['standard', 'cupula'] },
-          category: { type: 'integer', nullable: true },
+          canShareShippingPackage: { type: 'boolean' },
+          category: { type: 'integer' },
           collections: { type: 'array', items: { type: 'integer' } },
           story: {
-            type: 'string',
-            description: 'História da Peça. Pode ser texto (locale pt) ou JSON com {pt, en, es, it, de}',
+            type: 'object',
+            description: 'História da Peça por locale',
+            properties: {
+              pt: { type: 'string' },
+              en: { type: 'string' },
+              es: { type: 'string' },
+              it: { type: 'string' },
+              de: { type: 'string' },
+            },
           },
         },
         required: ['id'],
@@ -327,6 +360,17 @@ const CATALOG_TOOLS: OpenAI.ChatCompletionTool[] = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'uploadMedia',
+      description: 'Guarda a fotografia anexada na conversa no catálogo. Usa a imagem que a Marina enviou na mensagem anterior.',
+      parameters: {
+        type: 'object',
+        properties: {},
+      },
+    },
+  },
 ]
 
 // ─── System Instructions ─────────────────────────────────────
@@ -342,6 +386,7 @@ As tuas responsabilidades:
 - Não inventas IDs. Antes de criar, verifica se já existe produto/categoria/coleção semelhante quando apropriado.
 - Respeitas os campos definidos pela API.
 - Fotografias originais não devem ser modificadas.
+- Para guardar uma fotografia anexada, usa a ferramenta uploadMedia. Depois do upload, recebes o media ID e podes usá-lo ao criar/editar produtos, categorias ou coleções.
 
 Regras de segurança que o servidor já aplica automaticamente:
 - Produtos criados ou editados ficam com isPublic=false (não visíveis no site)
@@ -354,10 +399,6 @@ Explica o que fizeste e pergunta se a Marina quer mais alguma alteração.`
 
 // ─── Funções auxiliares ──────────────────────────────────────
 
-/**
- * Obtém a chave da API Catalog Assistant a partir da env.
- * Nunca é exposta ao modelo ou ao browser.
- */
 function getCatalogApiKey(): string {
   const key = process.env.CATALOG_ASSISTANT_API_KEY
   if (!key) {
@@ -366,10 +407,6 @@ function getCatalogApiKey(): string {
   return key
 }
 
-/**
- * Executa uma chamada à Catalog Assistant API.
- * Tudo server-side — a chave nunca sai do servidor.
- */
 async function callCatalogApi(
   method: string,
   path: string,
@@ -400,12 +437,88 @@ async function callCatalogApi(
 }
 
 /**
+ * Faz upload de media para a Catalog Assistant API via multipart/form-data.
+ * Preserva bytes originais, sem redimensionamento.
+ */
+async function uploadMediaToCatalog(
+  imageDataUrl: string,
+): Promise<{ status: number; data: unknown }> {
+  const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'
+  const apiKey = getCatalogApiKey()
+
+  // Extrair base64 e MIME da data URL
+  const match = imageDataUrl.match(/^data:(image\/\w+);base64,(.+)$/)
+  if (!match) {
+    return { status: 400, data: { success: false, error: { code: 'INVALID_DATA_URL', message: 'Formato de imagem inválido.' } } }
+  }
+
+  const mimeType = match[1]
+  const base64Data = match[2]
+
+  if (!ALLOWED_IMAGE_MIME.has(mimeType)) {
+    return { status: 415, data: { success: false, error: { code: 'INVALID_MIME_TYPE', message: 'Tipo de imagem não suportado.' } } }
+  }
+
+  // Descodificar base64 para bytes
+  const buffer = Buffer.from(base64Data, 'base64')
+
+  // Verificar tamanho (max 10 MB)
+  if (buffer.length > 10 * 1024 * 1024) {
+    return { status: 413, data: { success: false, error: { code: 'FILE_TOO_LARGE', message: 'Imagem demasiado grande. Máximo 10 MB.' } } }
+  }
+
+  // Gerar nome de ficheiro
+  const ext = mimeType.split('/')[1]
+  const filename = `catalog-upload-${Date.now()}.${ext}`
+
+  // Construir FormData
+  const formData = new FormData()
+  const blob = new Blob([buffer], { type: mimeType })
+  formData.append('file', blob, filename)
+
+  const url = `${serverUrl}${CATALOG_API_PREFIX}/media`
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: formData,
+    signal: AbortSignal.timeout(60000),
+  })
+
+  const data = await res.json()
+  return { status: res.status, data }
+}
+
+/**
+ * Sanitiza uma string de resultado para não expor detalhes internos.
+ */
+function sanitizeToolResult(result: string): string {
+  // Se o resultado contém erro com path interno, substituir
+  try {
+    const parsed = JSON.parse(result)
+    if (parsed?.error && typeof parsed.error === 'string') {
+      // Substituir mensagem de erro técnica por genérica
+      parsed.error = 'Erro interno ao executar operação.'
+      return JSON.stringify(parsed)
+    }
+    if (parsed?.error?.message) {
+      parsed.error.message = 'Erro interno ao executar operação.'
+      return JSON.stringify(parsed)
+    }
+  } catch {
+    // Não é JSON — devolver como está
+  }
+  return result
+}
+
+/**
  * Processa um tool call da OpenAI.
- * Executa a operação na Catalog Assistant API e retorna o resultado.
+ * Executa a operação na Catalog Assistant API e retorna o resultado sanitizado.
+ * NUNCA devolve err.message, paths, stacks, ou secrets ao modelo.
  */
 async function executeToolCall(
   toolName: string,
   args: Record<string, unknown>,
+  pendingImageData?: string | null,
 ): Promise<string> {
   try {
     switch (toolName) {
@@ -499,19 +612,40 @@ async function executeToolCall(
         return JSON.stringify(data)
       }
 
+      // ── Upload Media ────────────────────────────────────
+      case 'uploadMedia': {
+        if (!pendingImageData) {
+          return JSON.stringify({
+            success: false,
+            error: 'Não existe uma fotografia anexada disponível para guardar. Pede à Marina para enviar primeiro a fotografia.',
+          })
+        }
+        const result = await uploadMediaToCatalog(pendingImageData)
+        if (result.status >= 400) {
+          const errData = result.data as any
+          return JSON.stringify({
+            success: false,
+            error: errData?.error?.message || 'Erro ao fazer upload da fotografia.',
+          })
+        }
+        return JSON.stringify(result.data)
+      }
+
       default:
-        return JSON.stringify({ error: `Tool "${toolName}" não reconhecida.` })
+        return JSON.stringify({ error: 'Operação não reconhecida.' })
     }
   } catch (err: any) {
+    // Log interno mantém detalhe técnico
     console.error(`[catalog-chat] tool ${toolName} error:`, err.message)
-    return JSON.stringify({ error: `Erro ao executar ${toolName}: ${err.message}` })
+    // Resultado externo — genérico, sem detalhes
+    return JSON.stringify({ error: 'Erro interno ao executar operação.' })
   }
 }
 
 // ─── Função principal ────────────────────────────────────────
 
 /**
- * Processa uma mensagem de chat usando a OpenAI Responses API.
+ * Processa uma mensagem de chat usando a OpenAI Chat Completions API.
  * Retorna o histórico de mensagens atualizado.
  */
 export async function processChatMessage(request: ChatRequest): Promise<ChatResponse> {
@@ -529,14 +663,18 @@ export async function processChatMessage(request: ChatRequest): Promise<ChatResp
     { role: 'system', content: SYSTEM_INSTRUCTIONS },
   ]
 
+  // Encontrar a última imagem na conversa para uploadMedia
+  let pendingImageData: string | null = null
+
   // Adicionar mensagens anteriores
   for (const msg of request.messages) {
     if (msg.role === 'user') {
       const content: OpenAI.ChatCompletionUserMessageParam['content'] = []
       content.push({ type: 'text', text: msg.content })
 
-      // Se houver imagem nesta mensagem específica
+      // Se houver imagem nesta mensagem, guardar para uploadMedia e enviar ao modelo
       if (msg.imageData) {
+        pendingImageData = msg.imageData
         content.push({
           type: 'image_url',
           image_url: { url: msg.imageData, detail: 'high' },
@@ -549,14 +687,7 @@ export async function processChatMessage(request: ChatRequest): Promise<ChatResp
     }
   }
 
-  // Se a última mensagem do user tem imagem e não foi incluída acima
-  // (já está incluída no loop acima, mas verificar caso especial)
-  const lastUserMsg = request.messages.filter(m => m.role === 'user').pop()
-  if (lastUserMsg?.imageData && request.messages.length > 0) {
-    // A imagem já está incluída — não duplicar
-  }
-
-  // Tool calling em loop (até 10 iterações para evitar loops infinitos)
+  // Tool calling em loop (até 10 iterações)
   let maxIterations = 10
   let responseMessages: ChatMessage[] = [...request.messages]
 
@@ -573,7 +704,7 @@ export async function processChatMessage(request: ChatRequest): Promise<ChatResp
     const responseMsg = choice.message
 
     if (!responseMsg.tool_calls || responseMsg.tool_calls.length === 0) {
-      // Resposta final do modelo — sem tool calls
+      // Resposta final do modelo
       const content = responseMsg.content || ''
       responseMessages.push({
         role: 'assistant',
@@ -608,7 +739,7 @@ export async function processChatMessage(request: ChatRequest): Promise<ChatResp
         args = {}
       }
 
-      const result = await executeToolCall(name, args)
+      const result = await executeToolCall(name, args, pendingImageData)
 
       messages.push({
         role: 'tool',
