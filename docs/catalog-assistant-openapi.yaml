@@ -57,6 +57,7 @@ paths:
                 $ref: '#/components/schemas/PaginatedProducts'
         '401':
           $ref: '#/components/responses/Unauthorized'
+      operationId: listProducts
     post:
       summary: Criar produto
       description: Cria um novo produto. O campo isPublic é SEMPRE forçado a false pelo servidor, independentemente do valor
@@ -78,6 +79,7 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthorized'
+      operationId: createProduct
   /api/catalog-assistant/products/{id}:
     get:
       summary: Obter produto
@@ -96,6 +98,7 @@ paths:
                 $ref: '#/components/schemas/ProductResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+      operationId: getProduct
     patch:
       summary: Atualizar produto
       description: Atualiza campos de um produto existente. isPublic é SEMPRE forçado a false. Mesmo que o produto estivesse
@@ -125,6 +128,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+      operationId: updateProduct
   /api/catalog-assistant/categories:
     get:
       summary: Listar categorias
@@ -154,6 +158,7 @@ paths:
                 $ref: '#/components/schemas/PaginatedCategories'
         '401':
           $ref: '#/components/responses/Unauthorized'
+      operationId: listCategories
     post:
       summary: Criar categoria
       description: Cria uma nova categoria com traduções. isActive é SEMPRE forçado a false.
@@ -176,6 +181,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '409':
           $ref: '#/components/responses/Conflict'
+      operationId: createCategory
   /api/catalog-assistant/categories/{id}:
     get:
       summary: Obter categoria
@@ -194,6 +200,7 @@ paths:
                 $ref: '#/components/schemas/CategoryResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+      operationId: getCategory
     patch:
       summary: Atualizar categoria
       description: isActive é SEMPRE forçado a false.
@@ -222,6 +229,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+      operationId: updateCategory
   /api/catalog-assistant/collections:
     get:
       summary: Listar coleções
@@ -251,6 +259,7 @@ paths:
                 $ref: '#/components/schemas/PaginatedCollections'
         '401':
           $ref: '#/components/responses/Unauthorized'
+      operationId: listCollections
     post:
       summary: Criar coleção
       description: isActive é SEMPRE forçado a false.
@@ -273,6 +282,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '409':
           $ref: '#/components/responses/Conflict'
+      operationId: createCollection
   /api/catalog-assistant/collections/{id}:
     get:
       summary: Obter coleção
@@ -291,6 +301,7 @@ paths:
                 $ref: '#/components/schemas/CollectionResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+      operationId: getCollection
     patch:
       summary: Atualizar coleção
       description: isActive é SEMPRE forçado a false.
@@ -321,6 +332,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+      operationId: updateCollection
   /api/catalog-assistant/media:
     get:
       summary: Listar media
@@ -345,6 +357,7 @@ paths:
                 $ref: '#/components/schemas/PaginatedMedia'
         '401':
           $ref: '#/components/responses/Unauthorized'
+      operationId: listMedia
     post:
       summary: Upload de media (fotografia)
       description: 'Upload de ficheiro de imagem via multipart/form-data.
@@ -395,6 +408,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+      operationId: uploadMedia
   /api/catalog-assistant/media/{id}:
     get:
       summary: Obter media
@@ -413,6 +427,7 @@ paths:
                 $ref: '#/components/schemas/MediaResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+      operationId: getMedia
 components:
   securitySchemes:
     BearerAuth:
@@ -587,9 +602,24 @@ components:
         canShareShippingPackage:
           type: boolean
           default: false
-        story:
-          type: string
-          description: História da Peça
+        story: &id001
+          oneOf:
+          - type: string
+            description: História da Peça (locale pt)
+          - type: object
+            description: História da Peça por locale
+            properties:
+              pt:
+                type: string
+              en:
+                type: string
+              es:
+                type: string
+              it:
+                type: string
+              de:
+                type: string
+          description: História da Peça. Pode ser string (locale pt) ou objeto {pt, en, es, it, de}
         category:
           type: integer
           description: ID da categoria
@@ -685,8 +715,7 @@ components:
           - cupula
         canShareShippingPackage:
           type: boolean
-        story:
-          type: string
+        story: *id001
         category:
           type: integer
           nullable: true
@@ -767,6 +796,9 @@ components:
         isActive:
           type: boolean
           description: 'NOTA: Este campo é IGNORADO. Todas as categorias criadas ou editadas pela API ficam com isActive=false.'
+        image:
+          type: integer
+          description: ID da media (fotografia de capa)
       example:
         translations:
           pt:
@@ -785,6 +817,9 @@ components:
           type: string
         sortOrder:
           type: integer
+        image:
+          type: integer
+          description: ID da media (fotografia de capa)
     CategoryResponse:
       allOf:
       - $ref: '#/components/schemas/SuccessResponse'
@@ -828,6 +863,9 @@ components:
         isActive:
           type: boolean
           description: 'NOTA: Este campo é IGNORADO. Todas as coleções criadas ou editadas pela API ficam com isActive=false.'
+        image:
+          type: integer
+          description: ID da media (fotografia de capa)
       example:
         translations:
           pt:
@@ -844,6 +882,9 @@ components:
           $ref: '#/components/schemas/CategoryTranslations'
         slug:
           type: string
+        image:
+          type: integer
+          description: ID da media (fotografia de capa)
     CollectionResponse:
       allOf:
       - $ref: '#/components/schemas/SuccessResponse'

@@ -42,6 +42,79 @@ function error(code: string, message: string, status: number): Response {
   })
 }
 
+// ─── Projeção de output (allowlist de campos devolvidos) ────
+
+type Projection<T> = (raw: T) => Record<string, unknown>
+
+const FLOWER_OUTPUT_KEYS = new Set([
+  'id', 'namePt', 'nameEn', 'nameEs', 'nameIt', 'nameDe',
+  'productType', 'scientificName', 'creationName',
+  'price', 'descriptionPt', 'descriptionEn', 'descriptionEs', 'descriptionIt', 'descriptionDe',
+  'image', 'availability', 'sku', 'images', 'productionMode', 'productionLeadTime',
+  'stockQuantity', 'shippingClass', 'canShareShippingPackage',
+  'isPublic', 'story', 'category', 'collections',
+  'createdAt', 'updatedAt',
+])
+
+function projectFlower(raw: any): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const key of Object.keys(raw)) {
+    if (FLOWER_OUTPUT_KEYS.has(key)) out[key] = raw[key]
+  }
+  return out
+}
+
+const CATEGORY_OUTPUT_KEYS = new Set([
+  'id', 'name', 'slug', 'description', 'image', 'sortOrder', 'isActive', 'createdAt', 'updatedAt',
+])
+
+function projectCategory(raw: any): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const key of Object.keys(raw)) {
+    if (CATEGORY_OUTPUT_KEYS.has(key)) out[key] = raw[key]
+  }
+  return out
+}
+
+const COLLECTION_OUTPUT_KEYS = new Set([
+  'id', 'name', 'slug', 'description', 'image', 'isActive', 'createdAt', 'updatedAt',
+])
+
+function projectCollection(raw: any): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const key of Object.keys(raw)) {
+    if (COLLECTION_OUTPUT_KEYS.has(key)) out[key] = raw[key]
+  }
+  return out
+}
+
+const MEDIA_OUTPUT_KEYS = new Set([
+  'id', 'url', 'filename', 'mimeType', 'filesize', 'width', 'height',
+  'sizes', 'createdAt', 'updatedAt',
+])
+
+function projectMedia(raw: any): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const key of Object.keys(raw)) {
+    if (MEDIA_OUTPUT_KEYS.has(key)) out[key] = raw[key]
+  }
+  return out
+}
+
+// Wrappers para arrays tipados
+function projectFlowersList(docs: any[]): Record<string, unknown>[] {
+  return docs.map(projectFlower)
+}
+function projectCategoriesList(docs: any[]): Record<string, unknown>[] {
+  return docs.map(projectCategory)
+}
+function projectCollectionsList(docs: any[]): Record<string, unknown>[] {
+  return docs.map(projectCollection)
+}
+function projectMediaList(docs: any[]): Record<string, unknown>[] {
+  return docs.map(projectMedia)
+}
+
 // ─── Const-time string comparison ────────────────────────────
 
 function safeCompare(a: string, b: string): boolean {
@@ -138,6 +211,7 @@ const CATEGORY_ALLOWLIST = new Set([
   'translations',
   'slug',
   'sortOrder',
+  'image',
 ])
 
 /** Campos de sistema proibidos para categorias. */
@@ -165,6 +239,7 @@ const CATEGORY_LOCALE_KEYS = new Set(['pt', 'en', 'es', 'it', 'de'])
 const COLLECTION_ALLOWLIST = new Set([
   'translations',
   'slug',
+  'image',
 ])
 
 const COLLECTION_BLOCKED = new Set([
@@ -178,6 +253,8 @@ const COLLECTION_BLOCKED = new Set([
 ])
 
 const COLLECTION_LOCALE_KEYS = new Set(['pt', 'en', 'es', 'it', 'de'])
+
+const FLOWER_LOCALE_KEYS = new Set(['pt', 'en', 'es', 'it', 'de'])
 
 // ─── Filtragem de campos ─────────────────────────────────────
 
@@ -212,6 +289,75 @@ function filterFlowerFields(body: Record<string, unknown>): FieldFilterResult {
   }
 
   return { cleaned, errors }
+}
+
+/**
+ * Extrai story localizada do body se for enviada como objeto {pt, en, ...}.
+ * Retorna: { storyPt, storyTranslations } onde storyPt é o valor para locale pt
+ * (default locale do Payload) e storyTranslations contém os restantes locales.
+ * Se story for string simples, retorna { storyPt: string, storyTranslations: null }.
+ * Se story não foi enviada, retorna { storyPt: null, storyTranslations: null }.
+ */
+function extractLocalizedStory(
+  cleaned: Record<string, unknown>,
+): { storyPt: string | null; storyTranslations: Record<string, string> | null } {
+  const raw = cleaned['story']
+  // Remover story do cleaned — vamos aplicar manualmente
+  delete cleaned['story']
+
+  if (raw == null) {
+    return { storyPt: null, storyTranslations: null }
+  }
+
+  // String simples — tratar como locale pt (default)
+  if (typeof raw === 'string') {
+    return { storyPt: raw, storyTranslations: null }
+  }
+
+  // Objeto com locale keys
+  if (typeof raw === 'object' && !Array.isArray(raw)) {
+    const obj = raw as Record<string, unknown>
+    const translations: Record<string, string> = {}
+    let storyPt: string | null = null
+
+    for (const [locale, value] of Object.entries(obj)) {
+      if (!FLOWER_LOCALE_KEYS.has(locale)) {
+        continue // ignorar locale inválido silenciosamente
+      }
+      if (typeof value !== 'string') {
+        continue // ignorar valores não-string
+      }
+      if (locale === 'pt') {
+        storyPt = value
+      } else {
+        translations[locale] = value
+      }
+    }
+
+    return { storyPt, storyTranslations: Object.keys(translations).length > 0 ? translations : null }
+  }
+
+  // Tipo inesperado — ignorar
+  return { storyPt: null, storyTranslations: null }
+}
+
+/**
+ * Aplica story traduzida a um produto, locale por locale.
+ */
+async function applyLocalizedStory(
+  payload: Payload,
+  id: number | string,
+  storyTranslations: Record<string, string>,
+): Promise<void> {
+  for (const [locale, content] of Object.entries(storyTranslations)) {
+    await payload.update({
+      collection: 'flowers',
+      id: id as any,
+      data: { story: content } as any,
+      locale: locale as any,
+      depth: 0,
+    })
+  }
 }
 
 /**
@@ -441,7 +587,7 @@ export async function listProducts(req: Request): Promise<Response> {
     })
 
     return success({
-      docs: result.docs,
+      docs: projectFlowersList(result.docs),
       totalDocs: result.totalDocs,
       page: result.page,
       totalPages: result.totalPages,
@@ -468,7 +614,7 @@ export async function getProduct(req: Request, id: string): Promise<Response> {
       depth: 1,
       locale: 'all' as any,
     })
-    return success(doc)
+    return success(projectFlower(doc))
   } catch (err: any) {
     if (err.name === 'NotFoundError' || err.message?.includes('not found')) {
       return error('NOT_FOUND', 'Produto não encontrado.', 404)
@@ -495,6 +641,12 @@ export async function createProduct(req: Request): Promise<Response> {
     // Forçar isPublic = false
     cleaned.isPublic = false
 
+    // Extrair story localizada (remove do cleaned, retorna valores por locale)
+    const { storyPt, storyTranslations } = extractLocalizedStory(cleaned)
+    if (storyPt !== null) {
+      cleaned.story = storyPt
+    }
+
     const payload = await getPayloadClient()
     const doc = await payload.create({
       collection: 'flowers',
@@ -502,7 +654,12 @@ export async function createProduct(req: Request): Promise<Response> {
       depth: 1,
     })
 
-    return success(doc, 201)
+    // Aplicar story para outros locales
+    if (storyTranslations) {
+      await applyLocalizedStory(payload, doc.id, storyTranslations)
+    }
+
+    return success(projectFlower(doc), 201)
   } catch (err: any) {
     if (err.name === 'ValidationError' || err.message?.startsWith('The following field')) {
       return error('VALIDATION_ERROR', err.message, 400)
@@ -532,6 +689,12 @@ export async function updateProduct(req: Request, id: string): Promise<Response>
     // Forçar isPublic = false (mesmo que o registo estivesse público)
     cleaned.isPublic = false
 
+    // Extrair story localizada
+    const { storyPt, storyTranslations } = extractLocalizedStory(cleaned)
+    if (storyPt !== null) {
+      cleaned.story = storyPt
+    }
+
     const payload = await getPayloadClient()
     const doc = await payload.update({
       collection: 'flowers',
@@ -540,7 +703,12 @@ export async function updateProduct(req: Request, id: string): Promise<Response>
       depth: 1,
     })
 
-    return success(doc)
+    // Aplicar story para outros locales
+    if (storyTranslations) {
+      await applyLocalizedStory(payload, id, storyTranslations)
+    }
+
+    return success(projectFlower(doc))
   } catch (err: any) {
     if (err.name === 'NotFoundError' || err.message?.includes('not found')) {
       return error('NOT_FOUND', 'Produto não encontrado.', 404)
@@ -584,7 +752,7 @@ export async function listCategories(req: Request): Promise<Response> {
     })
 
     return success({
-      docs: result.docs,
+      docs: projectCategoriesList(result.docs),
       totalDocs: result.totalDocs,
       page: result.page,
       totalPages: result.totalPages,
@@ -608,7 +776,7 @@ export async function getCategory(req: Request, id: string): Promise<Response> {
       depth: 1,
       locale: 'all' as any,
     })
-    return success(doc)
+    return success(projectCategory(doc))
   } catch (err: any) {
     if (err.name === 'NotFoundError' || err.message?.includes('not found')) {
       return error('NOT_FOUND', 'Categoria não encontrada.', 404)
@@ -658,10 +826,10 @@ export async function createCategory(req: Request): Promise<Response> {
         depth: 1,
         locale: 'all' as any,
       })
-      return success(fullDoc, 201)
+      return success(projectCategory(fullDoc), 201)
     } catch {
       // Fallback: devolver o documento criado (sem relações populadas)
-      return success(doc, 201)
+      return success(projectCategory(doc), 201)
     }
   } catch (err: any) {
     if (err.name === 'NotFoundError' || err.message?.includes('not found') || err.message?.includes('NotFound')) {
@@ -719,7 +887,7 @@ export async function updateCategory(req: Request, id: string): Promise<Response
       locale: 'all' as any,
     })
 
-    return success(fullDoc)
+    return success(projectCategory(fullDoc))
   } catch (err: any) {
     if (err.name === 'NotFoundError' || err.message?.includes('not found')) {
       return error('NOT_FOUND', 'Categoria não encontrada.', 404)
@@ -763,7 +931,7 @@ export async function listCollections(req: Request): Promise<Response> {
     })
 
     return success({
-      docs: result.docs,
+      docs: projectCollectionsList(result.docs),
       totalDocs: result.totalDocs,
       page: result.page,
       totalPages: result.totalPages,
@@ -787,7 +955,7 @@ export async function getCollection(req: Request, id: string): Promise<Response>
       depth: 1,
       locale: 'all' as any,
     })
-    return success(doc)
+    return success(projectCollection(doc))
   } catch (err: any) {
     if (err.name === 'NotFoundError' || err.message?.includes('not found')) {
       return error('NOT_FOUND', 'Coleção não encontrada.', 404)
@@ -835,9 +1003,9 @@ export async function createCollection(req: Request): Promise<Response> {
         depth: 1,
         locale: 'all' as any,
       })
-      return success(fullDoc, 201)
+      return success(projectCollection(fullDoc), 201)
     } catch {
-      return success(doc, 201)
+      return success(projectCollection(doc), 201)
     }
   } catch (err: any) {
     if (err.name === 'NotFoundError' || err.message?.includes('not found') || err.message?.includes('NotFound')) {
@@ -893,7 +1061,7 @@ export async function updateCollection(req: Request, id: string): Promise<Respon
       locale: 'all' as any,
     })
 
-    return success(fullDoc)
+    return success(projectCollection(fullDoc))
   } catch (err: any) {
     if (err.name === 'NotFoundError' || err.message?.includes('not found')) {
       return error('NOT_FOUND', 'Coleção não encontrada.', 404)
@@ -938,7 +1106,7 @@ export async function listMedia(req: Request): Promise<Response> {
     })
 
     return success({
-      docs: result.docs,
+      docs: projectMediaList(result.docs),
       totalDocs: result.totalDocs,
       page: result.page,
       totalPages: result.totalPages,
@@ -961,7 +1129,7 @@ export async function getMedia(req: Request, id: string): Promise<Response> {
       id: id as any,
       depth: 0,
     })
-    return success(doc)
+    return success(projectMedia(doc))
   } catch (err: any) {
     if (err.name === 'NotFoundError' || err.message?.includes('not found')) {
       return error('NOT_FOUND', 'Media não encontrada.', 404)
@@ -1040,10 +1208,10 @@ export async function createMedia(req: Request): Promise<Response> {
       depth: 0,
     })
 
-    return success(doc, 201)
+    return success(projectMedia(doc), 201)
   } catch (err: any) {
     if (err.message?.includes('payload-files') || err.message?.includes('upload')) {
-      return error('UPLOAD_ERROR', `Erro no upload: ${err.message}`, 500)
+      return error('UPLOAD_ERROR', 'Erro ao fazer upload de media.', 500)
     }
     console.error('[catalog-assistant] createMedia error:', err.message)
     return error('INTERNAL_ERROR', 'Erro ao fazer upload de media.', 500)

@@ -352,8 +352,108 @@ describe('Catalog Assistant API — Products (flowers)', () => {
     const body = await res.json()
     expect(body.error.code).toBe('VALIDATION_ERROR')
   })
-})
 
+  it('POST /products com story localizada aceita objeto {pt, en, ...}', async () => {
+  mockPayload.create.mockResolvedValue({
+  ...MOCK_PRODUCT, id: 10, story: 'História PT',
+  })
+
+  const { POST } = await importHandlers()
+  const req = makeRequest('POST', '/products', {
+  namePt: 'Flor Story',
+  price: 20,
+  scientificName: 'Testus storius',
+  productType: 'permanente',
+  stockQuantity: 1,
+  story: {
+  pt: 'História em português',
+  en: 'Story in English',
+  es: 'Historia en español',
+  },
+  })
+  const res = await POST(req, { params: Promise.resolve({ slug: ['products'] }) })
+  expect(res.status).toBe(201)
+
+  // create deve receber apenas story pt (default locale) no data principal
+  const createCall = mockPayload.create.mock.calls[0][0]
+  expect(createCall.data.story).toBe('História em português')
+
+  // Deve ter chamado update para locale en e es
+  const updateCalls = mockPayload.update.mock.calls
+  const enCall = updateCalls.find((c: any) => c[0]?.locale === 'en')
+  expect(enCall).toBeDefined()
+  expect(enCall[0].data.story).toBe('Story in English')
+  })
+
+  it('PATCH /products/:id com story localizada', async () => {
+  mockPayload.update.mockImplementation(({ data }: any) =>
+  Promise.resolve({ ...MOCK_PRODUCT, id: 11, ...data }),
+  )
+
+  const { PATCH } = await importHandlers()
+  const req = makeRequest('PATCH', '/products/11', {
+  story: {
+  pt: 'Nova história PT',
+  de: 'Neue Geschichte DE',
+  },
+  })
+  const res = await PATCH(req, { params: Promise.resolve({ slug: ['products', '11'] }) })
+  expect(res.status).toBe(200)
+
+  // update deve ser chamado com locale pt no update principal
+  const updateCall = mockPayload.update.mock.calls[0][0]
+  if (mockPayload.update.mock.calls.length > 0) {
+  // story foi extraída, pt fica no update principal
+  expect(updateCall.data.story).toBe('Nova história PT')
+  }
+  // Deve ter update para locale de
+  const deCalls = mockPayload.update.mock.calls.filter((c: any) => c[0]?.locale === 'de')
+  expect(deCalls.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('POST /products com story como string simples funciona', async () => {
+  mockPayload.create.mockResolvedValue({ ...MOCK_PRODUCT, id: 12, story: 'Apenas texto' })
+
+  const { POST } = await importHandlers()
+  const req = makeRequest('POST', '/products', {
+  namePt: 'Flor String',
+  price: 15,
+  scientificName: 'Testus stringus',
+  productType: 'permanente',
+  stockQuantity: 1,
+  story: 'Apenas texto',
+  })
+  const res = await POST(req, { params: Promise.resolve({ slug: ['products'] }) })
+  expect(res.status).toBe(201)
+
+  const createCall = mockPayload.create.mock.calls[0][0]
+  expect(createCall.data.story).toBe('Apenas texto')
+  })
+
+  it('GET /products/:id não expõe campos internos', async () => {
+  mockPayload.findByID.mockResolvedValue({
+  ...MOCK_PRODUCT,
+  id: 1,
+  _status: 'draft',
+  someInternalField: 'secret',
+  password: 'hash',
+  })
+
+  const { GET } = await importHandlers()
+  const req = makeRequest('GET', '/products/1')
+  const res = await GET(req, { params: Promise.resolve({ slug: ['products', '1'] }) })
+  const body = await res.json()
+
+  expect(res.status).toBe(200)
+  expect(body.data._status).toBeUndefined()
+  expect(body.data.someInternalField).toBeUndefined()
+  expect(body.data.password).toBeUndefined()
+  expect(body.data.id).toBeDefined()
+  expect(body.data.namePt).toBeDefined()
+  })
+
+
+})
 // ─── Categories ──────────────────────────────────────────────
 
 describe('Catalog Assistant API — Categories', () => {
@@ -443,6 +543,34 @@ describe('Catalog Assistant API — Categories', () => {
     if (updateCall) {
       expect(updateCall[0].data.isActive).toBe(false)
     }
+  })
+
+  it('POST /categories com image aceita ID de media', async () => {
+    mockPayload.create.mockResolvedValue({ ...MOCK_CATEGORY, id: 6, isActive: false, image: 10 })
+    mockPayload.findByID.mockResolvedValue({ ...MOCK_CATEGORY, id: 6, isActive: false, image: 10 })
+
+    const { POST } = await importHandlers()
+    const req = makeRequest('POST', '/categories', {
+      translations: { pt: { name: 'Com Foto', description: 'Descrição' } },
+      slug: 'com-foto',
+      image: 10,
+    })
+    const res = await POST(req, { params: Promise.resolve({ slug: ['categories'] }) })
+    expect(res.status).toBe(201)
+
+    const createCall = mockPayload.create.mock.calls[0][0]
+    expect(createCall.data.image).toBe(10)
+  })
+
+  it('PATCH /categories/:id aceita image', async () => {
+    mockPayload.findByID.mockResolvedValue({ ...MOCK_CATEGORY, id: 7, image: null })
+    mockPayload.update.mockResolvedValue({ ...MOCK_CATEGORY, id: 7, image: 20 })
+    mockPayload.findByID.mockResolvedValue({ ...MOCK_CATEGORY, id: 7, image: 20 })
+
+    const { PATCH } = await importHandlers()
+    const req = makeRequest('PATCH', '/categories/7', { image: 20 })
+    const res = await PATCH(req, { params: Promise.resolve({ slug: ['categories', '7'] }) })
+    expect(res.status).toBe(200)
   })
 
   it('submete traduções corretamente', async () => {
@@ -589,6 +717,33 @@ describe('Catalog Assistant API — Collections', () => {
       expect(updateCall[0].data.isActive).toBe(false)
     }
   })
+
+  it('POST /collections com image aceita ID de media', async () => {
+    mockPayload.create.mockResolvedValue({ ...MOCK_COLLECTION, id: 5, isActive: false, image: 15 })
+    mockPayload.findByID.mockResolvedValue({ ...MOCK_COLLECTION, id: 5, isActive: false, image: 15 })
+
+    const { POST } = await importHandlers()
+    const req = makeRequest('POST', '/collections', {
+      translations: { pt: { name: 'Coleção Foto', description: 'Com imagem' } },
+      slug: 'colecao-foto',
+      image: 15,
+    })
+    const res = await POST(req, { params: Promise.resolve({ slug: ['collections'] }) })
+    expect(res.status).toBe(201)
+
+    const createCall = mockPayload.create.mock.calls[0][0]
+    expect(createCall.data.image).toBe(15)
+  })
+
+  it('PATCH /collections/:id aceita image', async () => {
+    mockPayload.findByID.mockResolvedValueOnce({ ...MOCK_COLLECTION, id: 6, image: null })
+    mockPayload.findByID.mockResolvedValueOnce({ ...MOCK_COLLECTION, id: 6, image: 25 })
+
+    const { PATCH } = await importHandlers()
+    const req = makeRequest('PATCH', '/collections/6', { image: 25 })
+    const res = await PATCH(req, { params: Promise.resolve({ slug: ['collections', '6'] }) })
+    expect(res.status).toBe(200)
+  })
 })
 
 // ─── Media ───────────────────────────────────────────────────
@@ -662,6 +817,23 @@ describe('Catalog Assistant API — Media', () => {
   })
 })
 
+  it('upload media não devolve err.message interno', async () => {
+    const { POST } = await import('./route')
+    const invalidFile = createMockFile('test.jpg', 'image/jpeg', 1024)
+    const formData = new FormData()
+    formData.append('file', invalidFile)
+    mockPayload.create.mockRejectedValue(new Error('Path: /srv/uploads/secret.pdf'))
+
+    const req = new NextRequest('http://localhost:3000/api/catalog-assistant/media', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${TEST_API_KEY}` },
+      body: formData,
+    })
+    const res = await POST(req, { params: Promise.resolve({ slug: ['media'] }) })
+    const body = await res.json()
+    expect(body.error.message).not.toContain('/srv/')
+    expect(body.error.message).not.toContain('secret.pdf')
+  })
 // ─── Recursos fora de scope ──────────────────────────────────
 
 describe('Catalog Assistant API — Recursos fora de scope', () => {
