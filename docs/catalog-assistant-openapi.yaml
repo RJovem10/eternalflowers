@@ -1,0 +1,945 @@
+openapi: 3.0.3
+info:
+  title: Eternal Flowers — Catalog Assistant API
+  description: "API REST restrita para o assistente de catálogo (ChatGPT Actions) da Marina.\n\nPermite à Marina (através\
+    \ do ChatGPT) consultar, criar e editar:\n  - Produtos / Flowers\n  - Categorias\n  - Coleções\n  - Media (upload de fotografias)\n\
+    \nREGRA ABSOLUTA: Qualquer registo criado ou editado através desta API fica\nNÃO VISÍVEL no site público. A Marina revê\
+    \ no Payload Admin e ativa manualmente.\n\nProducts -> isPublic=false (sempre)\nCategories -> isActive=false (sempre)\n\
+    Collections -> isActive=false (sempre)\n\nEsta API NÃO expõe: orders, payments, homepage, site-settings, users,\ncoupons,\
+    \ stock-reservations, ou qualquer endpoint administrativo do Payload."
+  version: 1.0.0
+  contact:
+    name: Eternal Flowers
+    url: https://eternalflowers.pt
+servers:
+- url: https://eternalflowers.pt
+  description: Produção
+- url: http://localhost:3000
+  description: Desenvolvimento local
+security:
+- BearerAuth: []
+paths:
+  /api/catalog-assistant/products:
+    get:
+      summary: Listar produtos
+      description: Lista produtos com paginação. Permite pesquisa por nome (todos os idiomas), SKU e nome científico/creationName.
+        Devolve produtos públicos e não públicos.
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          default: 1
+        description: Número da página
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+          maximum: 100
+        description: Itens por página (máx 100)
+      - name: search
+        in: query
+        schema:
+          type: string
+        description: Termo de pesquisa (nome, nome científico, SKU, creationName)
+      - name: sku
+        in: query
+        schema:
+          type: string
+        description: Pesquisa exata por SKU
+      responses:
+        '200':
+          description: Lista de produtos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProducts'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      operationId: listProducts
+    post:
+      summary: Criar produto
+      description: Cria um novo produto. O campo isPublic é SEMPRE forçado a false pelo servidor, independentemente do valor
+        enviado no body.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: Produto criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      operationId: createProduct
+  /api/catalog-assistant/products/{id}:
+    get:
+      summary: Obter produto
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Dados do produto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      operationId: getProduct
+    patch:
+      summary: Atualizar produto
+      description: Atualiza campos de um produto existente. isPublic é SEMPRE forçado a false. Mesmo que o produto estivesse
+        público, após o PATCH fica com isPublic=false.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchProductRequest'
+      responses:
+        '200':
+          description: Produto atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      operationId: updateProduct
+  /api/catalog-assistant/categories:
+    get:
+      summary: Listar categorias
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          default: 1
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+          maximum: 100
+      - name: search
+        in: query
+        schema:
+          type: string
+        description: Pesquisa por nome da categoria
+      responses:
+        '200':
+          description: Lista de categorias
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCategories'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      operationId: listCategories
+    post:
+      summary: Criar categoria
+      description: Cria uma nova categoria com traduções. isActive é SEMPRE forçado a false.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+      responses:
+        '201':
+          description: Categoria criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      operationId: createCategory
+  /api/catalog-assistant/categories/{id}:
+    get:
+      summary: Obter categoria
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Dados da categoria
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      operationId: getCategory
+    patch:
+      summary: Atualizar categoria
+      description: isActive é SEMPRE forçado a false.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchCategoryRequest'
+      responses:
+        '200':
+          description: Categoria atualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      operationId: updateCategory
+  /api/catalog-assistant/collections:
+    get:
+      summary: Listar coleções
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          default: 1
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+          maximum: 100
+      - name: search
+        in: query
+        schema:
+          type: string
+        description: Pesquisa por nome da coleção
+      responses:
+        '200':
+          description: Lista de coleções
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCollections'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      operationId: listCollections
+    post:
+      summary: Criar coleção
+      description: isActive é SEMPRE forçado a false.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCollectionRequest'
+      responses:
+        '201':
+          description: Coleção criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      operationId: createCollection
+  /api/catalog-assistant/collections/{id}:
+    get:
+      summary: Obter coleção
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Dados da coleção
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      operationId: getCollection
+    patch:
+      summary: Atualizar coleção
+      description: isActive é SEMPRE forçado a false.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchCollectionRequest'
+      responses:
+        '200':
+          description: Coleção atualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      operationId: updateCollection
+  /api/catalog-assistant/media:
+    get:
+      summary: Listar media
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          default: 1
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+          maximum: 100
+      responses:
+        '200':
+          description: Lista de media
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMedia'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      operationId: listMedia
+    post:
+      summary: Upload de media (fotografia)
+      description: 'Upload de ficheiro de imagem via multipart/form-data.
+
+
+        Campo obrigatório: "file" (o ficheiro de imagem).
+
+
+        Formatos aceites: JPEG, PNG, WebP.
+
+        Tamanho máximo: 10 MB.
+
+
+        O ficheiro é guardado no Media do Payload com os sizes automaticamente gerados (thumbnail 400x400, card 600x600).'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Ficheiro de imagem (JPEG, PNG ou WebP, max 10MB)
+      responses:
+        '201':
+          description: Media criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          description: Ficheiro demasiado grande (> 10 MB)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '415':
+          description: Tipo MIME nao suportado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      operationId: uploadMedia
+  /api/catalog-assistant/media/{id}:
+    get:
+      summary: Obter media
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Dados do ficheiro media
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      operationId: getMedia
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API Key
+      description: 'Autenticação via Bearer token. O token é definido na variável de ambiente CATALOG_ASSISTANT_API_KEY. Gerar
+        com: openssl rand -hex 32'
+  responses:
+    Unauthorized:
+      description: Token de acesso inválido ou ausente
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ValidationError:
+      description: Erro de validação
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Conflito (registo duplicado)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+      - success
+      - error
+      properties:
+        success:
+          type: boolean
+          enum:
+          - false
+        error:
+          type: object
+          required:
+          - code
+          - message
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+      example:
+        success: false
+        error:
+          code: INVALID_FIELD
+          message: 'Campos inválidos: Campo desconhecido: corFavorita'
+    SuccessResponse:
+      type: object
+      required:
+      - success
+      - data
+      properties:
+        success:
+          type: boolean
+          enum:
+          - true
+        data:
+          type: object
+    CreateProductRequest:
+      type: object
+      required:
+      - namePt
+      - price
+      - scientificName
+      properties:
+        namePt:
+          type: string
+          description: Nome (Português)
+        nameEn:
+          type: string
+          description: Nome (Inglês)
+        nameEs:
+          type: string
+          description: Nome (Espanhol)
+        nameIt:
+          type: string
+          description: Nome (Italiano)
+        nameDe:
+          type: string
+          description: Nome (Alemão)
+        productType:
+          type: string
+          enum:
+          - permanente
+          - sazonal
+          - exclusivo
+          description: Tipo de Produto (obrigatório na criação)
+        scientificName:
+          type: string
+          description: Nome Científico
+        creationName:
+          type: string
+          description: Nome da Criação
+        price:
+          type: number
+          minimum: 0
+          description: Preço (EUR)
+        descriptionPt:
+          type: string
+          description: Descrição (PT)
+        descriptionEn:
+          type: string
+          description: Descrição (EN)
+        descriptionEs:
+          type: string
+          description: Descrição (ES)
+        descriptionIt:
+          type: string
+          description: Descrição (IT)
+        descriptionDe:
+          type: string
+          description: Descrição (DE)
+        image:
+          type: integer
+          description: ID da media (foto principal)
+        availability:
+          type: string
+          enum:
+          - available
+          - reserved
+          - sold
+          - preparing
+          default: available
+        sku:
+          type: string
+          description: Código (SKU)
+        images:
+          type: array
+          description: Galeria de imagens
+          items:
+            type: object
+            properties:
+              image:
+                type: integer
+                description: ID da media
+        productionMode:
+          type: string
+          enum:
+          - unique
+          - reproducible
+          - made_to_order
+          description: Modo de Produção
+        productionLeadTime:
+          type: integer
+          minimum: 1
+          maximum: 255
+          description: Prazo de produção (dias úteis, apenas made_to_order)
+        stockQuantity:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Quantidade em stock
+        shippingClass:
+          type: string
+          enum:
+          - standard
+          - cupula
+          default: standard
+        canShareShippingPackage:
+          type: boolean
+          default: false
+        story: &id001
+          oneOf:
+          - type: string
+            description: História da Peça (locale pt)
+          - type: object
+            description: História da Peça por locale
+            properties:
+              pt:
+                type: string
+              en:
+                type: string
+              es:
+                type: string
+              it:
+                type: string
+              de:
+                type: string
+          description: História da Peça. Pode ser string (locale pt) ou objeto {pt, en, es, it, de}
+        category:
+          type: integer
+          description: ID da categoria
+        collections:
+          type: array
+          items:
+            type: integer
+          description: IDs das coleções
+        isPublic:
+          type: boolean
+          description: 'NOTA: Este campo é IGNORADO pelo servidor. Todos os produtos criados ou editados pela API ficam com
+            isPublic=false. A Marina ativa manualmente no Payload Admin.'
+      example:
+        namePt: Rosa Vermelha Preservada
+        nameEn: Preserved Red Rose
+        price: 45.0
+        scientificName: Rosa gallica
+        productType: permanente
+        productionMode: unique
+        stockQuantity: 1
+        availability: available
+        shippingClass: standard
+        image: 1
+        category: 2
+        collections:
+        - 3
+        - 5
+    PatchProductRequest:
+      type: object
+      description: Campos a atualizar. Apenas os campos enviados são alterados.
+      properties:
+        namePt:
+          type: string
+        nameEn:
+          type: string
+        nameEs:
+          type: string
+        nameIt:
+          type: string
+        nameDe:
+          type: string
+        productType:
+          type: string
+          enum:
+          - permanente
+          - sazonal
+          - exclusivo
+        scientificName:
+          type: string
+        creationName:
+          type: string
+        price:
+          type: number
+          minimum: 0
+        descriptionPt:
+          type: string
+        descriptionEn:
+          type: string
+        descriptionEs:
+          type: string
+        descriptionIt:
+          type: string
+        descriptionDe:
+          type: string
+        image:
+          type: integer
+        availability:
+          type: string
+          enum:
+          - available
+          - reserved
+          - sold
+          - preparing
+        sku:
+          type: string
+        productionMode:
+          type: string
+          enum:
+          - unique
+          - reproducible
+          - made_to_order
+        productionLeadTime:
+          type: integer
+          minimum: 1
+          maximum: 255
+        stockQuantity:
+          type: integer
+          minimum: 0
+        shippingClass:
+          type: string
+          enum:
+          - standard
+          - cupula
+        canShareShippingPackage:
+          type: boolean
+        story: *id001
+        category:
+          type: integer
+          nullable: true
+        collections:
+          type: array
+          items:
+            type: integer
+      example:
+        namePt: Rosa Vermelha Atualizada
+        price: 55.0
+    ProductResponse:
+      allOf:
+      - $ref: '#/components/schemas/SuccessResponse'
+      - type: object
+        properties:
+          data:
+            type: object
+            description: Objeto do produto
+    PaginatedProducts:
+      allOf:
+      - $ref: '#/components/schemas/SuccessResponse'
+      - type: object
+        properties:
+          data:
+            type: object
+            properties:
+              docs:
+                type: array
+                items:
+                  type: object
+              totalDocs:
+                type: integer
+              page:
+                type: integer
+              totalPages:
+                type: integer
+              hasNextPage:
+                type: boolean
+              hasPrevPage:
+                type: boolean
+    TranslationFields:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Nome traduzido
+        description:
+          type: string
+          description: Descrição traduzida
+    CategoryTranslations:
+      type: object
+      description: Traduções por idioma
+      properties:
+        pt:
+          $ref: '#/components/schemas/TranslationFields'
+        en:
+          $ref: '#/components/schemas/TranslationFields'
+        es:
+          $ref: '#/components/schemas/TranslationFields'
+        it:
+          $ref: '#/components/schemas/TranslationFields'
+        de:
+          $ref: '#/components/schemas/TranslationFields'
+    CreateCategoryRequest:
+      type: object
+      required:
+      - translations
+      - slug
+      properties:
+        translations:
+          $ref: '#/components/schemas/CategoryTranslations'
+        slug:
+          type: string
+          description: Slug único
+        sortOrder:
+          type: integer
+          default: 100
+        isActive:
+          type: boolean
+          description: 'NOTA: Este campo é IGNORADO. Todas as categorias criadas ou editadas pela API ficam com isActive=false.'
+        image:
+          type: integer
+          description: ID da media (fotografia de capa)
+      example:
+        translations:
+          pt:
+            name: Colares de Pérolas
+            description: Elegantes colares com pérolas naturais
+          en:
+            name: Pearl Necklaces
+            description: Elegant necklaces with natural pearls
+        slug: colares-perolas
+    PatchCategoryRequest:
+      type: object
+      properties:
+        translations:
+          $ref: '#/components/schemas/CategoryTranslations'
+        slug:
+          type: string
+        sortOrder:
+          type: integer
+        image:
+          type: integer
+          description: ID da media (fotografia de capa)
+    CategoryResponse:
+      allOf:
+      - $ref: '#/components/schemas/SuccessResponse'
+      - type: object
+        properties:
+          data:
+            type: object
+    PaginatedCategories:
+      allOf:
+      - $ref: '#/components/schemas/SuccessResponse'
+      - type: object
+        properties:
+          data:
+            type: object
+            properties:
+              docs:
+                type: array
+                items:
+                  type: object
+              totalDocs:
+                type: integer
+              page:
+                type: integer
+              totalPages:
+                type: integer
+              hasNextPage:
+                type: boolean
+              hasPrevPage:
+                type: boolean
+    CreateCollectionRequest:
+      type: object
+      required:
+      - translations
+      - slug
+      properties:
+        translations:
+          $ref: '#/components/schemas/CategoryTranslations'
+        slug:
+          type: string
+          description: Slug único
+        isActive:
+          type: boolean
+          description: 'NOTA: Este campo é IGNORADO. Todas as coleções criadas ou editadas pela API ficam com isActive=false.'
+        image:
+          type: integer
+          description: ID da media (fotografia de capa)
+      example:
+        translations:
+          pt:
+            name: Coleção de Natal
+            description: Peças especiais para a época natalícia
+          en:
+            name: Christmas Collection
+            description: Special pieces for the Christmas season
+        slug: colecao-natal
+    PatchCollectionRequest:
+      type: object
+      properties:
+        translations:
+          $ref: '#/components/schemas/CategoryTranslations'
+        slug:
+          type: string
+        image:
+          type: integer
+          description: ID da media (fotografia de capa)
+    CollectionResponse:
+      allOf:
+      - $ref: '#/components/schemas/SuccessResponse'
+      - type: object
+        properties:
+          data:
+            type: object
+    PaginatedCollections:
+      allOf:
+      - $ref: '#/components/schemas/SuccessResponse'
+      - type: object
+        properties:
+          data:
+            type: object
+            properties:
+              docs:
+                type: array
+                items:
+                  type: object
+              totalDocs:
+                type: integer
+              page:
+                type: integer
+              totalPages:
+                type: integer
+              hasNextPage:
+                type: boolean
+              hasPrevPage:
+                type: boolean
+    MediaResponse:
+      allOf:
+      - $ref: '#/components/schemas/SuccessResponse'
+      - type: object
+        properties:
+          data:
+            type: object
+    PaginatedMedia:
+      allOf:
+      - $ref: '#/components/schemas/SuccessResponse'
+      - type: object
+        properties:
+          data:
+            type: object
+            properties:
+              docs:
+                type: array
+                items:
+                  type: object
+              totalDocs:
+                type: integer
+              page:
+                type: integer
+              totalPages:
+                type: integer
+              hasNextPage:
+                type: boolean
+              hasPrevPage:
+                type: boolean
