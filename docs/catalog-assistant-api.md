@@ -164,6 +164,48 @@ A API aceita o formato `translations`:
 
 Locais suportados: `pt` (obrigatório), `en`, `es`, `it`, `de`.
 
+### Image (categorias e coleções)
+
+Categorias e coleções suportam uma imagem de capa opcional.
+
+```json
+{
+  "image": 1,
+  "translations": { ... },
+  "slug": "exemplo"
+}
+```
+
+O valor deve ser um ID de Media válido (criado via upload em `/api/catalog-assistant/media`).
+
+### Story (produtos) — texto localizado
+
+O campo `story` (História da Peça) aceita dois formatos:
+
+**String simples** (equivale ao locale PT, o default):
+
+```json
+{
+  "story": "A história em português..."
+}
+```
+
+**Objeto com locales** (suporta todos os 5 idiomas):
+
+```json
+{
+  "story": {
+    "pt": "A história em português...",
+    "en": "The story in English...",
+    "es": "La historia en español...",
+    "it": "La storia in italiano...",
+    "de": "Die Geschichte auf Deutsch..."
+  }
+}
+```
+
+Podes enviar apenas os locales que pretendes — os restantes mantêm-se inalterados ou ficam vazios.
+
 ### Media Upload
 
 **Formato:** `multipart/form-data`
@@ -318,7 +360,7 @@ A chave antiga deixa de funcionar imediatamente após o reinício.
 |----------|-----------|
 | `src/services/catalog-assistant.ts` | Lógica core: auth, allowlists, CRUD, força visibilidade |
 | `src/app/api/catalog-assistant/[...slug]/route.ts` | Route handler Next.js |
-| `src/app/api/catalog-assistant/[...slug]/route.test.ts` | Testes (41 testes) |
+| `src/app/api/catalog-assistant/[...slug]/route.test.ts` | Testes (50 testes) |
 | `docs/catalog-assistant-openapi.yaml` | OpenAPI 3.0 para ChatGPT Actions |
 | `docs/catalog-assistant-api.md` | Esta documentação |
 | `.env.example` | Variável CATALOG_ASSISTANT_API_KEY adicionada |
