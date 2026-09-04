@@ -18,10 +18,11 @@ export function middleware(req: NextRequest) {
     return NextResponse.rewrite(url)
   }
 
-  // não tocar em /admin (Painel da Marina), assets, api, ficheiros estáticos,
+  // não tocar em /admin (Painel da Marina), /assistente, assets, api, ficheiros estáticos,
   // ou rotas SEO de raiz (robots.txt, sitemap.xml)
   if (
     pathname.startsWith('/admin') ||
+    pathname.startsWith('/assistente') ||
     pathname.startsWith('/api') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/media') ||
@@ -44,5 +45,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next|api|admin|media|favicon\\.ico|robots\\.txt|sitemap\\.xml|.*\\.(?:jpg|jpeg|png|gif|svg|webp|ico|css|js|woff2?|ttf|eot|pdf)).*)'],
+  matcher: ['/((?!_next|api|assistente|admin|media|favicon\\.ico|robots\\.txt|sitemap\\.xml|.*\\.(?:jpg|jpeg|png|gif|svg|webp|ico|css|js|woff2?|ttf|eot|pdf)).*)'],
 }
