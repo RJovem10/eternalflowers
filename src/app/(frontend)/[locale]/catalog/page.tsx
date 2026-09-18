@@ -103,7 +103,7 @@ export default async function Catalog({
     id: f.id,
     name: f[nf] || f.namePt || '—',
     price: f.price,
-    image: f.image?.url || null,
+    image: f.image?.sizes?.card?.url || f.image?.url || null,
     availability: f.availability || 'available',
     locale,
   }))
@@ -130,8 +130,8 @@ export default async function Catalog({
         <p className="text-stone-500">{dict.emptyCatalog}</p>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {cards.map((c) => (
-            <FlowerCard key={c.id} flower={c} dict={dict} />
+          {cards.map((c, index) => (
+            <FlowerCard key={c.id} flower={c} dict={dict} eager={index < 4} />
           ))}
         </div>
       )}
