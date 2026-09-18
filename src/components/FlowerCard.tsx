@@ -10,7 +10,7 @@ export type FlowerCardData = {
   locale: string
 }
 
-export default function FlowerCard({ flower, dict }: { flower: FlowerCardData; dict: any }) {
+export default function FlowerCard({ flower, dict, eager = false }: { flower: FlowerCardData; dict: any; eager?: boolean }) {
   const badge = () => {
     switch (flower.availability) {
       case 'sold': return <span className="bg-brand-charcoal px-2.5 py-1.5 text-[0.65rem] uppercase tracking-wider text-brand-cream">{dict.sold}</span>
@@ -32,14 +32,15 @@ export default function FlowerCard({ flower, dict }: { flower: FlowerCardData; d
                 src={imgSrc}
                 alt={displayName}
                 fill
-                sizes="(min-width: 1024px) 25vw, 50vw"
+                sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
+                loading={eager ? 'eager' : 'lazy'}
                 className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
               />
           ) : (
             // External image hosts are dynamic, so they cannot be safely passed to
             // next/image without broadening the application's remote image policy.
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={imgSrc} alt={displayName} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
+            <img src={imgSrc} alt={displayName} loading={eager ? 'eager' : 'lazy'} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
           )}
           <div className="absolute left-3 top-3">{badge()}</div>
         </div>
