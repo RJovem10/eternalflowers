@@ -579,6 +579,11 @@ describe('handlePaymentSucceeded — reservation safety', () => {
 
     const r2 = await handlePaymentSucceeded(payload, paymentIntent)
     expect(r2.kind).toBe('already_processed')
+    expect(mockEmailNotifications.filter((n: any) => n.deduplicationKey === `order-confirmed:${order.id}`)).toHaveLength(1)
+    expect(mockEmailNotifications.filter((n: any) => n.deduplicationKey === `admin-order-paid:${order.id}`)).toHaveLength(1)
+    expect(mockEmailNotifications.find((n: any) => n.type === 'admin_order_paid')).toMatchObject({
+      status: 'pending', recipientEmail: 'admin@example.invalid',
+    })
   })
 
   it('9. reservation expired → Order NÃO fica confirmed (late payment)', async () => {
