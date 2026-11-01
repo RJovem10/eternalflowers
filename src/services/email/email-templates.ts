@@ -9,6 +9,7 @@
  */
 import type { Locale } from '@/i18n/locales'
 import type {
+  AdminOrderPaidSnapshot,
   OrderConfirmedSnapshot,
   OrderShippedSnapshot,
   OrderCompletedSnapshot,
@@ -36,7 +37,7 @@ function fmtPrice(value: number, currency: string): string {
 
 // ─── Inline CSS wrapper ──────────────────────────────────────
 
-function htmlWrapper(body: string): string {
+function htmlWrapper(body: string, includeAddress = true): string {
   return `<!DOCTYPE html>
 <html lang="pt">
 <head>
@@ -62,7 +63,7 @@ function htmlWrapper(body: string): string {
 ${body}
 <div class="footer">
   <p>Eternal Flowers — Joias Botânicas</p>
-  <p>Rua das Flores, 123 · Lisboa · Portugal</p>
+  ${includeAddress ? '<p>Rua das Flores, 123 · Lisboa · Portugal</p>' : ''}
 </div>
 </div>
 </body>
@@ -346,6 +347,43 @@ export function renderOrderConfirmed(
   return { subject, html, text }
 }
 
+/** Template administrativo em pt-PT, usando a apresentação dos emails existentes. */
+export function renderAdminOrderPaid(snapshot: AdminOrderPaidSnapshot): RenderedEmail {
+  const date = snapshot.orderDate ? new Intl.DateTimeFormat('pt-PT', {
+    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Lisbon',
+  }).format(new Date(snapshot.orderDate)) : 'Não registada'
+  const details = [
+    ['N.º da encomenda', snapshot.orderNumber], ['Data da encomenda', date],
+    ['Cliente', snapshot.customerName || 'Não registado'],
+    ['Email', snapshot.customerEmail || 'Não registado'],
+    ['Telefone', snapshot.customerPhone || 'Não registado'],
+    ['Estado do pagamento', 'Pago (paid)'], ['Método de entrega', snapshot.deliveryMethod],
+  ]
+  const totals = [
+    ['Subtotal', fmtPrice(snapshot.subtotal, snapshot.currency)],
+    ['Descontos', '-' + fmtPrice(snapshot.discount, snapshot.currency)],
+    ['Portes', fmtPrice(snapshot.shippingCost, snapshot.currency)],
+    ['Total', fmtPrice(snapshot.total, snapshot.currency)],
+  ]
+  const html = htmlWrapper(`
+<h1>Nova encomenda paga</h1>
+<p>Foi confirmada uma nova encomenda. Pode consultar os detalhes no painel administrativo.</p>
+<dl class="details">${details.map(([key, value]) => `<dt>${esc(key)}</dt><dd>${esc(value)}</dd>`).join('')}</dl>
+<table><thead><tr><th>Artigo</th><th>Qtd</th><th>Preço unitário</th><th>Total</th></tr></thead>
+<tbody>${snapshot.items.map(item => `<tr><td>${esc(item.name)}</td><td>${esc(item.qty)}</td><td>${esc(fmtPrice(item.unitPrice, snapshot.currency))}</td><td>${esc(fmtPrice(item.lineTotal, snapshot.currency))}</td></tr>`).join('')}</tbody></table>
+<table>${totals.map(([key, value]) => `<tr><td>${esc(key)}</td><td>${esc(value)}</td></tr>`).join('')}</table>
+${snapshot.shippingAddress.length ? `<h2>Morada de entrega</h2><p>${snapshot.shippingAddress.map(esc).join('<br>')}</p>` : ''}
+<p><a href="${esc(snapshot.adminOrderURL)}">Consultar encomenda no painel administrativo</a></p>`, false)
+  const text = [
+    'Nova encomenda paga', ...details.map(([key, value]) => `${key}: ${value}`), '',
+    ...snapshot.items.map(item => `${item.qty}x ${item.name} — ${fmtPrice(item.unitPrice, snapshot.currency)} / unidade — ${fmtPrice(item.lineTotal, snapshot.currency)}`),
+    '', ...totals.map(([key, value]) => `${key}: ${value}`),
+    ...(snapshot.shippingAddress.length ? ['', 'Morada de entrega:', ...snapshot.shippingAddress] : []),
+    '', `Consultar encomenda: ${snapshot.adminOrderURL}`,
+  ].join('\n')
+  return { subject: `Nova encomenda paga ${snapshot.orderNumber.replace(/[\r\n]/g, '')} — Eternal Flowers`, html, text }
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Template: Order Shipped
 // ═══════════════════════════════════════════════════════════════
@@ -506,6 +544,8 @@ export function renderEmail(
   locale: Locale | string,
 ): RenderedEmail {
   switch (snapshot.type) {
+    case 'admin_order_paid':
+      return renderAdminOrderPaid(snapshot.data as AdminOrderPaidSnapshot)
     case 'order_confirmed':
       return renderOrderConfirmed(snapshot.data as OrderConfirmedSnapshot, locale)
     case 'order_shipped':

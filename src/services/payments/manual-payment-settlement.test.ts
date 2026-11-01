@@ -23,6 +23,7 @@ vi.mock('../db-adapter', () => ({
 
 vi.mock('../email/email-notifications', () => ({
   enqueueEmailNotification: mocks.enqueueEmailNotification,
+  dedupKeyAdminPaid: (orderID: number) => `admin-order-paid:${orderID}`,
   dedupKeyConfirmed: (orderID: number) => `order:${orderID}:confirmed`,
 }))
 
@@ -125,7 +126,7 @@ describe('manual external-payment settlement', () => {
     })
   })
 
-  it('I/N: records manual evidence, skips stock reservations and email when absent', async () => {
+  it('I/N: records manual evidence, skips stock reservations and notifies admin without customer email', async () => {
     const payload = createPayload()
     const result = await confirmExternalPayment(payload, {
       orderId: 42,
@@ -152,7 +153,7 @@ describe('manual external-payment settlement', () => {
       manualPaymentConfirmedBy: 9,
     })
     expect(order.paidAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
-    expect(mocks.enqueueEmailNotification).not.toHaveBeenCalled()
+    expect(mocks.enqueueEmailNotification).toHaveBeenCalledWith(payload, expect.objectContaining({ type: 'admin_order_paid', recipientEmail: 'admin@example.invalid' }))
   })
 
   it('J: repeating the same confirmation is idempotent and never confirms stock twice', async () => {
@@ -296,7 +297,7 @@ describe('manual external-payment settlement', () => {
       confirmedBy: 9,
     })
 
-    expect(mocks.enqueueEmailNotification).toHaveBeenCalledTimes(1)
+    expect(mocks.enqueueEmailNotification).toHaveBeenCalledTimes(2)
     expect(mocks.enqueueEmailNotification).toHaveBeenCalledWith(payload, expect.objectContaining({
       type: 'order_confirmed',
       orderId: 42,

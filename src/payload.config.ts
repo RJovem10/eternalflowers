@@ -897,6 +897,7 @@ const EmailNotifications: CollectionConfig = {
       required: true,
       label: 'Tipo',
       options: [
+        { label: 'Nova encomenda paga (administração)', value: 'admin_order_paid' },
         { label: 'Encomenda Confirmada', value: 'order_confirmed' },
         { label: 'Encomenda Expedida', value: 'order_shipped' },
         { label: 'Encomenda Concluída', value: 'order_completed' },

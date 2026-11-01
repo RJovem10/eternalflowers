@@ -3,6 +3,7 @@ import { runInTransactionWithRetry, type TransactionCtx } from '../transact'
 import { confirmReservation } from '../stock'
 import { lockCouponForUpdate, lockOrderForUpdate } from '../db-adapter'
 import { enqueueEmailNotification, dedupKeyConfirmed } from '../email/email-notifications'
+import { enqueueAdminOrderPaid } from '../email/admin-order-paid'
 
 const FORWARD_PAID_STATUSES = new Set(['confirmed', 'processing', 'shipped', 'completed'])
 
@@ -159,6 +160,8 @@ export async function settleOrderPayment(
         req: ctx.req,
       })
     }
+
+    await enqueueAdminOrderPaid(payload, { ...order, ...updateData }, ctx.req)
 
     return { kind: 'processed', orderId: order.id }
   })

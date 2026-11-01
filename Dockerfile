@@ -53,6 +53,8 @@ RUN npm run build
 
 # Prune devDependencies for smaller runtime
 RUN npm prune --omit=dev
+# Falhar o build se o executor necessário às ferramentas operacionais desaparecer.
+RUN test -f scripts/recover-historical-admin-notification.ts && test -x node_modules/.bin/tsx && node_modules/.bin/tsx --version
 
 # ────────── Stage 3: Runtime ──────────
 FROM node:22-alpine AS runner

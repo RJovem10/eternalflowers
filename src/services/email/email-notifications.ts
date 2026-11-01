@@ -16,6 +16,7 @@
  */
 import type { Payload } from 'payload'
 import type { EmailProvider } from './email-provider'
+import { assertAdminOrderDeliveryRecipient } from './admin-email-config'
 import { renderEmail } from './email-templates'
 import { runInTransaction, type TransactionCtx } from '../transact'
 import type {
@@ -67,6 +68,7 @@ async function executeEnqueue(
   const existing = await payload.find({
     collection: 'email-notifications' as any,
     where: { deduplicationKey: { equals: input.deduplicationKey } },
+    req: ctx.req,
     limit: 1,
     depth: 0,
     overrideAccess: true,
@@ -78,17 +80,6 @@ async function executeEnqueue(
   }
 
   // ─── Criar notification ──────────────────────────────
-  const payloadData: Record<string, unknown> = {}
-  if (input.snapshot.type === 'order_confirmed') {
-    payloadData.data = input.snapshot.data
-  } else if (input.snapshot.type === 'order_shipped') {
-    payloadData.data = input.snapshot.data
-  } else if (input.snapshot.type === 'order_completed') {
-    payloadData.data = input.snapshot.data
-  } else if (input.snapshot.type === 'order_cancelled') {
-    payloadData.data = input.snapshot.data
-  }
-
   let doc: any
   try {
     doc = await payload.create({
@@ -103,7 +94,7 @@ async function executeEnqueue(
         attemptCount: 0,
         payload: {
           type: input.snapshot.type,
-          data: payloadData.data,
+          data: input.snapshot.data,
         },
       } as any,
       req: ctx.req,
@@ -125,6 +116,7 @@ async function executeEnqueue(
       const existing = await payload.find({
         collection: 'email-notifications' as any,
         where: { deduplicationKey: { equals: input.deduplicationKey } },
+        req: ctx.req,
         limit: 1,
         depth: 0,
         overrideAccess: true,
@@ -144,6 +136,10 @@ async function executeEnqueue(
 // ═══════════════════════════════════════════════════════════════
 // Helpers de deduplicationKey
 // ═══════════════════════════════════════════════════════════════
+
+export function dedupKeyAdminPaid(orderId: number): string {
+  return `admin-order-paid:${orderId}`
+}
 
 export function dedupKeyConfirmed(orderId: number): string {
   return `order-confirmed:${orderId}`
@@ -259,6 +255,9 @@ export async function processPendingEmailNotifications(
     // ─── 2c. Enviar FORA da transacção DB ────────────────
     let sendResult
     try {
+      if (notification.type === 'admin_order_paid' || notification.payload?.type === 'admin_order_paid') {
+        assertAdminOrderDeliveryRecipient(notification.recipientEmail)
+      }
       sendResult = await provider!.send({
         to: notification.recipientEmail,
         subject: rendered.subject,

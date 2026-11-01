@@ -9,6 +9,7 @@ import type { Locale } from '@/i18n/locales'
 // ─── Tipos de notificação ─────────────────────────────────────
 
 export type EmailNotificationType =
+  | 'admin_order_paid'
   | 'order_confirmed'
   | 'order_shipped'
   | 'order_completed'
@@ -40,6 +41,16 @@ export interface OrderConfirmedSnapshot {
   currency: string
 }
 
+export interface AdminOrderPaidSnapshot extends OrderConfirmedSnapshot {
+  orderDate: string | null
+  customerEmail: string
+  customerPhone: string
+  paymentStatus: 'paid'
+  deliveryMethod: string
+  shippingAddress: string[]
+  adminOrderURL: string
+}
+
 export interface OrderShippedSnapshot {
   orderNumber: string
   customerName: string
@@ -62,6 +73,7 @@ export interface OrderCancelledSnapshot {
 }
 
 export type EmailSnapshot =
+  | { type: 'admin_order_paid'; data: AdminOrderPaidSnapshot }
   | { type: 'order_confirmed'; data: OrderConfirmedSnapshot }
   | { type: 'order_shipped'; data: OrderShippedSnapshot }
   | { type: 'order_completed'; data: OrderCompletedSnapshot }
